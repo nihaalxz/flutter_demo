@@ -1,18 +1,52 @@
+import 'package:hive/hive.dart';
+
+part 'product_model.g.dart'; // This file will be generated
+
+@HiveType(typeId: 0)
 class Product {
+  @HiveField(0)
   final int id;
+
+  @HiveField(1)
   final String name;
+
+  @HiveField(2)
   final String description;
+
+  @HiveField(3)
   final String image;
+
+  @HiveField(4)
   final double price;
+
+  @HiveField(5)
   final int categoryId;
+
+  @HiveField(6)
   final String? ownerProfileImage;
+
+  @HiveField(7)
   final String categoryName;
+
+  @HiveField(8)
   final String ownerId;
+
+  @HiveField(9)
   final String ownerName;
+
+  @HiveField(10)
   final String location;
+
+  @HiveField(11)
   final bool availability;
+
+  @HiveField(12)
   final String createdAt;
+
+  @HiveField(13)
   final String status;
+
+  @HiveField(14)
   final int views;
 
   Product({
@@ -52,7 +86,7 @@ class Product {
       views: json['views'],
     );
   }
-
+  
   Map<String, dynamic> toJson() {
     return {
       'id': id,

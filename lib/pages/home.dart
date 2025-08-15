@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:intl/intl.dart';
-import 'package:hive/hive.dart';
-
-import '../models/category_model.dart';
+import 'package:cached_network_image/cached_network_image.dart'; // Import the new package
+import '../models/category_model.dart'; 
 import '../models/product_model.dart';
 import '../services/category_service.dart';
 import '../services/product_service.dart';
@@ -17,37 +16,43 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  // State variables
   List<Product> products = [];
   List<CategoryModel> categories = [];
   bool isLoading = true;
 
-  final String _apiBaseUrl = AppConfig.ApibaseUrl;
-  final ProductService cacheService = ProductService();
+  // Use the API base URL from your environment configuration
+  final String _apiBaseUrl = AppConfig.ApibaseUrl; 
 
   @override
   void initState() {
     super.initState();
-    loadData();
+    loadData(); // Initial load from cache or network
   }
 
-  /// Fetch categories & products (products via cache)
-  Future<void> loadData() async {
+  /// Fetches data, allowing for a forced refresh to bypass the cache.
+  Future<void> loadData({bool forceRefresh = false}) async {
+    // Only show the main loading spinner on the very first load.
     if (products.isEmpty && categories.isEmpty) {
-      setState(() {
-        isLoading = true;
-      });
+        setState(() {
+          isLoading = true;
+        });
     }
 
+    final productService = ProductService();
     final categoryService = CategoryService();
 
     try {
-      final fetchedCategories = await categoryService.getCategories();
-      final fetchedProducts = await cacheService.fetchProducts();
+      // Fetch both data sets, passing the forceRefresh flag.
+      final results = await Future.wait([
+        productService.fetchProducts(forceRefresh: forceRefresh),
+        categoryService.getCategories(forceRefresh: forceRefresh),
+      ]);
 
       if (mounted) {
         setState(() {
-          categories = fetchedCategories;
-          products = fetchedProducts;
+          products = results[0] as List<Product>;
+          categories = results[1] as List<CategoryModel>;
           isLoading = false;
         });
       }
@@ -72,10 +77,8 @@ class _HomePageState extends State<HomePage> {
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
-              onRefresh: () async {
-                await cacheService.refreshProducts();
-                await loadData();
-              },
+              // When the user pulls to refresh, call loadData with forceRefresh = true.
+              onRefresh: () => loadData(forceRefresh: true),
               child: CustomScrollView(
                 slivers: [
                   SliverList(
@@ -107,6 +110,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  /// Builds the horizontal list of categories.
   Widget _buildCategoriesSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -120,7 +124,7 @@ class _HomePageState extends State<HomePage> {
         ),
         const SizedBox(height: 15),
         SizedBox(
-          height: 90,
+          height: 90, // Height for the category items with icons
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.only(left: 20, right: 10),
@@ -128,7 +132,7 @@ class _HomePageState extends State<HomePage> {
             itemBuilder: (context, index) {
               final category = categories[index];
               return Container(
-                width: 80,
+                width: 80, // Fixed width for each category item
                 margin: const EdgeInsets.only(right: 10),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -142,7 +146,7 @@ class _HomePageState extends State<HomePage> {
                         shape: BoxShape.circle,
                       ),
                       child: SvgPicture.network(
-                        "$_apiBaseUrl${category.icon}",
+                        "$_apiBaseUrl${category.icon}", // Use icon URL from the model
                         placeholderBuilder: (context) => const SizedBox(
                           height: 20,
                           width: 20,
@@ -170,11 +174,14 @@ class _HomePageState extends State<HomePage> {
       ],
     );
   }
-
+  
+  /// Builds the vertical list of products as a SliverList.
   Widget _buildProductsList() {
     return products.isEmpty
         ? const SliverFillRemaining(
-            child: Center(child: Text('No products found.')),
+            child: Center(
+              child: Text('No products found.'),
+            ),
           )
         : SliverList(
             delegate: SliverChildBuilderDelegate(
@@ -186,15 +193,16 @@ class _HomePageState extends State<HomePage> {
           );
   }
 
+  /// Builds a card widget for a single product.
   Widget _buildProductCard(Product product) {
     final String imageUrl = "$_apiBaseUrl${product.image}";
-
     String formattedDate = '';
     try {
-      final DateTime parsedDate = DateTime.parse(product.createdAt ?? '');
+      final DateTime parsedDate = DateTime.parse(product.createdAt);
       formattedDate = DateFormat.yMMMd().format(parsedDate);
     } catch (e) {
-      formattedDate = product.createdAt ?? '';
+      formattedDate = product.createdAt; 
+      print("Error parsing date: $e");
     }
 
     return Container(
@@ -215,19 +223,25 @@ class _HomePageState extends State<HomePage> {
         children: [
           ClipRRect(
             borderRadius: BorderRadius.circular(10),
-            child: Image.network(
-              imageUrl,
+            // --- REPLACED Image.network with CachedNetworkImage ---
+            child: CachedNetworkImage(
+              imageUrl: "https://p2prental.runasp.net${product.image}",
               width: 100,
               height: 100,
               fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) {
-                return Container(
-                    width: 100,
-                    height: 100,
-                    color: Colors.grey[200],
-                    child: Icon(Icons.broken_image, color: Colors.grey[400]));
-              },
+              placeholder: (context, url) => Container(
+                width: 100,
+                height: 100,
+                color: Colors.grey[200],
+                child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+              ),
+              errorWidget: (context, url, error) => Container(
+                width: 100,
+                height: 100,
+                child: Icon(Icons.broken_image, color: Colors.grey[400])
+              ),
             ),
+            // ---------------------------------------------------
           ),
           const SizedBox(width: 15),
           Expanded(
@@ -238,7 +252,7 @@ class _HomePageState extends State<HomePage> {
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
                   Text(
-                    product.name ?? '',
+                    product.name,
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
@@ -248,18 +262,20 @@ class _HomePageState extends State<HomePage> {
                   ),
                   Row(
                     children: [
-                      Text(
-                        'By: ${product.ownerName ?? ''}',
-                        style: TextStyle(fontSize: 12, color: Colors.grey[700]),
-                        overflow: TextOverflow.ellipsis,
-                        maxLines: 1,
+                      Flexible(
+                        child: Text(
+                          'By: ${product.ownerName}',
+                          style: TextStyle(fontSize: 12, color: Colors.grey[700]),
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                        ),
                       ),
-                      const Spacer(),
+                      const SizedBox(width: 4),
                       Text(
-                        product.availability == true ? 'Available' : 'Not Available',
+                        product.availability ? 'Available' : 'Not Available',
                         style: TextStyle(
-                          fontSize: 12,
-                          color: product.availability == true ? Colors.green : Colors.red,
+                          fontSize: 12, 
+                          color: product.availability ? Colors.green : Colors.red,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -270,7 +286,7 @@ class _HomePageState extends State<HomePage> {
                       Icon(Icons.location_on, size: 14, color: Colors.grey[600]),
                       const SizedBox(width: 4),
                       Text(
-                        product.location ?? '',
+                        product.location,
                         style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                       ),
                       const Spacer(),
@@ -281,7 +297,7 @@ class _HomePageState extends State<HomePage> {
                     ],
                   ),
                   Text(
-                    '₹${product.price?.toStringAsFixed(2) ?? ''}/day',
+                    '₹${product.price.toStringAsFixed(2)}/day',
                     style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -297,12 +313,16 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  /// The search bar widget.
   Container _SearchBar() {
     return Container(
       margin: const EdgeInsets.fromLTRB(20, 20, 20, 0),
       decoration: BoxDecoration(
         boxShadow: [
-          BoxShadow(blurRadius: 15, color: Colors.black.withOpacity(0.1))
+          BoxShadow(
+            blurRadius: 15,
+            color: Colors.black.withOpacity(0.1),
+          )
         ],
       ),
       child: TextField(
@@ -320,6 +340,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  /// The app bar widget.
   AppBar appBar() {
     return AppBar(
       title: const Text(
@@ -343,7 +364,7 @@ class _HomePageState extends State<HomePage> {
             borderRadius: BorderRadius.circular(10),
           ),
           child: SvgPicture.asset(
-            'assets/icons/arrow-left.svg',
+            'assets/icons/arrow-left.svg', // Ensure this asset exists
             height: 20,
             width: 20,
           ),
@@ -361,7 +382,7 @@ class _HomePageState extends State<HomePage> {
               borderRadius: BorderRadius.circular(10),
             ),
             child: SvgPicture.asset(
-              'assets/icons/three-dots.svg',
+              'assets/icons/three-dots.svg', // Ensure this asset exists
               height: 5,
               width: 5,
             ),
