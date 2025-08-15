@@ -195,7 +195,7 @@ class _HomePageState extends State<HomePage> {
 
   /// Builds a card widget for a single product.
   Widget _buildProductCard(Product product) {
-    final String imageUrl = "$_apiBaseUrl${product.image}";
+    final String imageUrl = "https://p2prental.runasp.net${product.image}";
     String formattedDate = '';
     try {
       final DateTime parsedDate = DateTime.parse(product.createdAt);
