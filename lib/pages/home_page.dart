@@ -195,6 +195,7 @@ class _HomePageState extends State<HomePage> {
 
   /// Builds a card widget for a single product.
   Widget _buildProductCard(Product product) {
+    // ignore: unused_local_variable
     final String imageUrl = "https://p2prental.runasp.net${product.image}";
     String formattedDate = '';
     try {
@@ -235,7 +236,7 @@ class _HomePageState extends State<HomePage> {
                 color: Colors.grey[200],
                 child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
               ),
-              errorWidget: (context, url, error) => Container(
+              errorWidget: (context, url, error) => SizedBox(
                 width: 100,
                 height: 100,
                 child: Icon(Icons.broken_image, color: Colors.grey[400])

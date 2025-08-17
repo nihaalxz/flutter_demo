@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'models/product_model.dart';   // Import your models
+import 'models/product_model.dart'; // Import your models
 import 'models/category_model.dart';
-import '../pages/home.dart';
-
+import 'pages/Auth/auth_wrapper.dart';
 
 Future<void> main() async {
   // Ensure Flutter is initialized
@@ -29,12 +28,9 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Flutter Demo',
-      theme: ThemeData(
-        
-        primarySwatch: Colors.blue,
-      ),
+      theme: ThemeData(primarySwatch: Colors.blue),
       debugShowCheckedModeBanner: false,
-      home: const HomePage(),
+      home: const AuthWrapper(),
     );
   }
 }
