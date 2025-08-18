@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:intl/intl.dart';
 import 'package:cached_network_image/cached_network_image.dart'; // Import the new package
+import 'package:myfirstflutterapp/models/user_model.dart';
+import 'package:myfirstflutterapp/pages/Auth/login_page.dart';
+import 'package:myfirstflutterapp/services/auth_service.dart';
 import '../models/category_model.dart'; 
 import '../models/product_model.dart';
 import '../services/category_service.dart';
@@ -20,6 +23,8 @@ class _HomePageState extends State<HomePage> {
   List<Product> products = [];
   List<CategoryModel> categories = [];
   bool isLoading = true;
+  final AuthService _authService = AuthService();
+  AppUser? _currentUser;
 
   // Use the API base URL from your environment configuration
   final String _apiBaseUrl = AppConfig.ApibaseUrl; 
@@ -27,9 +32,26 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    loadData(); // Initial load from cache or network
+    loadData().then((_)=>_loadUserProfile()); // Initial load from cache or network
+  }
+Future<void> _loadUserProfile() async {
+    final user = await _authService.getUserProfile();
+    if (mounted) {
+      setState(() {
+        _currentUser = user;
+      });
+    }
   }
 
+   Future<void> _logout() async {
+    await _authService.logout();
+    if (mounted) {
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (context) => const LoginPage()),
+        (route) => false,
+      );
+    }
+  }
   /// Fetches data, allowing for a forced refresh to bypass the cache.
   Future<void> loadData({bool forceRefresh = false}) async {
     // Only show the main loading spinner on the very first load.
@@ -355,39 +377,25 @@ class _HomePageState extends State<HomePage> {
       backgroundColor: Colors.white,
       elevation: 0.0,
       centerTitle: true,
-      leading: GestureDetector(
-        onTap: () {},
-        child: Container(
-          margin: const EdgeInsets.all(10),
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: const Color(0xffF7F8F8),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: SvgPicture.asset(
-            'assets/icons/arrow-left.svg', // Ensure this asset exists
-            height: 20,
-            width: 20,
-          ),
+      leading: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: CircleAvatar(
+          backgroundColor: Colors.grey[200],
+          // Use CachedNetworkImage for the background
+          backgroundImage: _currentUser?.pictureUrl != null && _currentUser!.pictureUrl!.isNotEmpty
+              ? CachedNetworkImageProvider("https://p2prental.runasp.net${_currentUser!.pictureUrl}")
+              : null,
+          // Show an icon if there's no image
+          child: _currentUser?.pictureUrl == null || _currentUser!.pictureUrl!.isEmpty
+              ? const Icon(Icons.person, color: Colors.grey)
+              : null,
         ),
       ),
       actions: [
-        GestureDetector(
-          onTap: () {},
-          child: Container(
-            margin: const EdgeInsets.all(10),
-            alignment: Alignment.center,
-            width: 37,
-            decoration: BoxDecoration(
-              color: const Color(0xffF7F8F8),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: SvgPicture.asset(
-              'assets/icons/three-dots.svg', // Ensure this asset exists
-              height: 5,
-              width: 5,
-            ),
-          ),
+        IconButton(
+          icon: const Icon(Icons.logout, color: Colors.black),
+          onPressed: _logout,
+          tooltip: 'Logout',
         ),
       ],
     );
