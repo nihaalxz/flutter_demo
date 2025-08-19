@@ -66,7 +66,7 @@
 
 	<key>NSBonjourServices</key>
 	<array>
-		<string>_dartobservatory._tcp</string>
+		<string>_dartVmService._tcp</string>
 	</array>
 
 	<!-- Optional: Allow HTTP for debugging -->

@@ -43,6 +43,6 @@ flutter_launcher_icons:
 
 flutter_native_splash:
   color: "#FFF5F5" # This is the background color (white)
-  image: assets/icons/app_icon.png
+  image: assets/icons/splash_screen.png
   android: true
   ios: true
