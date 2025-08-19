@@ -12,6 +12,10 @@
 		<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
 		<key>CFBundleInfoDictionaryVersion</key>
 		<string>6.0</string>
+		<key>CFBundleURLSchemes</key>
+		<array>
+		<string>com.googleusercontent.apps.65125654341-q3ek76obu8sgf3phq2dujs4ge0bo64os</string>
+		</array>
 		<key>CFBundleName</key>
 		<string>myfirstflutterapp</string>
 		<key>CFBundlePackageType</key>
