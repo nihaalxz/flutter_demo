@@ -7,6 +7,7 @@ import 'pages/Auth/auth_wrapper.dart';
 Future<void> main() async {
   // Ensure Flutter is initialized
   WidgetsFlutterBinding.ensureInitialized();
+   print("🚀 Flutter main() reached");
 
   // Initialize Hive
   await Hive.initFlutter();
