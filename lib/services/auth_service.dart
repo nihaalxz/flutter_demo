@@ -129,4 +129,31 @@ class AuthService {
     );
     return response.statusCode == 200;
   }
+
+  Future<String?> getUserId() async {
+  final token = await getToken();
+  if (token != null && !JwtDecoder.isExpired(token)) {
+    final decodedToken = JwtDecoder.decode(token);
+    return decodedToken['nameid']?.toString(); // Adjust key if backend uses 'sub' or something else
+  }
+  return null;
+}
+
+ Future<bool> isLoggedIn() async {
+    final token = await getToken(); // getToken() already exists
+    if (token == null) {
+      return false; // No token, not logged in
+    }
+
+    // Check if the token is expired
+    if (JwtDecoder.isExpired(token)) {
+      await deleteToken(); // Clean up the expired token
+      return false; // Token is expired, not logged in
+    }
+
+    return true; // Token exists and is not expired
+  }
+
+
+
 }

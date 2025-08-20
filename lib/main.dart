@@ -1,13 +1,16 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'models/product_model.dart'; // Import your models
+import 'models/product_model.dart'; 
 import 'models/category_model.dart';
-import 'pages/Auth/auth_wrapper.dart';
+import '../pages/Auth/auth_check_screen.dart';
 
 Future<void> main() async {
   // Ensure Flutter is initialized
   WidgetsFlutterBinding.ensureInitialized();
-   print("🚀 Flutter main() reached");
+  if (kDebugMode) {
+    print("🚀 Flutter main() reached");
+  }
 
   // Initialize Hive
   await Hive.initFlutter();
@@ -18,6 +21,8 @@ Future<void> main() async {
 
   // Open your boxes (like tables in a database)
   await Hive.openBox('p2p_cache');
+
+  // ✅ Initialize notification service
 
   runApp(const MyApp());
 }
@@ -31,7 +36,7 @@ class MyApp extends StatelessWidget {
       title: 'Flutter Demo',
       theme: ThemeData(primarySwatch: Colors.blue),
       debugShowCheckedModeBanner: false,
-      home: const AuthWrapper(),
+      home: const AuthCheckScreen(),
     );
   }
 }

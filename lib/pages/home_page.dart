@@ -4,12 +4,14 @@ import 'package:intl/intl.dart';
 import 'package:cached_network_image/cached_network_image.dart'; // Import the new package
 import 'package:myfirstflutterapp/models/user_model.dart';
 import 'package:myfirstflutterapp/pages/Auth/login_page.dart';
+import 'package:myfirstflutterapp/pages/notification_page.dart';
 import 'package:myfirstflutterapp/services/auth_service.dart';
-import '../models/category_model.dart'; 
+import '../models/category_model.dart';
 import '../models/product_model.dart';
 import '../services/category_service.dart';
 import '../services/product_service.dart';
 import '../environment/env.dart';
+import 'package:bootstrap_icons/bootstrap_icons.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -27,14 +29,17 @@ class _HomePageState extends State<HomePage> {
   AppUser? _currentUser;
 
   // Use the API base URL from your environment configuration
-  final String _apiBaseUrl = AppConfig.ApibaseUrl; 
+  final String _apiBaseUrl = AppConfig.ApibaseUrl;
 
   @override
   void initState() {
     super.initState();
-    loadData().then((_)=>_loadUserProfile()); // Initial load from cache or network
+    loadData().then(
+      (_) => _loadUserProfile(),
+    ); // Initial load from cache or network
   }
-Future<void> _loadUserProfile() async {
+
+  Future<void> _loadUserProfile() async {
     final user = await _authService.getUserProfile();
     if (mounted) {
       setState(() {
@@ -43,7 +48,7 @@ Future<void> _loadUserProfile() async {
     }
   }
 
-   Future<void> _logout() async {
+  Future<void> _logout() async {
     await _authService.logout();
     if (mounted) {
       Navigator.of(context).pushAndRemoveUntil(
@@ -52,13 +57,14 @@ Future<void> _loadUserProfile() async {
       );
     }
   }
+
   /// Fetches data, allowing for a forced refresh to bypass the cache.
   Future<void> loadData({bool forceRefresh = false}) async {
     // Only show the main loading spinner on the very first load.
     if (products.isEmpty && categories.isEmpty) {
-        setState(() {
-          isLoading = true;
-        });
+      setState(() {
+        isLoading = true;
+      });
     }
 
     final productService = ProductService();
@@ -104,26 +110,24 @@ Future<void> _loadUserProfile() async {
               child: CustomScrollView(
                 slivers: [
                   SliverList(
-                    delegate: SliverChildListDelegate(
-                      [
-                        _SearchBar(),
-                        const SizedBox(height: 20),
-                        _buildCategoriesSection(),
-                        const SizedBox(height: 20),
-                        const Padding(
-                          padding: EdgeInsets.only(left: 20),
-                          child: Text(
-                            'All Products',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black,
-                            ),
+                    delegate: SliverChildListDelegate([
+                      _SearchBar(),
+                      const SizedBox(height: 20),
+                      _buildCategoriesSection(),
+                      const SizedBox(height: 20),
+                      const Padding(
+                        padding: EdgeInsets.only(left: 20),
+                        child: Text(
+                          'All Products',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black,
                           ),
                         ),
-                        const SizedBox(height: 10),
-                      ],
-                    ),
+                      ),
+                      const SizedBox(height: 10),
+                    ]),
                   ),
                   _buildProductsList(),
                 ],
@@ -175,14 +179,18 @@ Future<void> _loadUserProfile() async {
                           child: CircularProgressIndicator(strokeWidth: 2),
                         ),
                         colorFilter: const ColorFilter.mode(
-                            Colors.amber, BlendMode.srcIn),
+                          Colors.amber,
+                          BlendMode.srcIn,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 8),
                     Text(
                       category.name,
                       style: const TextStyle(
-                          fontSize: 12, fontWeight: FontWeight.w500),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
                       textAlign: TextAlign.center,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -196,22 +204,17 @@ Future<void> _loadUserProfile() async {
       ],
     );
   }
-  
+
   /// Builds the vertical list of products as a SliverList.
   Widget _buildProductsList() {
     return products.isEmpty
         ? const SliverFillRemaining(
-            child: Center(
-              child: Text('No products found.'),
-            ),
+            child: Center(child: Text('No products found.')),
           )
         : SliverList(
-            delegate: SliverChildBuilderDelegate(
-              (context, index) {
-                return _buildProductCard(products[index]);
-              },
-              childCount: products.length,
-            ),
+            delegate: SliverChildBuilderDelegate((context, index) {
+              return _buildProductCard(products[index]);
+            }, childCount: products.length),
           );
   }
 
@@ -224,7 +227,7 @@ Future<void> _loadUserProfile() async {
       final DateTime parsedDate = DateTime.parse(product.createdAt);
       formattedDate = DateFormat.yMMMd().format(parsedDate);
     } catch (e) {
-      formattedDate = product.createdAt; 
+      formattedDate = product.createdAt;
       print("Error parsing date: $e");
     }
 
@@ -256,12 +259,14 @@ Future<void> _loadUserProfile() async {
                 width: 100,
                 height: 100,
                 color: Colors.grey[200],
-                child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                child: const Center(
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
               ),
               errorWidget: (context, url, error) => SizedBox(
                 width: 100,
                 height: 100,
-                child: Icon(Icons.broken_image, color: Colors.grey[400])
+                child: Icon(Icons.broken_image, color: Colors.grey[400]),
               ),
             ),
             // ---------------------------------------------------
@@ -288,7 +293,10 @@ Future<void> _loadUserProfile() async {
                       Flexible(
                         child: Text(
                           'By: ${product.ownerName}',
-                          style: TextStyle(fontSize: 12, color: Colors.grey[700]),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[700],
+                          ),
                           overflow: TextOverflow.ellipsis,
                           maxLines: 1,
                         ),
@@ -297,8 +305,10 @@ Future<void> _loadUserProfile() async {
                       Text(
                         product.availability ? 'Available' : 'Not Available',
                         style: TextStyle(
-                          fontSize: 12, 
-                          color: product.availability ? Colors.green : Colors.red,
+                          fontSize: 12,
+                          color: product.availability
+                              ? Colors.green
+                              : Colors.red,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -306,7 +316,11 @@ Future<void> _loadUserProfile() async {
                   ),
                   Row(
                     children: [
-                      Icon(Icons.location_on, size: 14, color: Colors.grey[600]),
+                      Icon(
+                        Icons.location_on,
+                        size: 14,
+                        color: Colors.grey[600],
+                      ),
                       const SizedBox(width: 4),
                       Text(
                         product.location,
@@ -342,10 +356,7 @@ Future<void> _loadUserProfile() async {
       margin: const EdgeInsets.fromLTRB(20, 20, 20, 0),
       decoration: BoxDecoration(
         boxShadow: [
-          BoxShadow(
-            blurRadius: 15,
-            color: Colors.black.withOpacity(0.1),
-          )
+          BoxShadow(blurRadius: 15, color: Colors.black.withOpacity(0.1)),
         ],
       ),
       child: TextField(
@@ -367,33 +378,48 @@ Future<void> _loadUserProfile() async {
   AppBar appBar() {
     return AppBar(
       title: const Text(
-        'Marketplace',
+        'Circlo',
         style: TextStyle(
           color: Colors.black,
           fontSize: 18,
           fontWeight: FontWeight.bold,
         ),
       ),
-      backgroundColor: Colors.white,
+      backgroundColor: const Color.fromARGB(255, 255, 255, 255),
       elevation: 0.0,
-      centerTitle: true,
+      centerTitle: false,
       leading: Padding(
         padding: const EdgeInsets.all(8.0),
         child: CircleAvatar(
           backgroundColor: Colors.grey[200],
           // Use CachedNetworkImage for the background
-          backgroundImage: _currentUser?.pictureUrl != null && _currentUser!.pictureUrl!.isNotEmpty
-              ? CachedNetworkImageProvider("https://p2prental.runasp.net${_currentUser!.pictureUrl}")
+          backgroundImage:
+              _currentUser?.pictureUrl != null &&
+                  _currentUser!.pictureUrl!.isNotEmpty
+              ? CachedNetworkImageProvider(
+                  "https://p2prental.runasp.net${_currentUser!.pictureUrl}",
+                )
               : null,
           // Show an icon if there's no image
-          child: _currentUser?.pictureUrl == null || _currentUser!.pictureUrl!.isEmpty
+          child:
+              _currentUser?.pictureUrl == null ||
+                  _currentUser!.pictureUrl!.isEmpty
               ? const Icon(Icons.person, color: Colors.grey)
               : null,
         ),
       ),
       actions: [
         IconButton(
-          icon: const Icon(Icons.logout, color: Colors.black),
+          icon: const Icon(BootstrapIcons.bell_fill, color: Colors.black),
+          onPressed: () {
+            Navigator.of(
+              context,
+            ).push(MaterialPageRoute(builder: (context) => const NotificationPage()));
+          },
+          tooltip: 'Notifications',
+        ),
+        IconButton(
+          icon: const Icon(Icons.more_vert_rounded, color: Colors.black),
           onPressed: _logout,
           tooltip: 'Logout',
         ),

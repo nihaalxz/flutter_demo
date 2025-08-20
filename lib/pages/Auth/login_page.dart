@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:myfirstflutterapp/pages/Auth/privacy_policy_page.dart';
+import 'package:myfirstflutterapp/pages/main_screen.dart';
 import '/services/auth_service.dart';
 import '../home_page.dart';
 import 'register_page.dart';
@@ -36,7 +37,7 @@ class _LoginPageState extends State<LoginPage> {
 
     if (success && mounted) {
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const HomePage()),
+        MaterialPageRoute(builder: (context) => const MainScreen()),
       );
     } else if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -52,7 +53,7 @@ class _LoginPageState extends State<LoginPage> {
 
     if (success && mounted) {
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const HomePage()),
+        MaterialPageRoute(builder: (context) => const MainScreen()),
       );
     } else if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
