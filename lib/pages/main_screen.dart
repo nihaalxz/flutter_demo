@@ -67,8 +67,8 @@ class _MainScreenState extends State<MainScreen> {
 
         // --- Styling ---
         type: BottomNavigationBarType.fixed, // Keeps all labels visible
-        selectedItemColor: Colors.amber[800], // Color for the selected tab
-        unselectedItemColor: Colors.grey, // Color for inactive tabs
+        selectedItemColor: const Color.fromARGB(255, 255, 0, 0), // Color for the selected tab
+        unselectedItemColor: const Color.fromARGB(255, 0, 0, 0), // Color for inactive tabs
         showUnselectedLabels: true, // Ensures all labels are shown
       ),
     );
