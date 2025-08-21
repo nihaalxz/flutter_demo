@@ -26,6 +26,7 @@ dependencies:
   http: ^1.5.0
   provider: ^6.1.5+1
   timeago: ^3.6.1
+  shimmer: ^3.0.0
 
 dev_dependencies:
   flutter_test:
@@ -40,6 +41,7 @@ flutter:
   uses-material-design: true
   assets:
     - assets/icons/
+    - assets/icons/constant/empty-user-profilepic.webp
 
 flutter_launcher_icons:
   android: "launcher_icon"

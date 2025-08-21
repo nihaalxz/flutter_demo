@@ -88,6 +88,7 @@ class _NotificationPageState extends State<NotificationPage> {
       await _notificationService.markAllAsRead();
       // Optimistically update the UI for a faster user experience.
       setState(() {
+        // ignore: unused_local_variable
         for (var n in _notifications) {
           // This requires the 'isRead' property in NotificationModel to be mutable.
           // If it's final, you'd need to recreate the list with updated items.

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:intl/intl.dart';
 import 'package:myfirstflutterapp/models/user_model.dart';
+import 'package:myfirstflutterapp/pages/wishlist_page.dart';
 import 'package:myfirstflutterapp/services/auth_service.dart';
 import 'package:myfirstflutterapp/environment/env.dart';
 import 'Auth/login_page.dart';
@@ -212,6 +213,15 @@ class _ProfilePageState extends State<ProfilePage> {
             onTap: () {
               // TODO: Navigate to Payment Methods Page
               ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Navigate to Payment Methods')));
+            },
+          ),
+           _buildMenuTile(
+            icon: Icons.heart_broken_rounded,
+            title: 'My Wishlists',
+            onTap: () {
+               Navigator.of(context).push(
+              MaterialPageRoute(builder: (context) => const WishlistPage()),
+            );  
             },
           ),
         ],

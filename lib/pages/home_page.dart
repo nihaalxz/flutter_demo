@@ -1,17 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:intl/intl.dart';
-import 'package:cached_network_image/cached_network_image.dart'; // Import the new package
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:myfirstflutterapp/models/user_model.dart';
 import 'package:myfirstflutterapp/pages/Auth/login_page.dart';
 import 'package:myfirstflutterapp/pages/notification_page.dart';
+import 'package:myfirstflutterapp/pages/product/product_details_page.dart';
 import 'package:myfirstflutterapp/services/auth_service.dart';
-import '../models/category_model.dart';
-import '../models/product_model.dart';
-import '../services/category_service.dart';
-import '../services/product_service.dart';
-import '../environment/env.dart';
+import 'package:myfirstflutterapp/services/category_service.dart';
+import 'package:myfirstflutterapp/services/product_service.dart';
+import 'package:myfirstflutterapp/services/wishlist_service.dart';
+import 'package:myfirstflutterapp/models/category_model.dart';
+import 'package:myfirstflutterapp/models/product_model.dart';
+import 'package:myfirstflutterapp/models/wishlist_item_model.dart';
+import 'package:myfirstflutterapp/environment/env.dart';
 import 'package:bootstrap_icons/bootstrap_icons.dart';
+import 'package:shimmer/shimmer.dart';
+import '../widgets/product_card.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -21,22 +25,17 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  // State variables
-  List<Product> products = [];
-  List<CategoryModel> categories = [];
-  bool isLoading = true;
+  List<Product> _products = [];
   final AuthService _authService = AuthService();
   AppUser? _currentUser;
 
-  // Use the API base URL from your environment configuration
-  final String _apiBaseUrl = AppConfig.ApibaseUrl;
+  late Future<Map<String, dynamic>> _dataFuture;
 
   @override
   void initState() {
     super.initState();
-    loadData().then(
-      (_) => _loadUserProfile(),
-    ); // Initial load from cache or network
+    _dataFuture = loadData();
+    _loadUserProfile();
   }
 
   Future<void> _loadUserProfile() async {
@@ -58,43 +57,42 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  /// Fetches data, allowing for a forced refresh to bypass the cache.
-  Future<void> loadData({bool forceRefresh = false}) async {
-    // Only show the main loading spinner on the very first load.
-    if (products.isEmpty && categories.isEmpty) {
-      setState(() {
-        isLoading = true;
-      });
-    }
-
+  Future<Map<String, dynamic>> loadData({bool forceRefresh = false}) async {
     final productService = ProductService();
     final categoryService = CategoryService();
+    final wishlistService = WishlistService();
 
-    try {
-      // Fetch both data sets, passing the forceRefresh flag.
-      final results = await Future.wait([
-        productService.fetchProducts(forceRefresh: forceRefresh),
-        categoryService.getCategories(forceRefresh: forceRefresh),
-      ]);
+    final results = await Future.wait([
+      productService.fetchProducts(forceRefresh: forceRefresh),
+      categoryService.getCategories(forceRefresh: forceRefresh),
+      wishlistService.getWishlist(),
+    ]);
 
-      if (mounted) {
-        setState(() {
-          products = results[0] as List<Product>;
-          categories = results[1] as List<CategoryModel>;
-          isLoading = false;
-        });
-      }
-    } catch (e) {
-      print("Error loading data: $e");
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to load data from the server.')),
-        );
-        setState(() {
-          isLoading = false;
-        });
-      }
+    final fetchedProducts = results[0] as List<Product>;
+    final fetchedCategories = results[1] as List<CategoryModel>;
+    final wishlistItems = results[2] as List<WishlistItemModel>;
+
+    final wishlistedIds = wishlistItems.map((item) => item.itemId).toSet();
+
+    for (var product in fetchedProducts) {
+      product.isWishlisted = wishlistedIds.contains(product.id);
     }
+
+    _products = fetchedProducts;
+
+    return {
+      'products': fetchedProducts,
+      'categories': fetchedCategories,
+    };
+  }
+
+  void _onWishlistChanged(int productId, bool isWishlisted) {
+    setState(() {
+      final index = _products.indexWhere((p) => p.id == productId);
+      if (index != -1) {
+        _products[index].isWishlisted = isWishlisted;
+      }
+    });
   }
 
   @override
@@ -102,42 +100,163 @@ class _HomePageState extends State<HomePage> {
     return Scaffold(
       appBar: appBar(),
       backgroundColor: Colors.white,
-      body: isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : RefreshIndicator(
-              // When the user pulls to refresh, call loadData with forceRefresh = true.
-              onRefresh: () => loadData(forceRefresh: true),
-              child: CustomScrollView(
-                slivers: [
-                  SliverList(
-                    delegate: SliverChildListDelegate([
-                      _SearchBar(),
-                      const SizedBox(height: 20),
-                      _buildCategoriesSection(),
-                      const SizedBox(height: 20),
-                      const Padding(
-                        padding: EdgeInsets.only(left: 20),
-                        child: Text(
-                          'All Products',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                    ]),
+      body: FutureBuilder<Map<String, dynamic>>(
+        future: _dataFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            /// 🔥 Shimmer while loading
+            return _buildShimmerUI();
+          }
+
+          if (snapshot.hasError) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text("Failed to load data."),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () {
+                      setState(() {
+                        _dataFuture = loadData(forceRefresh: true);
+                      });
+                    },
+                    child: const Text("Retry"),
                   ),
-                  _buildProductsList(),
                 ],
               ),
+            );
+          }
+
+          final products = snapshot.data!['products'] as List<Product>;
+          final categories = snapshot.data!['categories'] as List<CategoryModel>;
+
+          return RefreshIndicator(
+            onRefresh: () async {
+              setState(() {
+                _dataFuture = loadData(forceRefresh: true);
+              });
+            },
+            child: CustomScrollView(
+              slivers: [
+                SliverList(
+                  delegate: SliverChildListDelegate([
+                    _SearchBar(),
+                    const SizedBox(height: 20),
+                    _buildCategoriesSection(categories),
+                    const SizedBox(height: 20),
+                    const Padding(
+                      padding: EdgeInsets.only(left: 20),
+                      child: Text(
+                        'All Products',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                  ]),
+                ),
+                _buildProductsList(products),
+              ],
             ),
+          );
+        },
+      ),
     );
   }
 
-  /// Builds the horizontal list of categories.
-  Widget _buildCategoriesSection() {
+  /// 🔥 Shimmer Skeleton
+  Widget _buildShimmerUI() {
+    return CustomScrollView(
+      slivers: [
+        SliverList(
+          delegate: SliverChildListDelegate([
+            _SearchBar(),
+            const SizedBox(height: 20),
+            _shimmerCategories(),
+            const SizedBox(height: 20),
+            const Padding(
+              padding: EdgeInsets.only(left: 20),
+              child: Text(
+                'All Products',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+            ),
+            const SizedBox(height: 10),
+          ]),
+        ),
+        _shimmerProducts(),
+      ],
+    );
+  }
+
+  /// 🔥 Shimmer for categories
+  Widget _shimmerCategories() {
+    return SizedBox(
+      height: 90,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.only(left: 20, right: 10),
+        itemCount: 6,
+        itemBuilder: (context, index) {
+          return Shimmer.fromColors(
+            baseColor: Colors.grey.shade300,
+            highlightColor: Colors.grey.shade100,
+            child: Container(
+              width: 80,
+              margin: const EdgeInsets.only(right: 10),
+              child: Column(
+                children: [
+                  Container(
+                    height: 50,
+                    width: 50,
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    height: 10,
+                    width: 40,
+                    color: Colors.white,
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  /// 🔥 Shimmer for products
+  Widget _shimmerProducts() {
+    return SliverList(
+      delegate: SliverChildBuilderDelegate(
+        (context, index) {
+          return Shimmer.fromColors(
+            baseColor: Colors.grey.shade300,
+            highlightColor: Colors.grey.shade100,
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              height: 120,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          );
+        },
+        childCount: 6,
+      ),
+    );
+  }
+
+  Widget _buildCategoriesSection(List<CategoryModel> categories) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -150,7 +269,7 @@ class _HomePageState extends State<HomePage> {
         ),
         const SizedBox(height: 15),
         SizedBox(
-          height: 90, // Height for the category items with icons
+          height: 90,
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.only(left: 20, right: 10),
@@ -158,7 +277,7 @@ class _HomePageState extends State<HomePage> {
             itemBuilder: (context, index) {
               final category = categories[index];
               return Container(
-                width: 80, // Fixed width for each category item
+                width: 80,
                 margin: const EdgeInsets.only(right: 10),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -172,12 +291,9 @@ class _HomePageState extends State<HomePage> {
                         shape: BoxShape.circle,
                       ),
                       child: SvgPicture.network(
-                        "$_apiBaseUrl${category.icon}", // Use icon URL from the model
-                        placeholderBuilder: (context) => const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        ),
+                        "${AppConfig.ApibaseUrl}${category.icon}",
+                        placeholderBuilder: (context) =>
+                            const CircularProgressIndicator(strokeWidth: 2),
                         colorFilter: const ColorFilter.mode(
                           Colors.amber,
                           BlendMode.srcIn,
@@ -205,152 +321,35 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  /// Builds the vertical list of products as a SliverList.
-  Widget _buildProductsList() {
+  Widget _buildProductsList(List<Product> products) {
     return products.isEmpty
         ? const SliverFillRemaining(
             child: Center(child: Text('No products found.')),
           )
         : SliverList(
-            delegate: SliverChildBuilderDelegate((context, index) {
-              return _buildProductCard(products[index]);
-            }, childCount: products.length),
+            delegate: SliverChildBuilderDelegate(
+              (context, index) {
+                final product = products[index];
+                return InkWell(
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            ProductDetailsPage(productId: product.id),
+                      ),
+                    );
+                  },
+                  child: ProductCard(
+                    product: product,
+                    onWishlistChanged: _onWishlistChanged,
+                  ),
+                );
+              },
+              childCount: products.length,
+            ),
           );
   }
 
-  /// Builds a card widget for a single product.
-  Widget _buildProductCard(Product product) {
-    // ignore: unused_local_variable
-    final String imageUrl = "https://p2prental.runasp.net${product.image}";
-    String formattedDate = '';
-    try {
-      final DateTime parsedDate = DateTime.parse(product.createdAt);
-      formattedDate = DateFormat.yMMMd().format(parsedDate);
-    } catch (e) {
-      formattedDate = product.createdAt;
-      print("Error parsing date: $e");
-    }
-
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(15),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            spreadRadius: 1,
-            blurRadius: 10,
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(10),
-            // --- REPLACED Image.network with CachedNetworkImage ---
-            child: CachedNetworkImage(
-              imageUrl: "https://p2prental.runasp.net${product.image}",
-              width: 100,
-              height: 100,
-              fit: BoxFit.cover,
-              placeholder: (context, url) => Container(
-                width: 100,
-                height: 100,
-                color: Colors.grey[200],
-                child: const Center(
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ),
-              ),
-              errorWidget: (context, url, error) => SizedBox(
-                width: 100,
-                height: 100,
-                child: Icon(Icons.broken_image, color: Colors.grey[400]),
-              ),
-            ),
-            // ---------------------------------------------------
-          ),
-          const SizedBox(width: 15),
-          Expanded(
-            child: SizedBox(
-              height: 100,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  Text(
-                    product.name,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  Row(
-                    children: [
-                      Flexible(
-                        child: Text(
-                          'By: ${product.ownerName}',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey[700],
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                          maxLines: 1,
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        product.availability ? 'Available' : 'Not Available',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: product.availability
-                              ? Colors.green
-                              : Colors.red,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.location_on,
-                        size: 14,
-                        color: Colors.grey[600],
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        product.location,
-                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                      ),
-                      const Spacer(),
-                      Text(
-                        formattedDate,
-                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                      ),
-                    ],
-                  ),
-                  Text(
-                    '₹${product.price.toStringAsFixed(2)}/day',
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.green,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// The search bar widget.
   Container _SearchBar() {
     return Container(
       margin: const EdgeInsets.fromLTRB(20, 20, 20, 0),
@@ -374,7 +373,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  /// The app bar widget.
   AppBar appBar() {
     return AppBar(
       title: const Text(
@@ -392,17 +390,13 @@ class _HomePageState extends State<HomePage> {
         padding: const EdgeInsets.all(8.0),
         child: CircleAvatar(
           backgroundColor: Colors.grey[200],
-          // Use CachedNetworkImage for the background
-          backgroundImage:
-              _currentUser?.pictureUrl != null &&
+          backgroundImage: _currentUser?.pictureUrl != null &&
                   _currentUser!.pictureUrl!.isNotEmpty
               ? CachedNetworkImageProvider(
-                  "https://p2prental.runasp.net${_currentUser!.pictureUrl}",
+                  "${AppConfig.imageBaseUrl}${_currentUser!.pictureUrl}",
                 )
               : null,
-          // Show an icon if there's no image
-          child:
-              _currentUser?.pictureUrl == null ||
+          child: _currentUser?.pictureUrl == null ||
                   _currentUser!.pictureUrl!.isEmpty
               ? const Icon(Icons.person, color: Colors.grey)
               : null,
@@ -412,9 +406,9 @@ class _HomePageState extends State<HomePage> {
         IconButton(
           icon: const Icon(BootstrapIcons.bell_fill, color: Colors.black),
           onPressed: () {
-            Navigator.of(
-              context,
-            ).push(MaterialPageRoute(builder: (context) => const NotificationPage()));
+            Navigator.of(context).push(
+              MaterialPageRoute(builder: (context) => const NotificationPage()),
+            );
           },
           tooltip: 'Notifications',
         ),

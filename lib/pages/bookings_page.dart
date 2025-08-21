@@ -1,10 +1,10 @@
+import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-
 import 'package:myfirstflutterapp/models/BookingResponseDTO.dart';
 import 'package:myfirstflutterapp/services/auth_service.dart';
 import 'package:myfirstflutterapp/services/booking_service.dart';
-import 'package:myfirstflutterapp/widgets/booking_card.dart'; // We will create this next
-import 'package:flutter/material.dart';
+import 'package:myfirstflutterapp/widgets/booking_card.dart';
+import 'package:shimmer/shimmer.dart';
 
 class BookingsPage extends StatefulWidget {
   const BookingsPage({super.key});
@@ -22,8 +22,8 @@ class _BookingsPageState extends State<BookingsPage> {
   bool _isLoading = true;
   String? _errorMessage;
   String? _currentUserId;
-  List<BookingResponseDTO> _myRentals = []; // Bookings where I am the renter
-  List<BookingResponseDTO> _myItemsBookings = []; // Bookings where I am the owner
+  List<BookingResponseDTO> _myRentals = [];
+  List<BookingResponseDTO> _myItemsBookings = [];
 
   @override
   void initState() {
@@ -32,7 +32,6 @@ class _BookingsPageState extends State<BookingsPage> {
   }
 
   Future<void> _fetchBookings() async {
-    // Ensure the initial state is loading
     if (!_isLoading) {
       setState(() {
         _isLoading = true;
@@ -42,17 +41,13 @@ class _BookingsPageState extends State<BookingsPage> {
 
     try {
       final userId = await _authService.getUserId();
-      if (userId == null) {
-        throw Exception("User not authenticated.");
-      }
+      if (userId == null) throw Exception("User not authenticated.");
 
       final allBookings = await _bookingService.getMyBookings();
 
-      // Filter bookings into two separate lists
       final rentals = allBookings.where((b) => b.renterId == userId).toList();
       final itemBookings = allBookings.where((b) => b.ownerId == userId).toList();
-      
-      // Sort bookings by creation date, newest first
+
       rentals.sort((a, b) => b.createdAt.compareTo(a.createdAt));
       itemBookings.sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
@@ -77,7 +72,7 @@ class _BookingsPageState extends State<BookingsPage> {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 2, // The number of tabs
+      length: 2,
       child: Scaffold(
         appBar: AppBar(
           title: const Text('My Bookings'),
@@ -90,29 +85,20 @@ class _BookingsPageState extends State<BookingsPage> {
         ),
         body: TabBarView(
           children: [
-            // "My Rentals" Tab Content
-            _buildBookingList(
-              bookings: _myRentals,
-              isRentalView: true,
-            ),
-            // "My Items" Tab Content
-            _buildBookingList(
-              bookings: _myItemsBookings,
-              isRentalView: false,
-            ),
+            _buildBookingList(bookings: _myRentals, isRentalView: true),
+            _buildBookingList(bookings: _myItemsBookings, isRentalView: false),
           ],
         ),
       ),
     );
   }
 
-  /// A helper widget to build the list view for each tab.
   Widget _buildBookingList({
     required List<BookingResponseDTO> bookings,
     required bool isRentalView,
   }) {
     if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return _buildShimmerLoader();
     }
 
     if (_errorMessage != null) {
@@ -120,6 +106,8 @@ class _BookingsPageState extends State<BookingsPage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            const Icon(Icons.error_outline, color: Colors.redAccent, size: 48),
+            const SizedBox(height: 8),
             Text(_errorMessage!, textAlign: TextAlign.center),
             const SizedBox(height: 16),
             ElevatedButton(
@@ -133,14 +121,23 @@ class _BookingsPageState extends State<BookingsPage> {
 
     if (bookings.isEmpty) {
       return Center(
-        child: Text(
-          isRentalView ? "You haven't rented any items yet." : "You have no booking requests for your items.",
-          style: const TextStyle(color: Colors.grey, fontSize: 16),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.inbox, size: 64, color: Colors.grey.shade400),
+            const SizedBox(height: 12),
+            Text(
+              isRentalView
+                  ? "You haven't rented any items yet."
+                  : "No one has booked your items yet.",
+              style: const TextStyle(color: Colors.grey, fontSize: 16),
+              textAlign: TextAlign.center,
+            ),
+          ],
         ),
       );
     }
 
-    // Use RefreshIndicator for pull-to-refresh
     return RefreshIndicator(
       onRefresh: _fetchBookings,
       child: ListView.builder(
@@ -152,10 +149,32 @@ class _BookingsPageState extends State<BookingsPage> {
             booking: booking,
             isRentalView: isRentalView,
             currentUserId: _currentUserId!,
-            onAction: _fetchBookings, // Pass a callback to refresh the list after an action
+            onAction: _fetchBookings,
           );
         },
       ),
+    );
+  }
+
+  /// Shimmer loading placeholder
+  Widget _buildShimmerLoader() {
+    return ListView.builder(
+      itemCount: 4,
+      padding: const EdgeInsets.all(8),
+      itemBuilder: (context, index) {
+        return Shimmer.fromColors(
+          baseColor: Colors.grey.shade300,
+          highlightColor: Colors.grey.shade100,
+          child: Container(
+            margin: const EdgeInsets.symmetric(vertical: 8),
+            height: 100,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        );
+      },
     );
   }
 }

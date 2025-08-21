@@ -16,14 +16,16 @@ class _AuthCheckScreenState extends State<AuthCheckScreen> {
   @override
   void initState() {
     super.initState();
-    // Use addPostFrameCallback to ensure the build is complete before navigating
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkLoginStatus();
     });
   }
 
   Future<void> _checkLoginStatus() async {
-    // We will add the isLoggedIn method to the AuthService next.
+    // ✅ FIX: Add a minimal delay to ensure all initializations in main() are complete.
+    // This pushes the navigation to the next event loop, resolving the race condition.
+    await Future.delayed(Duration.zero);
+
     final bool loggedIn = await _authService.isLoggedIn();
 
     if (mounted) {

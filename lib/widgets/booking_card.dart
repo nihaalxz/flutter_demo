@@ -9,7 +9,7 @@ class BookingCard extends StatelessWidget {
   final BookingResponseDTO booking;
   final bool isRentalView;
   final String currentUserId;
-  final VoidCallback onAction; // Callback to refresh the list
+  final VoidCallback onAction;
 
   const BookingCard({
     super.key,
@@ -22,33 +22,47 @@ class BookingCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final title = booking.itemName;
-    final subtitle = isRentalView ? "Rented from: ${booking.ownerName}" : "Rented by: ${booking.renterName}";
+    final subtitle = isRentalView
+        ? "Rented from: ${booking.ownerName}"
+        : "Rented by: ${booking.renterName}";
     final dateFormat = DateFormat('MMM d, y');
-    final dateRange = "${dateFormat.format(booking.startDate)} - ${dateFormat.format(booking.endDate)}";
+    final dateRange =
+        "${dateFormat.format(booking.startDate)} - ${dateFormat.format(booking.endDate)}";
     final price = "${booking.totalPrice.toStringAsFixed(2)}";
     final imageUrl = "${AppConfig.imageBaseUrl}${booking.itemImage}";
 
     return Card(
-      margin: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
-      elevation: 4, // Increased elevation for more depth
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), // Slightly more rounded corners
+      margin: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 6.0),
+      elevation: 5,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      clipBehavior: Clip.antiAlias, // ensures smooth rounded corners
       child: Padding(
-        padding: const EdgeInsets.all(16.0), // Increased padding for better spacing
+        padding: const EdgeInsets.all(14.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Top section: Image + details
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 ClipRRect(
-                  borderRadius: BorderRadius.circular(12), // Slightly more rounded image
+                  borderRadius: BorderRadius.circular(12),
                   child: CachedNetworkImage(
                     imageUrl: imageUrl,
-                    width: 90, // Slightly larger image
-                    height: 90,
+                    width: 95,
+                    height: 95,
                     fit: BoxFit.cover,
-                    placeholder: (context, url) => Container(color: Colors.grey[200]),
-                    errorWidget: (context, url, error) => const Icon(Icons.broken_image, color: Colors.grey),
+                    placeholder: (context, url) => Container(
+                      width: 95,
+                      height: 95,
+                      color: Colors.grey[200],
+                      child: const Center(
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    ),
+                    errorWidget: (context, url, error) =>
+                        const Icon(Icons.broken_image,
+                            color: Colors.grey, size: 40),
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -56,23 +70,35 @@ class BookingCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold), maxLines: 1, overflow: TextOverflow.ellipsis), // Larger title font
+                      Text(title,
+                          style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              overflow: TextOverflow.ellipsis)),
                       const SizedBox(height: 6),
                       Row(
                         children: [
-                          Icon(Icons.person_outline, size: 16, color: Colors.grey[700]),
+                          const Icon(Icons.person_outline,
+                              size: 16, color: Colors.grey),
                           const SizedBox(width: 4),
                           Expanded(
-                            child: Text(subtitle, style: TextStyle(fontSize: 14, color: Colors.grey[700]), maxLines: 2, overflow: TextOverflow.ellipsis), // Allow 2 lines for subtitle
+                            child: Text(subtitle,
+                                style: const TextStyle(
+                                    fontSize: 14, color: Colors.black54),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis),
                           ),
                         ],
                       ),
                       const SizedBox(height: 6),
                       Row(
                         children: [
-                          Icon(Icons.calendar_today, size: 16, color: Colors.grey[700]),
+                          const Icon(Icons.calendar_today,
+                              size: 16, color: Colors.grey),
                           const SizedBox(width: 4),
-                          Text(dateRange, style: TextStyle(fontSize: 14, color: Colors.grey[700])),
+                          Text(dateRange,
+                              style: const TextStyle(
+                                  fontSize: 14, color: Colors.black54)),
                         ],
                       ),
                     ],
@@ -80,20 +106,29 @@ class BookingCard extends StatelessWidget {
                 ),
               ],
             ),
-            const Divider(height: 24),
+
+            const Divider(height: 28),
+
+            // Bottom row: Status + Price
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 _StatusChip(status: booking.status),
                 Row(
                   children: [
-                    Icon(Icons.currency_rupee, size: 18, color: Colors.green),
-                    Text(price, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.green)),
+                    const Icon(Icons.currency_rupee,
+                        size: 18, color: Colors.green),
+                    Text(price,
+                        style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.green)),
                   ],
                 ),
               ],
             ),
-            // Show action buttons if the booking is in a 'Pending' state
+
+            // Conditional action buttons
             if (booking.status.toLowerCase() == 'pending')
               _ActionButtons(
                 bookingId: booking.id,
@@ -107,7 +142,7 @@ class BookingCard extends StatelessWidget {
   }
 }
 
-/// A chip to display the booking status with appropriate colors.
+/// Booking status chip
 class _StatusChip extends StatelessWidget {
   final String status;
   const _StatusChip({required this.status});
@@ -139,15 +174,17 @@ class _StatusChip extends StatelessWidget {
 
     return Chip(
       avatar: Icon(icon, color: Colors.white, size: 18),
-      label: Text(status, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+      label: Text(status.toUpperCase(),
+          style: const TextStyle(
+              color: Colors.white, fontWeight: FontWeight.bold)),
       backgroundColor: color,
-      padding: const EdgeInsets.symmetric(horizontal: 8),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)), // More rounded chip
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
     );
   }
 }
 
-/// A widget to show contextual action buttons (Approve/Reject or Cancel).
+/// Approve/Reject or Cancel actions
 class _ActionButtons extends StatelessWidget {
   final int bookingId;
   final bool isOwnerView;
@@ -166,19 +203,23 @@ class _ActionButtons extends StatelessWidget {
     void handleAction(Future<void> Function(int) action) async {
       try {
         await action(bookingId);
-        onAction(); // Trigger the refresh callback
+        onAction();
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Action successful!"), backgroundColor: Colors.green),
+          const SnackBar(
+              content: Text("Action successful!"),
+              backgroundColor: Colors.green),
         );
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Action failed: ${e.toString()}"), backgroundColor: Colors.red),
+          SnackBar(
+              content: Text("Action failed: ${e.toString()}"),
+              backgroundColor: Colors.red),
         );
       }
     }
 
     return Padding(
-      padding: const EdgeInsets.only(top: 16.0), // Increased top padding
+      padding: const EdgeInsets.only(top: 16.0),
       child: isOwnerView
           ? Row(
               mainAxisAlignment: MainAxisAlignment.end,
@@ -186,15 +227,23 @@ class _ActionButtons extends StatelessWidget {
                 ElevatedButton.icon(
                   icon: const Icon(Icons.cancel),
                   label: const Text('Reject'),
-                  onPressed: () => handleAction(bookingService.rejectBooking),
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.red, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+                  onPressed: () =>
+                      handleAction(bookingService.rejectBooking),
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8))),
                 ),
                 const SizedBox(width: 8),
                 ElevatedButton.icon(
                   icon: const Icon(Icons.check),
                   label: const Text('Approve'),
-                  onPressed: () => handleAction(bookingService.approveBooking),
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.green, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+                  onPressed: () =>
+                      handleAction(bookingService.approveBooking),
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8))),
                 ),
               ],
             )
@@ -204,8 +253,14 @@ class _ActionButtons extends StatelessWidget {
                 OutlinedButton.icon(
                   icon: const Icon(Icons.cancel),
                   label: const Text('Cancel Request'),
-                  onPressed: () => handleAction(bookingService.cancelBooking),
-                  style: OutlinedButton.styleFrom(foregroundColor: Colors.red, side: const BorderSide(color: Colors.red), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+                  onPressed: () =>
+                      handleAction(bookingService.cancelBooking),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.red,
+                    side: const BorderSide(color: Colors.red),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8)),
+                  ),
                 ),
               ],
             ),

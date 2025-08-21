@@ -29,7 +29,7 @@ class ProductAdapter extends TypeAdapter<Product> {
       ownerName: fields[9] as String,
       location: fields[10] as String,
       availability: fields[11] as bool,
-      createdAt: fields[12] as String,
+      createdAt: fields[12] as DateTime,
       status: fields[13] as String,
       views: fields[14] as int,
     );
