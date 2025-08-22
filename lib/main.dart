@@ -1,9 +1,12 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'models/product_model.dart'; 
+import 'package:myfirstflutterapp/state/AppStateManager.dart';
+import 'package:provider/provider.dart';
+import 'models/product_model.dart';
 import 'models/category_model.dart';
 import '../pages/Auth/auth_check_screen.dart';
+import 'services/theme_provider.dart';
 
 Future<void> main() async {
   // Ensure Flutter is initialized
@@ -22,9 +25,16 @@ Future<void> main() async {
   // Open your boxes (like tables in a database)
   await Hive.openBox('p2p_cache');
 
-  // ✅ Initialize notification service
-
-  runApp(const MyApp());
+runApp(
+    // ✅ 2. Use MultiProvider to provide all your state managers
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),
+        ChangeNotifierProvider(create: (_) => AppStateManager()), // 👈 Add your new provider
+      ],
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -32,11 +42,26 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(primarySwatch: Colors.blue),
-      debugShowCheckedModeBanner: false,
-      home: const AuthCheckScreen(),
+    // ✅ FIX: Wrap MaterialApp with a Consumer to get the themeProvider
+    return Consumer<ThemeProvider>(
+      builder: (context, themeProvider, child) {
+        return MaterialApp(
+          title: 'Flutter Demo',
+          // Now 'themeProvider' is defined and can be used here
+          themeMode: themeProvider.isDarkMode ? ThemeMode.dark : ThemeMode.light,
+          theme: ThemeData(
+            primarySwatch: Colors.blue,
+            brightness: Brightness.light,
+          ),
+          darkTheme: ThemeData(
+            primarySwatch: Colors.blue,
+            brightness: Brightness.dark,
+            // You can further customize your dark theme here
+          ),
+          debugShowCheckedModeBanner: false,
+          home: const AuthCheckScreen(),
+        );
+      },
     );
   }
 }

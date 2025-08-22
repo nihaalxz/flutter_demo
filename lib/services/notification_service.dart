@@ -4,37 +4,45 @@ import 'package:http/http.dart' as http;
 import 'package:signalr_netcore/signalr_client.dart';
 
 // --- Assumed Imports ---
-// You will need to replace these with your actual files for configuration and authentication.
 import '../models/notification_model.dart'; 
-import '../environment/env.dart'; // A file containing your base API URL, e.g., final String baseUrl = "https://yourapi.com";
-import 'auth_service.dart'; // A service to get the current user's ID and JWT token.
+import '../environment/env.dart';
+import 'auth_service.dart';
 
 class NotificationService {
+  // ✅ FIX: Changed to the static getter pattern
+  // 1. Private constructor
+  NotificationService._internal();
+
+  // 2. The single, static, public instance
+  static final NotificationService instance = NotificationService._internal();
+
+  // ❌ REMOVED: The factory constructor is no longer needed
+  // factory NotificationService() => _instance;
+
   final String _baseUrl = AppConfig.ApibaseUrl; 
-  final AuthService _authService = AuthService(); // Your auth service instance.
+  final AuthService _authService = AuthService();
 
   // --- Real-time SignalR Hub Connection ---
-
   HubConnection? _hubConnection;
   
-  // A StreamController to broadcast incoming real-time notifications to the app UI.
   final StreamController<NotificationModel> _notificationController = StreamController<NotificationModel>.broadcast();
   
-  // Expose the stream for UI widgets to listen to.
   Stream<NotificationModel> get notificationStream => _notificationController.stream;
 
   /// Initializes and starts the connection to the SignalR hub.
   Future<void> connectToNotificationHub() async {
     final token = await _authService.getToken();
+    
     if (token == null) {
       print("NotificationService: Authentication token not found. Cannot connect to hub.");
       return;
     }
 
-    // Configure the hub connection
+    // ✅ FIX: Corrected the SignalR Hub URL to not include /api
+    final hubUrl = _baseUrl.replaceAll("/api", ""); // Remove /api if it exists for SignalR
     _hubConnection = HubConnectionBuilder()
         .withUrl(
-          '$_baseUrl/notificationHub', // The URL of your SignalR hub
+          '$hubUrl/notificationHub', // The URL of your SignalR hub
           options: HttpConnectionOptions(
             accessTokenFactory: () async => token, // Provide the auth token
           ),
@@ -47,10 +55,8 @@ class NotificationService {
       if (message != null && message.isNotEmpty) {
         try {
           final data = message[0] as Map<String, dynamic>;
-          // Manually construct a NotificationModel from the SignalR payload
-          // The payload from the C# code might be slightly different than the REST API response
           final notification = NotificationModel.fromJson({
-            'id': data['id'] ?? 0, // ID might not be sent in real-time push, handle gracefully
+            'id': data['id'] ?? 0,
             'userId': data['userId'] ?? '',
             'title': data['title'],
             'message': data['message'],
@@ -59,7 +65,7 @@ class NotificationService {
             'isRead': data['isRead'],
             'type': data['type'] 
           });
-          _notificationController.add(notification); // Add the new notification to the stream
+          _notificationController.add(notification);
         } catch (e) {
           print("Error parsing received real-time notification: $e");
         }
@@ -78,7 +84,9 @@ class NotificationService {
   /// Closes the SignalR hub connection and the stream controller.
   Future<void> disconnectFromNotificationHub() async {
     await _hubConnection?.stop();
-    _notificationController.close();
+    // Do not close the stream controller if the app might reconnect later.
+    // Only close it if the user is permanently logging out.
+    // _notificationController.close(); 
     print('Notification Hub connection closed.');
   }
 
@@ -86,12 +94,12 @@ class NotificationService {
   // --- REST API Methods ---
 
   /// Fetches a list of notifications for the authenticated user.
-  /// Corresponds to: [GET api/Notifications/user/{userId}]
   Future<List<NotificationModel>> getNotifications({String? type}) async {
     final userId = await _authService.getUserId();
     final token = await _authService.getToken();
     if (userId == null || token == null) throw Exception('User not authenticated.');
     
+    // ✅ FIX: Removed hardcoded /api
     var uri = Uri.parse('$_baseUrl/Notifications/user/$userId');
     if (type != null) {
       uri = uri.replace(queryParameters: {'type': type});
@@ -110,7 +118,6 @@ class NotificationService {
   }
 
   /// Fetches the count of unread notifications for the user.
-  /// Corresponds to: [GET api/Notifications/user/{userId}/unread-count]
   Future<int> getUnreadCount() async {
     final userId = await _authService.getUserId();
     final token = await _authService.getToken();
@@ -130,15 +137,12 @@ class NotificationService {
   }
 
   /// Marks a single notification as read by its ID.
-  /// Corresponds to: [PUT api/Notifications/{id}/mark-read]
   Future<void> markAsRead(int notificationId) async {
-    // Note: The provided C# endpoint is not decorated with [Authorize].
-    // It's a good practice to send the token anyway in case the backend changes.
     final token = await _authService.getToken();
     final uri = Uri.parse('$_baseUrl/Notifications/$notificationId/mark-read');
     
     final response = await http.put(uri, headers: {
-       if (token != null) 'Authorization': 'Bearer $token',
+        if (token != null) 'Authorization': 'Bearer $token',
     });
 
     if (response.statusCode != 200) {
@@ -147,7 +151,6 @@ class NotificationService {
   }
 
   /// Marks all unread notifications for the user as read.
-  /// Corresponds to: [PUT api/Notifications/mark-all-read/{userId}]
   Future<void> markAllAsRead() async {
     final userId = await _authService.getUserId();
     final token = await _authService.getToken();
