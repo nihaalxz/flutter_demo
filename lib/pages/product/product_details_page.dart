@@ -37,8 +37,12 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
   Future<void> _fetchProduct() async {
     try {
       setState(() => isLoading = true);
-      final fetchedProduct = await _productService.getProductById(widget.productId);
-      final fetchedSimilar = await _productService.getSimilarProducts(widget.productId);
+      final fetchedProduct = await _productService.getProductById(
+        widget.productId,
+      );
+      final fetchedSimilar = await _productService.getSimilarProducts(
+        widget.productId,
+      );
 
       setState(() {
         product = fetchedProduct;
@@ -91,7 +95,9 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
     if (startDate != null && endDate != null && product != null) {
       final days = endDate!.difference(startDate!).inDays + 1; // inclusive
       // ignore: unnecessary_type_check
-      final pricePerDay = (product!.price is num) ? (product!.price as num).toDouble() : 0.0;
+      final pricePerDay = (product!.price is num)
+          ? (product!.price as num).toDouble()
+          : 0.0;
       totalPrice = pricePerDay * days;
     } else {
       totalPrice = null;
@@ -99,7 +105,10 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
   }
 
   void _requestBooking() async {
-    if (product == null || startDate == null || endDate == null || totalPrice == null) {
+    if (product == null ||
+        startDate == null ||
+        endDate == null ||
+        totalPrice == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Please select start and end dates")),
       );
@@ -120,9 +129,9 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
 
       if (mounted) Navigator.pushNamed(context, "/my-bookings");
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Booking failed: $e")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Booking failed: $e")));
     }
   }
 
@@ -195,10 +204,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                           child: Shimmer.fromColors(
                             baseColor: Colors.grey[300]!,
                             highlightColor: Colors.grey[100]!,
-                            child: Container(
-                              height: 20,
-                              color: Colors.white,
-                            ),
+                            child: Container(height: 20, color: Colors.white),
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -236,7 +242,10 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                         Shimmer.fromColors(
                           baseColor: Colors.grey[300]!,
                           highlightColor: Colors.grey[100]!,
-                          child: const CircleAvatar(radius: 24, backgroundColor: Colors.white),
+                          child: const CircleAvatar(
+                            radius: 24,
+                            backgroundColor: Colors.white,
+                          ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
@@ -246,13 +255,21 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                               Shimmer.fromColors(
                                 baseColor: Colors.grey[300]!,
                                 highlightColor: Colors.grey[100]!,
-                                child: Container(height: 14, width: double.infinity, color: Colors.white),
+                                child: Container(
+                                  height: 14,
+                                  width: double.infinity,
+                                  color: Colors.white,
+                                ),
                               ),
                               const SizedBox(height: 6),
                               Shimmer.fromColors(
                                 baseColor: Colors.grey[300]!,
                                 highlightColor: Colors.grey[100]!,
-                                child: Container(height: 12, width: 120, color: Colors.white),
+                                child: Container(
+                                  height: 12,
+                                  width: 120,
+                                  color: Colors.white,
+                                ),
                               ),
                             ],
                           ),
@@ -360,7 +377,8 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                         child: ListView.separated(
                           scrollDirection: Axis.horizontal,
                           itemCount: 4,
-                          separatorBuilder: (_, __) => const SizedBox(width: 12),
+                          separatorBuilder: (_, __) =>
+                              const SizedBox(width: 12),
                           itemBuilder: (context, index) {
                             return Container(
                               width: 160,
@@ -380,206 +398,270 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
             )
           // --------------------- END SHIMMER BRANCH ---------------------
           : error != null
-              ? Center(child: Text("Error: $error"))
-              : product == null
-                  ? const Center(child: Text("Product not found"))
-                  : SingleChildScrollView(
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
+          ? Center(child: Text("Error: $error"))
+          : product == null
+          ? const Center(child: Text("Product not found"))
+          : SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Hero image (cached + constrained)
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: AspectRatio(
+                        aspectRatio: 16 / 9,
+                        child: CachedNetworkImage(
+                          imageUrl:
+                              "${AppConfig.imageBaseUrl}${product!.image}",
+                          fit: BoxFit.cover,
+                          placeholder: (context, url) => Container(
+                            color: Colors.grey[300],
+                            child: const Center(
+                              child: CircularProgressIndicator(),
+                            ),
+                          ),
+                          errorWidget: (context, url, error) => const Center(
+                            child: Icon(Icons.broken_image, size: 56),
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // Price + Title
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            product!.name,
+                            style: const TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Text(
+                          "${currency.format(product!.price)}/day",
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.blue,
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 8),
+
+                    // Availability chip
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: (product!.availability == true)
+                                ? Colors.green[100]
+                                : Colors.red[100],
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Text(
+                            (product!.availability == true)
+                                ? 'Available for Rent'
+                                : 'Currently Unavailable',
+                            style: TextStyle(
+                              color: (product!.availability == true)
+                                  ? Colors.green[800]
+                                  : Colors.red[800],
+                              fontWeight: FontWeight.w600,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    // Owner block
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: CircleAvatar(
+                        radius: 24,
+                        backgroundImage:
+                            (product!.ownerProfileImage != null &&
+                                product!.ownerProfileImage!.isNotEmpty)
+                            ? CachedNetworkImageProvider(
+                                "${AppConfig.imageBaseUrl}${product!.ownerProfileImage!}",
+                              )
+                            : const AssetImage(
+                                    "assets/icons/constant/empty-user-profilepic.webp",
+                                  )
+                                  as ImageProvider,
+                      ),
+                      title: Text(product!.ownerName),
+                      subtitle: Text("Posted on $createdAtLabel"),
+                      trailing: OutlinedButton.icon(
+                        onPressed: () {
+                          // TODO: open chat
+                        },
+                        icon: const Icon(Icons.chat_bubble_outline),
+                        label: const Text("Chat"),
+                      ),
+                      onTap: () {
+                        // TODO: navigate to owner products page if needed
+                      },
+                    ),
+
+                    const Divider(height: 24),
+
+                    // Date selection
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text("Rental Dates"),
+                      subtitle: Text(
+                        (startDate != null && endDate != null)
+                            ? "${dateFmt.format(startDate!)} → ${dateFmt.format(endDate!)}"
+                            : "Select rental start & end date",
+                      ),
+                      trailing: ElevatedButton(
+                        onPressed: () => _selectDate(context),
+                        child: const Text("Pick Dates"),
+                      ),
+                    ),
+
+                    if (startDate != null || endDate != null)
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton(
+                          onPressed: _clearDates,
+                          child: const Text("Clear selection"),
+                        ),
+                      ),
+
+                    if (totalPrice != null)
+                      Container(
+                        margin: const EdgeInsets.symmetric(vertical: 12),
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.blue[50],
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.blue[100]!),
+                        ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // Hero image (cached + constrained)
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(16),
-                              child: AspectRatio(
-                                aspectRatio: 16 / 9,
-                                child: CachedNetworkImage(
-                                  imageUrl: "${AppConfig.imageBaseUrl}${product!.image}",
-                                  fit: BoxFit.cover,
-                                  placeholder: (context, url) => Container(
-                                    color: Colors.grey[300],
-                                    child: const Center(child: CircularProgressIndicator()),
-                                  ),
-                                  errorWidget: (context, url, error) =>
-                                      const Center(child: Icon(Icons.broken_image, size: 56)),
-                                ),
+                            const Text(
+                              "Total Estimated Price",
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.blue,
                               ),
                             ),
-
-                            const SizedBox(height: 16),
-
-                            // Price + Title
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    product!.name,
-                                    style: const TextStyle(
-                                      fontSize: 22,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Text(
-                                  "${currency.format(product!.price)}/day",
-                                  style: const TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w700,
-                                    color: Colors.blue,
-                                  ),
-                                ),
-                              ],
-                            ),
-
-                            const SizedBox(height: 8),
-
-                            // Availability chip
-                            Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                  decoration: BoxDecoration(
-                                    color: (product!.availability == true)
-                                        ? Colors.green[100]
-                                        : Colors.red[100],
-                                    borderRadius: BorderRadius.circular(16),
-                                  ),
-                                  child: Text(
-                                    (product!.availability == true)
-                                        ? 'Available for Rent'
-                                        : 'Currently Unavailable',
-                                    style: TextStyle(
-                                      color: (product!.availability == true)
-                                          ? Colors.green[800]
-                                          : Colors.red[800],
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-
-                            const SizedBox(height: 12),
-
-                            // Owner block
-                            ListTile(
-                              contentPadding: EdgeInsets.zero,
-                              leading: CircleAvatar(
-                                radius: 24,
-                                backgroundImage: (product!.ownerProfileImage != null &&
-                                        product!.ownerProfileImage!.isNotEmpty)
-                                    ? CachedNetworkImageProvider(
-                                        "${AppConfig.imageBaseUrl}${product!.ownerProfileImage!}",
-                                      )
-                                    : const AssetImage("assets/icons/constant/empty-user-profilepic.webp")
-                                        as ImageProvider,
-                              ),
-                              title: Text(product!.ownerName),
-                              subtitle: Text("Posted on $createdAtLabel"),
-                              trailing: OutlinedButton.icon(
-                                onPressed: () {
-                                  // TODO: open chat
-                                },
-                                icon: const Icon(Icons.chat_bubble_outline),
-                                label: const Text("Chat"),
-                              ),
-                              onTap: () {
-                                // TODO: navigate to owner products page if needed
-                              },
-                            ),
-
-                            const Divider(height: 24),
-
-                            // Date selection
-                            ListTile(
-                              contentPadding: EdgeInsets.zero,
-                              title: const Text("Rental Dates"),
-                              subtitle: Text(
-                                (startDate != null && endDate != null)
-                                    ? "${dateFmt.format(startDate!)} → ${dateFmt.format(endDate!)}"
-                                    : "Select rental start & end date",
-                              ),
-                              trailing: ElevatedButton(
-                                onPressed: () => _selectDate(context),
-                                child: const Text("Pick Dates"),
+                            const SizedBox(height: 6),
+                            Text(
+                              currency.format(totalPrice),
+                              style: const TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.blue,
                               ),
                             ),
+                          ],
+                        ),
+                      ),
 
-                            if (startDate != null || endDate != null)
-                              Align(
-                                alignment: Alignment.centerRight,
-                                child: TextButton(
-                                  onPressed: _clearDates,
-                                  child: const Text("Clear selection"),
-                                ),
-                              ),
+                    // Request button
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed:
+                            (product!.availability == true && endDate != null)
+                            ? _requestBooking
+                            : null,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.indigo,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text("Request Rental"),
+                      ),
+                    ),
 
-                            if (totalPrice != null)
-                              Container(
-                                margin: const EdgeInsets.symmetric(vertical: 12),
-                                padding: const EdgeInsets.all(16),
-                                decoration: BoxDecoration(
-                                  color: Colors.blue[50],
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(color: Colors.blue[100]!),
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const Text(
-                                      "Total Estimated Price",
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w600,
-                                        color: Colors.blue,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 6),
-                                    Text(
-                                      currency.format(totalPrice),
-                                      style: const TextStyle(
-                                        fontSize: 22,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.blue,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
+                    const SizedBox(height: 24),
 
-                            // Request button
-                            SizedBox(
-                              width: double.infinity,
-                              child: ElevatedButton(
-                                onPressed: (product!.availability == true && endDate != null)
-                                    ? _requestBooking
-                                    : null,
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.indigo,
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(vertical: 16),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                ),
-                                child: const Text("Request Rental"),
-                              ),
+                    // Description
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.all(Radius.circular(12)),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black12,
+                            blurRadius: 6,
+                            offset: Offset(0, 3),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            "Description",
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
                             ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(product!.description),
+                        ],
+                      ),
+                    ),
 
-                            const SizedBox(height: 24),
+                    const SizedBox(height: 24),
 
-                            // Description
-                            Container(
-                              padding: const EdgeInsets.all(16),
+                    // Similar products
+                    if (similarProducts.isNotEmpty) ...[
+                      const Text(
+                        "Similar Products",
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        height: 220,
+                        child: ListView.separated(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: similarProducts.length,
+                          separatorBuilder: (_, __) =>
+                              const SizedBox(width: 12),
+                          itemBuilder: (context, index) {
+                            final sim = similarProducts[index];
+                            return Container(
+                              width: 160,
+                              padding: const EdgeInsets.all(8),
                               decoration: const BoxDecoration(
                                 color: Colors.white,
-                                borderRadius: BorderRadius.all(Radius.circular(12)),
+                                borderRadius: BorderRadius.all(
+                                  Radius.circular(12),
+                                ),
                                 boxShadow: [
                                   BoxShadow(
                                     color: Colors.black12,
@@ -591,115 +673,69 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Text(
-                                    "Description",
-                                    style: TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(8),
+                                    child: AspectRatio(
+                                      aspectRatio: 16 / 9,
+                                      child: CachedNetworkImage(
+                                        imageUrl:
+                                            '${AppConfig.imageBaseUrl}${sim.image}',
+                                        fit: BoxFit.cover,
+                                        placeholder: (context, url) =>
+                                            Container(
+                                              color: Colors.grey[300],
+                                              child: const Center(
+                                                child:
+                                                    CircularProgressIndicator(),
+                                              ),
+                                            ),
+                                        errorWidget: (context, url, error) =>
+                                            const Icon(Icons.error, size: 40),
+                                      ),
                                     ),
                                   ),
                                   const SizedBox(height: 8),
-                                  Text(product!.description),
+                                  Text(
+                                    sim.name,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  Text(
+                                    "${currency.format(sim.price)}/day",
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.blue,
+                                    ),
+                                  ),
+                                  const Spacer(),
+                                  TextButton(
+                                    onPressed: () {
+                                      Navigator.pushReplacement(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) => ProductDetailsPage(
+                                            productId: sim.id,
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                    child: const Text("View"),
+                                  ),
                                 ],
                               ),
-                            ),
-
-                            const SizedBox(height: 24),
-
-                            // Similar products
-                            if (similarProducts.isNotEmpty) ...[
-                              const Text(
-                                "Similar Products",
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-                              SizedBox(
-                                height: 220,
-                                child: ListView.separated(
-                                  scrollDirection: Axis.horizontal,
-                                  itemCount: similarProducts.length,
-                                  separatorBuilder: (_, __) => const SizedBox(width: 12),
-                                  itemBuilder: (context, index) {
-                                    final sim = similarProducts[index];
-                                    return Container(
-                                      width: 160,
-                                      padding: const EdgeInsets.all(8),
-                                      decoration: const BoxDecoration(
-                                        color: Colors.white,
-                                        borderRadius: BorderRadius.all(Radius.circular(12)),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: Colors.black12,
-                                            blurRadius: 6,
-                                            offset: Offset(0, 3),
-                                          ),
-                                        ],
-                                      ),
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          ClipRRect(
-                                            borderRadius: BorderRadius.circular(8),
-                                            child: AspectRatio(
-                                              aspectRatio: 16 / 9,
-                                              child: CachedNetworkImage(
-                                                imageUrl:
-                                                    '${AppConfig.imageBaseUrl}${sim.image}',
-                                                fit: BoxFit.cover,
-                                                placeholder: (context, url) => Container(
-                                                  color: Colors.grey[300],
-                                                  child: const Center(
-                                                      child: CircularProgressIndicator()),
-                                                ),
-                                                errorWidget: (context, url, error) =>
-                                                    const Icon(Icons.error, size: 40),
-                                              ),
-                                            ),
-                                          ),
-                                          const SizedBox(height: 8),
-                                          Text(
-                                            sim.name,
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.w600,
-                                            ),
-                                          ),
-                                          Text(
-                                            "${currency.format(sim.price)}/day",
-                                            style: const TextStyle(
-                                              fontSize: 14,
-                                              fontWeight: FontWeight.bold,
-                                              color: Colors.blue,
-                                            ),
-                                          ),
-                                          const Spacer(),
-                                          TextButton(
-                                            onPressed: () {
-                                              Navigator.pushReplacement(
-                                                context,
-                                                MaterialPageRoute(
-                                                  builder: (_) =>
-                                                      ProductDetailsPage(productId: sim.id),
-                                                ),
-                                              );
-                                            },
-                                            child: const Text("View"),
-                                          ),
-                                        ],
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ),
-                            ],
-                          ],
+                            );
+                          },
                         ),
                       ),
-                    ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
     );
   }
 }
