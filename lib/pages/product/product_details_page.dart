@@ -1,7 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-
 import '../../environment/env.dart';
 import '../../models/product_model.dart';
 import '../../services/product_service.dart';
@@ -91,6 +90,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
   void _calculateTotal() {
     if (startDate != null && endDate != null && product != null) {
       final days = endDate!.difference(startDate!).inDays + 1; // inclusive
+      // ignore: unnecessary_type_check
       final pricePerDay = (product!.price is num) ? (product!.price as num).toDouble() : 0.0;
       totalPrice = pricePerDay * days;
     } else {
@@ -141,7 +141,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
     final createdAtDt = _asDateTime(product?.createdAt);
     final createdAtLabel = createdAtDt != null
         ? dateFmt.format(createdAtDt)
-        : (product?.createdAt?.toString() ?? '');
+        : (product?.createdAt.toString() ?? '');
 
     return Scaffold(
       backgroundColor: Colors.grey[50],
@@ -480,7 +480,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                                     : const AssetImage("assets/icons/constant/empty-user-profilepic.webp")
                                         as ImageProvider,
                               ),
-                              title: Text(product!.ownerName ?? "Owner"),
+                              title: Text(product!.ownerName),
                               subtitle: Text("Posted on $createdAtLabel"),
                               trailing: OutlinedButton.icon(
                                 onPressed: () {
@@ -599,7 +599,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                                     ),
                                   ),
                                   const SizedBox(height: 8),
-                                  Text(product!.description ?? "No description available."),
+                                  Text(product!.description),
                                 ],
                               ),
                             ),

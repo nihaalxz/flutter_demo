@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:shimmer/shimmer.dart';
 import 'package:timeago/timeago.dart' as timeago;
+
 import '../models/notification_model.dart';
 import '../services/notification_service.dart';
 
@@ -12,35 +14,31 @@ class NotificationPage extends StatefulWidget {
 }
 
 class _NotificationPageState extends State<NotificationPage> {
-  // Instantiate the service to use its methods.
-  final NotificationService _notificationService = NotificationService();
-  
-  List<NotificationModel> _notifications = [];
+  final NotificationService _notificationService = NotificationService.instance;
+
+  final List<NotificationModel> _notifications = [];
   bool _isLoading = true;
   String? _errorMessage;
-  
-  // Subscription to listen for real-time notifications from the service stream.
+
   StreamSubscription<NotificationModel>? _notificationSubscription;
 
   @override
   void initState() {
     super.initState();
-    // Fetch initial data when the widget is first created.
     _fetchNotifications();
-    // Start listening for real-time updates.
     _listenToRealtimeNotifications();
   }
 
   @override
   void dispose() {
-    // IMPORTANT: Cancel the stream subscription to prevent memory leaks.
     _notificationSubscription?.cancel();
     super.dispose();
   }
 
-  /// Fetches notifications from the API and updates the UI state.
+  // ------------------------------
+  // Data
+  // ------------------------------
   Future<void> _fetchNotifications() async {
-    // Set loading state only if it's the initial load.
     if (_notifications.isEmpty) {
       setState(() {
         _isLoading = true;
@@ -49,90 +47,149 @@ class _NotificationPageState extends State<NotificationPage> {
     }
 
     try {
-      final notifications = await _notificationService.getNotifications();
+      final list = await _notificationService.getNotifications();
       setState(() {
-        _notifications = notifications;
+        _notifications
+          ..clear()
+          ..addAll(list);
       });
     } catch (e) {
-      setState(() {
-        _errorMessage = "Failed to load notifications. Please try again.";
-      });
-      print(e); // For debugging
+      setState(() => _errorMessage = 'Failed to load notifications. Please try again.');
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  /// Subscribes to the notification stream from the service.
   void _listenToRealtimeNotifications() {
-    _notificationSubscription = _notificationService.notificationStream.listen((notification) {
-      // When a new notification arrives, add it to the top of the list.
+    _notificationSubscription =
+        _notificationService.notificationStream.listen((notification) {
+      // Ensure newest on top
       setState(() {
         _notifications.insert(0, notification);
       });
-      // Optionally, show a snackbar or some other UI feedback.
+
+      // Optional toast
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text("New notification: ${notification.title}"),
+          content: Text('New: ${notification.title}'),
           backgroundColor: Colors.green,
+          behavior: SnackBarBehavior.floating,
         ),
       );
     });
   }
 
-  /// Marks all notifications as read and refreshes the list.
   Future<void> _markAllAsRead() async {
     try {
-      await _notificationService.markAllAsRead();
-      // Optimistically update the UI for a faster user experience.
+      // Optimistic UI
       setState(() {
-        // ignore: unused_local_variable
-        for (var n in _notifications) {
-          // This requires the 'isRead' property in NotificationModel to be mutable.
-          // If it's final, you'd need to recreate the list with updated items.
-          // For simplicity, let's assume it's mutable or we refetch.
+        for (var i = 0; i < _notifications.length; i++) {
+          final n = _notifications[i];
+          _notifications[i] = NotificationModel(
+            id: n.id,
+            userId: n.userId,
+            title: n.title,
+            message: n.message,
+            description: n.description,
+            createdAt: n.createdAt,
+            isRead: true,
+            type: n.type,
+          );
         }
       });
-      // Refresh the list from the server to ensure consistency.
-      await _fetchNotifications();
+
+      await _notificationService.markAllAsRead();
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("All notifications marked as read.")),
+        const SnackBar(content: Text('All notifications marked as read.')),
       );
-    } catch (e) {
+    } catch (_) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Could not mark all as read."), backgroundColor: Colors.red),
+        const SnackBar(
+          content: Text('Could not mark all as read.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      // Refresh from server if needed
+      _fetchNotifications();
+    }
+  }
+
+  Future<void> _markOneAsRead(int index) async {
+    final orig = _notifications[index];
+    if (orig.isRead) return;
+
+    // Optimistic UI
+    setState(() {
+      _notifications[index] = NotificationModel(
+        id: orig.id,
+        userId: orig.userId,
+        title: orig.title,
+        message: orig.message,
+        description: orig.description,
+        createdAt: orig.createdAt,
+        isRead: true,
+        type: orig.type,
+      );
+    });
+
+    try {
+      await _notificationService.markAsRead(orig.id);
+    } catch (_) {
+      // Revert on failure
+      setState(() => _notifications[index] = orig);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Failed to update notification.'),
+          backgroundColor: Colors.red,
+        ),
       );
     }
   }
 
-  /// Helper to return an icon based on notification type.
-  Icon _getNotificationIcon(NotificationType type) {
+  // ------------------------------
+  // UI Helpers
+  // ------------------------------
+  IconData _iconForType(NotificationType type) {
     switch (type) {
       case NotificationType.Promotional:
-        return const Icon(Icons.campaign, color: Colors.blue);
+        return Icons.campaign;
+      case NotificationType.Transactional: // Bookings, confirmations, etc.
+        return Icons.event_available;
       case NotificationType.Alert:
-        return const Icon(Icons.warning, color: Colors.orange);
+        return Icons.warning_amber_rounded;
+      case NotificationType.Payments:
+        return Icons.currency_rupee;
       case NotificationType.Message:
-        return const Icon(Icons.message, color: Colors.green);
+        return Icons.chat_bubble_outline;
       default:
-        return const Icon(Icons.notifications, color: Colors.grey);
+        return Icons.notifications;
     }
   }
 
+  // Strip simple HTML tags like <b>...</b>
+  String _stripHtml(String? input) {
+    if (input == null) return '';
+    final noTags = input.replaceAll(RegExp(r'<[^>]*>'), '');
+    return noTags.replaceAll('&nbsp;', ' ').trim();
+  }
+
+  // ------------------------------
+  // Build
+  // ------------------------------
   @override
   Widget build(BuildContext context) {
+    final hasUnread = _notifications.any((n) => !n.isRead);
+
     return Scaffold(
+      backgroundColor: const Color(0xFFF7F8FA),
       appBar: AppBar(
-        title: const Text("Notifications"),
+        title: const Text('Notifications'),
         actions: [
-          // Show the "Mark all as read" button only if there are unread notifications.
-          if (_notifications.any((n) => !n.isRead))
+          if (hasUnread)
             IconButton(
-              icon: const Icon(Icons.done_all),
-              tooltip: "Mark all as read",
+              tooltip: 'Mark all as read',
               onPressed: _markAllAsRead,
+              icon: const Icon(Icons.done_all),
             ),
         ],
       ),
@@ -143,90 +200,188 @@ class _NotificationPageState extends State<NotificationPage> {
     );
   }
 
-  /// Builds the main body content based on the current state.
   Widget _buildBody() {
-    if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
+    if (_isLoading) return _buildShimmerList();
 
     if (_errorMessage != null) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(_errorMessage!, textAlign: TextAlign.center),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: _fetchNotifications,
-              child: const Text("Retry"),
+      return ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        children: [
+          const SizedBox(height: 120),
+          Icon(Icons.cloud_off, size: 56, color: Colors.grey.shade500),
+          const SizedBox(height: 16),
+          Center(
+            child: Text(
+              _errorMessage!,
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.grey.shade700),
             ),
-          ],
-        ),
+          ),
+          const SizedBox(height: 16),
+          Center(
+            child: ElevatedButton(
+              onPressed: _fetchNotifications,
+              child: const Text('Retry'),
+            ),
+          ),
+        ],
       );
     }
 
     if (_notifications.isEmpty) {
-      return const Center(
-        child: Text(
-          "You have no notifications.",
-          style: TextStyle(color: Colors.grey, fontSize: 16),
-        ),
+      return ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        children: const [
+          SizedBox(height: 140),
+          Center(
+            child: Text(
+              "🎉 You're all caught up!\nNo new notifications.",
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.grey, fontSize: 16),
+            ),
+          ),
+        ],
       );
     }
 
     return ListView.builder(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.symmetric(vertical: 8),
       itemCount: _notifications.length,
       itemBuilder: (context, index) {
-        final notification = _notifications[index];
-        final bool isUnread = !notification.isRead;
-        
+        final n = _notifications[index];
+        final isUnread = !n.isRead;
+
         return InkWell(
-          onTap: () async {
-            if (isUnread) {
-              try {
-                // Optimistically update UI
-                setState(() {
-                  // To update a final property, replace the object in the list
-                  _notifications[index] = NotificationModel(
-                      id: notification.id,
-                      userId: notification.userId,
-                      title: notification.title,
-                      description: notification.description,
-                      message: notification.message,
-                      isRead: true, // Mark as read
-                      type: notification.type,
-                      createdAt: notification.createdAt);
-                });
-                await _notificationService.markAsRead(notification.id);
-              } catch (e) {
-                // If API call fails, revert the change and show an error
-                setState(() {
-                   _notifications[index] = notification; // Revert to original
-                });
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("Failed to update notification."), backgroundColor: Colors.red),
-                );
-              }
-            }
-          },
-          child: Container(
-            color: isUnread ? Colors.blue.withOpacity(0.05) : Colors.transparent,
-            padding: const EdgeInsets.symmetric(horizontal: 8.0),
-            child: ListTile(
-              leading: _getNotificationIcon(notification.type),
-              title: Text(
-                notification.title,
-                style: TextStyle(
-                  fontWeight: isUnread ? FontWeight.bold : FontWeight.normal,
-                ),
+          onTap: () => _markOneAsRead(index),
+          child: Card(
+            elevation: isUnread ? 2 : 0,
+            margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Container(
+              decoration: BoxDecoration(
+                color: isUnread ? const Color(0xFFE8F1FF) : Colors.white,
+                borderRadius: BorderRadius.circular(14),
               ),
-              subtitle: Text(
-                "${notification.description ?? notification.message ?? ''}\n${timeago.format(notification.createdAt)}",
+              padding: const EdgeInsets.all(14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Header: icon + title + time + unread dot
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: isUnread ? const Color(0xFFDBE7FF) : const Color(0xFFF0F2F5),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(_iconForType(n.type), size: 22, color: const Color(0xFF2D5BFF)),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              n.title,
+                              style: TextStyle(
+                                fontSize: 15.5,
+                                fontWeight: isUnread ? FontWeight.w700 : FontWeight.w600,
+                                color: const Color(0xFF1F2937),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              timeago.format(n.createdAt),
+                              style: TextStyle(
+                                fontSize: 12.5,
+                                color: Colors.grey.shade600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (isUnread)
+                        const Padding(
+                          padding: EdgeInsets.only(top: 6),
+                          child: Icon(Icons.circle, size: 10, color: Color(0xFF2D5BFF)),
+                        ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 10),
+
+                  // Message (HTML-stripped)
+                  if ((_stripHtml(n.message)).isNotEmpty)
+                    Text(
+                      _stripHtml(n.message),
+                      style: const TextStyle(fontSize: 14, height: 1.35, color: Color(0xFF111827)),
+                    ),
+
+                  // Description
+                  if ((n.description ?? '').isNotEmpty) ...[
+                    if ((_stripHtml(n.message)).isNotEmpty) const SizedBox(height: 8),
+                    Text(
+                      n.description!,
+                      style: const TextStyle(fontSize: 13, height: 1.35, color: Color(0xFF6B7280)),
+                    ),
+                  ],
+                ],
               ),
-              trailing: isUnread
-                  ? const Icon(Icons.circle, color: Colors.blue, size: 12)
-                  : null,
-              isThreeLine: true,
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // ------------------------------
+  // Shimmer skeleton while loading
+  // ------------------------------
+  Widget _buildShimmerList() {
+    return ListView.builder(
+      physics: const AlwaysScrollableScrollPhysics(),
+      itemCount: 6,
+      itemBuilder: (context, index) {
+        return Shimmer.fromColors(
+          baseColor: Colors.grey.shade300,
+          highlightColor: Colors.grey.shade100,
+          child: Card(
+            margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // header row placeholders
+                  Row(
+                    children: [
+                      Container(width: 40, height: 40, decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle)),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(height: 14, width: 180, color: Colors.white),
+                            const SizedBox(height: 8),
+                            Container(height: 12, width: 90, color: Colors.white),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Container(height: 12, width: double.infinity, color: Colors.white), // message
+                  const SizedBox(height: 8),
+                  Container(height: 12, width: 220, color: Colors.white), // description
+                ],
+              ),
             ),
           ),
         );

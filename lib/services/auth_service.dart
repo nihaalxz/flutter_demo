@@ -47,6 +47,7 @@ class AuthService {
         'emailAddress': email,
         'phoneNumber': phoneNumber,
         'password': password,
+        'passwordConfirmation': password, 
       }),
     );
     return response.statusCode == 200;

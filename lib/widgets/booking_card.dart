@@ -24,7 +24,7 @@ class BookingCard extends StatelessWidget {
     final title = booking.itemName;
     final subtitle = isRentalView
         ? "Rented from: ${booking.ownerName}"
-        : "Rented by: ${booking.renterName}";
+        : "Request from: ${booking.renterName}";
     final dateFormat = DateFormat('MMM d, y');
     final dateRange =
         "${dateFormat.format(booking.startDate)} - ${dateFormat.format(booking.endDate)}";

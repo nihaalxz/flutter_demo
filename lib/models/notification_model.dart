@@ -3,6 +3,8 @@ enum NotificationType {
   Promotional,
   Alert,
   Message,
+  Transactional,
+  Payments,
   // Add other types as needed
   Unknown // A fallback for any unrecognized types
 }
@@ -21,7 +23,7 @@ class NotificationModel {
     required this.id,
     required this.userId,
     required this.title,
-    this.description,
+    required this.description,
     this.message,
     required this.isRead,
     required this.type,
@@ -53,6 +55,11 @@ class NotificationModel {
         return NotificationType.Alert;
       case 'message':
         return NotificationType.Message;
+      case 'transactional':
+        return NotificationType.Transactional;
+      case 'payments':
+        return NotificationType.Payments;
+      // Add other cases as needed
       default:
         return NotificationType.Unknown;
     }

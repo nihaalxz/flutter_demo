@@ -3,7 +3,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:myfirstflutterapp/pages/Auth/privacy_policy_page.dart';
 import 'package:myfirstflutterapp/pages/main_screen.dart';
 import '/services/auth_service.dart';
-import '../home_page.dart';
+
 import 'register_page.dart';
 import 'forgot_password_page.dart'; // Import the new page
 

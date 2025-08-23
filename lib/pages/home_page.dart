@@ -5,6 +5,7 @@ import 'package:myfirstflutterapp/models/user_model.dart';
 import 'package:myfirstflutterapp/pages/Auth/login_page.dart';
 import 'package:myfirstflutterapp/pages/notification_page.dart';
 import 'package:myfirstflutterapp/pages/product/product_details_page.dart';
+import 'package:myfirstflutterapp/state/AppStateManager.dart';
 import 'package:myfirstflutterapp/services/auth_service.dart';
 import 'package:myfirstflutterapp/services/category_service.dart';
 import 'package:myfirstflutterapp/services/product_service.dart';
@@ -14,6 +15,7 @@ import 'package:myfirstflutterapp/models/product_model.dart';
 import 'package:myfirstflutterapp/models/wishlist_item_model.dart';
 import 'package:myfirstflutterapp/environment/env.dart';
 import 'package:bootstrap_icons/bootstrap_icons.dart';
+import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
 import '../widgets/product_card.dart';
 
@@ -97,78 +99,82 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: appBar(),
-      backgroundColor: Colors.white,
-      body: FutureBuilder<Map<String, dynamic>>(
-        future: _dataFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            /// 🔥 Shimmer while loading
-            return _buildShimmerUI();
-          }
+    // ✅ Use a Consumer to get the AppStateManager for the notification count
+    return Consumer<AppStateManager>(
+      builder: (context, appState, child) {
+        return Scaffold(
+          appBar: appBar(appState.unreadNotificationCount), // Pass the count
+          backgroundColor: Colors.white,
+          body: FutureBuilder<Map<String, dynamic>>(
+            future: _dataFuture,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return _buildShimmerUI();
+              }
 
-          if (snapshot.hasError) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text("Failed to load data."),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: () {
-                      setState(() {
-                        _dataFuture = loadData(forceRefresh: true);
-                      });
-                    },
-                    child: const Text("Retry"),
-                  ),
-                ],
-              ),
-            );
-          }
-
-          final products = snapshot.data!['products'] as List<Product>;
-          final categories = snapshot.data!['categories'] as List<CategoryModel>;
-
-          return RefreshIndicator(
-            onRefresh: () async {
-              setState(() {
-                _dataFuture = loadData(forceRefresh: true);
-              });
-            },
-            child: CustomScrollView(
-              slivers: [
-                SliverList(
-                  delegate: SliverChildListDelegate([
-                    _SearchBar(),
-                    const SizedBox(height: 20),
-                    _buildCategoriesSection(categories),
-                    const SizedBox(height: 20),
-                    const Padding(
-                      padding: EdgeInsets.only(left: 20),
-                      child: Text(
-                        'All Products',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black,
-                        ),
+              if (snapshot.hasError) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Text("Failed to load data."),
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: () {
+                          setState(() {
+                            _dataFuture = loadData(forceRefresh: true);
+                          });
+                        },
+                        child: const Text("Retry"),
                       ),
+                    ],
+                  ),
+                );
+              }
+
+              final products = snapshot.data!['products'] as List<Product>;
+              final categories = snapshot.data!['categories'] as List<CategoryModel>;
+
+              return RefreshIndicator(
+                onRefresh: () async {
+                  setState(() {
+                    _dataFuture = loadData(forceRefresh: true);
+                  });
+                },
+                child: CustomScrollView(
+                  slivers: [
+                    SliverList(
+                      delegate: SliverChildListDelegate([
+                        _SearchBar(),
+                        const SizedBox(height: 20),
+                        _buildCategoriesSection(categories),
+                        const SizedBox(height: 20),
+                        const Padding(
+                          padding: EdgeInsets.only(left: 20),
+                          child: Text(
+                            'All Products',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                      ]),
                     ),
-                    const SizedBox(height: 10),
-                  ]),
+                    _buildProductsList(products),
+                  ],
                 ),
-                _buildProductsList(products),
-              ],
-            ),
-          );
-        },
-      ),
+              );
+            },
+          ),
+        );
+      },
     );
   }
 
-  /// 🔥 Shimmer Skeleton
+  /// Shimmer Skeleton
   Widget _buildShimmerUI() {
     return CustomScrollView(
       slivers: [
@@ -193,7 +199,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  /// 🔥 Shimmer for categories
+  /// Shimmer for categories
   Widget _shimmerCategories() {
     return SizedBox(
       height: 90,
@@ -233,7 +239,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  /// 🔥 Shimmer for products
+  /// Shimmer for products
   Widget _shimmerProducts() {
     return SliverList(
       delegate: SliverChildBuilderDelegate(
@@ -373,7 +379,8 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  AppBar appBar() {
+  /// ✅ AppBar now accepts the notification count
+  AppBar appBar(int notificationCount) {
     return AppBar(
       title: const Text(
         'Circlo',
@@ -404,7 +411,11 @@ class _HomePageState extends State<HomePage> {
       ),
       actions: [
         IconButton(
-          icon: const Icon(BootstrapIcons.bell_fill, color: Colors.black),
+          // ✅ Use the badge helper for the notification icon
+          icon: _buildIconWithBadge(
+            icon: BootstrapIcons.bell_fill,
+            count: notificationCount,
+          ),
           onPressed: () {
             Navigator.of(context).push(
               MaterialPageRoute(builder: (context) => const NotificationPage()),
@@ -417,6 +428,40 @@ class _HomePageState extends State<HomePage> {
           onPressed: _logout,
           tooltip: 'Logout',
         ),
+      ],
+    );
+  }
+
+  /// ✅ Helper widget to build an icon with a notification badge.
+  Widget _buildIconWithBadge({required IconData icon, required int count}) {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: <Widget>[
+        Icon(icon, color: Colors.black),
+        if (count > 0)
+          Positioned(
+            right: -4,
+            top: -4,
+            child: Container(
+              padding: const EdgeInsets.all(2),
+              decoration: BoxDecoration(
+                color: Colors.red,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              constraints: const BoxConstraints(
+                minWidth: 16,
+                minHeight: 16,
+              ),
+              child: Text(
+                count.toString(),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 10,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          )
       ],
     );
   }

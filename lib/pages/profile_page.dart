@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:intl/intl.dart';
 import 'package:myfirstflutterapp/models/user_model.dart';
+import 'package:myfirstflutterapp/pages/gen/settings_page.dart';
 import 'package:myfirstflutterapp/pages/wishlist_page.dart';
 import 'package:myfirstflutterapp/services/auth_service.dart';
 import 'package:myfirstflutterapp/environment/env.dart';
@@ -69,11 +70,11 @@ class _ProfilePageState extends State<ProfilePage> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _currentUser == null
-              ? _buildErrorView()
-              : RefreshIndicator(
-                  onRefresh: _loadUserProfile,
-                  child: _buildProfileView(),
-                ),
+          ? _buildErrorView()
+          : RefreshIndicator(
+              onRefresh: _loadUserProfile,
+              child: _buildProfileView(),
+            ),
     );
   }
 
@@ -101,7 +102,9 @@ class _ProfilePageState extends State<ProfilePage> {
   Widget _buildProfileHeader() {
     final String? pictureUrl = _currentUser!.pictureUrl;
     final hasPicture = pictureUrl != null && pictureUrl.isNotEmpty;
-    final fullImageUrl = hasPicture ? "${AppConfig.imageBaseUrl}$pictureUrl" : null;
+    final fullImageUrl = hasPicture
+        ? "${AppConfig.imageBaseUrl}$pictureUrl"
+        : null;
 
     // Format the "Member Since" date
     String memberSince = '';
@@ -120,8 +123,12 @@ class _ProfilePageState extends State<ProfilePage> {
         CircleAvatar(
           radius: 50,
           backgroundColor: Colors.grey[200],
-          backgroundImage: hasPicture ? CachedNetworkImageProvider(fullImageUrl!) : null,
-          child: !hasPicture ? Icon(Icons.person, size: 50, color: Colors.grey[400]) : null,
+          backgroundImage: hasPicture
+              ? CachedNetworkImageProvider(fullImageUrl!)
+              : null,
+          child: !hasPicture
+              ? Icon(Icons.person, size: 50, color: Colors.grey[400])
+              : null,
         ),
         const SizedBox(height: 16),
         Text(
@@ -157,10 +164,15 @@ class _ProfilePageState extends State<ProfilePage> {
         children: [
           ListTile(
             leading: Icon(
-              isKycVerified ? Icons.verified_user_outlined : Icons.report_problem_outlined,
+              isKycVerified
+                  ? Icons.verified_user_outlined
+                  : Icons.report_problem_outlined,
               color: isKycVerified ? Colors.green : Colors.orange,
             ),
-            title: const Text('KYC Status', style: TextStyle(fontWeight: FontWeight.w500)),
+            title: const Text(
+              'KYC Status',
+              style: TextStyle(fontWeight: FontWeight.w500),
+            ),
             trailing: Text(
               isKycVerified ? 'Verified' : 'Not Verified',
               style: TextStyle(
@@ -172,7 +184,10 @@ class _ProfilePageState extends State<ProfilePage> {
           const Divider(height: 1, indent: 16, endIndent: 16),
           ListTile(
             leading: Icon(Icons.phone_outlined, color: Colors.grey[800]),
-            title: const Text('Phone Number', style: TextStyle(fontWeight: FontWeight.w500)),
+            title: const Text(
+              'Phone Number',
+              style: TextStyle(fontWeight: FontWeight.w500),
+            ),
             trailing: Text(
               phoneNumber,
               style: TextStyle(color: Colors.grey[600], fontSize: 14),
@@ -196,7 +211,9 @@ class _ProfilePageState extends State<ProfilePage> {
             title: 'Edit Profile',
             onTap: () {
               // TODO: Navigate to Edit Profile Page
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Navigate to Edit Profile')));
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Navigate to Edit Profile')),
+              );
             },
           ),
           _buildMenuTile(
@@ -204,7 +221,9 @@ class _ProfilePageState extends State<ProfilePage> {
             title: 'My Listings',
             onTap: () {
               // TODO: Navigate to My Listings Page
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Navigate to My Listings')));
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Navigate to My Listings')),
+              );
             },
           ),
           _buildMenuTile(
@@ -212,16 +231,18 @@ class _ProfilePageState extends State<ProfilePage> {
             title: 'Payment Methods',
             onTap: () {
               // TODO: Navigate to Payment Methods Page
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Navigate to Payment Methods')));
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Navigate to Payment Methods')),
+              );
             },
           ),
-           _buildMenuTile(
+          _buildMenuTile(
             icon: Icons.heart_broken_rounded,
             title: 'My Wishlists',
             onTap: () {
-               Navigator.of(context).push(
-              MaterialPageRoute(builder: (context) => const WishlistPage()),
-            );  
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (context) => const WishlistPage()),
+              );
             },
           ),
         ],
@@ -241,8 +262,9 @@ class _ProfilePageState extends State<ProfilePage> {
             icon: Icons.settings_outlined,
             title: 'Settings',
             onTap: () {
-              // TODO: Navigate to Settings Page
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Navigate to Settings')));
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (context) => const SettingsPage()),
+              );
             },
           ),
           const Divider(height: 1, indent: 16, endIndent: 16),
@@ -282,12 +304,20 @@ class _ProfilePageState extends State<ProfilePage> {
   }) {
     return ListTile(
       leading: Icon(icon, color: textColor ?? Colors.grey[800]),
-      title: Text(title, style: TextStyle(color: textColor ?? Colors.black87, fontWeight: FontWeight.w500)),
-      trailing: textColor == null ? const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey) : null,
+      title: Text(
+        title,
+        style: TextStyle(
+          color: textColor ?? Colors.black87,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+      trailing: textColor == null
+          ? const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey)
+          : null,
       onTap: onTap,
     );
   }
-  
+
   /// A view to show when the user profile fails to load.
   Widget _buildErrorView() {
     return Center(
@@ -298,9 +328,16 @@ class _ProfilePageState extends State<ProfilePage> {
           children: [
             Icon(Icons.cloud_off_rounded, size: 60, color: Colors.grey[400]),
             const SizedBox(height: 16),
-            const Text("Could not load profile.", style: TextStyle(fontSize: 18)),
+            const Text(
+              "Could not load profile.",
+              style: TextStyle(fontSize: 18),
+            ),
             const SizedBox(height: 8),
-            Text("Please check your connection and try again.", style: TextStyle(color: Colors.grey[600]), textAlign: TextAlign.center,),
+            Text(
+              "Please check your connection and try again.",
+              style: TextStyle(color: Colors.grey[600]),
+              textAlign: TextAlign.center,
+            ),
             const SizedBox(height: 24),
             ElevatedButton(
               onPressed: _loadUserProfile,
