@@ -5,6 +5,7 @@ import 'package:myfirstflutterapp/models/user_model.dart';
 import 'package:myfirstflutterapp/pages/Auth/login_page.dart';
 import 'package:myfirstflutterapp/pages/notification_page.dart';
 import 'package:myfirstflutterapp/pages/product/product_details_page.dart';
+import 'package:myfirstflutterapp/pages/wishlist_page.dart';
 import 'package:myfirstflutterapp/state/AppStateManager.dart';
 import 'package:myfirstflutterapp/services/auth_service.dart';
 import 'package:myfirstflutterapp/services/category_service.dart';
@@ -25,6 +26,8 @@ class HomePage extends StatefulWidget {
   @override
   State<HomePage> createState() => _HomePageState();
 }
+
+enum MenuItem { item1, item2, item3, item4, item5, item6, item7 }
 
 class _HomePageState extends State<HomePage> {
   List<Product> _products = [];
@@ -82,10 +85,7 @@ class _HomePageState extends State<HomePage> {
 
     _products = fetchedProducts;
 
-    return {
-      'products': fetchedProducts,
-      'categories': fetchedCategories,
-    };
+    return {'products': fetchedProducts, 'categories': fetchedCategories};
   }
 
   void _onWishlistChanged(int productId, bool isWishlisted) {
@@ -133,7 +133,8 @@ class _HomePageState extends State<HomePage> {
               }
 
               final products = snapshot.data!['products'] as List<Product>;
-              final categories = snapshot.data!['categories'] as List<CategoryModel>;
+              final categories =
+                  snapshot.data!['categories'] as List<CategoryModel>;
 
               return RefreshIndicator(
                 onRefresh: () async {
@@ -225,11 +226,7 @@ class _HomePageState extends State<HomePage> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  Container(
-                    height: 10,
-                    width: 40,
-                    color: Colors.white,
-                  ),
+                  Container(height: 10, width: 40, color: Colors.white),
                 ],
               ),
             ),
@@ -242,23 +239,20 @@ class _HomePageState extends State<HomePage> {
   /// Shimmer for products
   Widget _shimmerProducts() {
     return SliverList(
-      delegate: SliverChildBuilderDelegate(
-        (context, index) {
-          return Shimmer.fromColors(
-            baseColor: Colors.grey.shade300,
-            highlightColor: Colors.grey.shade100,
-            child: Container(
-              margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-              height: 120,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-              ),
+      delegate: SliverChildBuilderDelegate((context, index) {
+        return Shimmer.fromColors(
+          baseColor: Colors.grey.shade300,
+          highlightColor: Colors.grey.shade100,
+          child: Container(
+            margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            height: 120,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
             ),
-          );
-        },
-        childCount: 6,
-      ),
+          ),
+        );
+      }, childCount: 6),
     );
   }
 
@@ -333,26 +327,23 @@ class _HomePageState extends State<HomePage> {
             child: Center(child: Text('No products found.')),
           )
         : SliverList(
-            delegate: SliverChildBuilderDelegate(
-              (context, index) {
-                final product = products[index];
-                return InkWell(
-                  onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (context) =>
-                            ProductDetailsPage(productId: product.id),
-                      ),
-                    );
-                  },
-                  child: ProductCard(
-                    product: product,
-                    onWishlistChanged: _onWishlistChanged,
-                  ),
-                );
-              },
-              childCount: products.length,
-            ),
+            delegate: SliverChildBuilderDelegate((context, index) {
+              final product = products[index];
+              return InkWell(
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) =>
+                          ProductDetailsPage(productId: product.id),
+                    ),
+                  );
+                },
+                child: ProductCard(
+                  product: product,
+                  onWishlistChanged: _onWishlistChanged,
+                ),
+              );
+            }, childCount: products.length),
           );
   }
 
@@ -397,13 +388,15 @@ class _HomePageState extends State<HomePage> {
         padding: const EdgeInsets.all(8.0),
         child: CircleAvatar(
           backgroundColor: Colors.grey[200],
-          backgroundImage: _currentUser?.pictureUrl != null &&
+          backgroundImage:
+              _currentUser?.pictureUrl != null &&
                   _currentUser!.pictureUrl!.isNotEmpty
               ? CachedNetworkImageProvider(
                   "${AppConfig.imageBaseUrl}${_currentUser!.pictureUrl}",
                 )
               : null,
-          child: _currentUser?.pictureUrl == null ||
+          child:
+              _currentUser?.pictureUrl == null ||
                   _currentUser!.pictureUrl!.isEmpty
               ? const Icon(Icons.person, color: Colors.grey)
               : null,
@@ -423,10 +416,53 @@ class _HomePageState extends State<HomePage> {
           },
           tooltip: 'Notifications',
         ),
-        IconButton(
-          icon: const Icon(Icons.more_vert_rounded, color: Colors.black),
-          onPressed: _logout,
-          tooltip: 'Logout',
+        PopupMenuButton<MenuItem>(
+          onSelected: (value) {
+            if (value == MenuItem.item1) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Navigate to Dashboard')),
+              );
+            }
+            if (value == MenuItem.item2) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Navigate to My items')),
+              );
+            }
+            if (value == MenuItem.item3) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Navigate to Wallet')),
+              );
+            }
+            if (value == MenuItem.item4) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Navigate to Payment History')),
+              );
+            }
+            if (value == MenuItem.item5) {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => const WishlistPage(),
+                ),
+              );
+            }
+            if (value == MenuItem.item6) {}
+            if (value == MenuItem.item7) {}
+          },
+          itemBuilder: (context) => const [
+            PopupMenuItem(value: MenuItem.item1, child: Text('Dashboard')),
+            PopupMenuItem(value: MenuItem.item2, child: Text('My Items')),
+            PopupMenuItem(value: MenuItem.item3, child: Text('Wallet')),
+            PopupMenuItem(
+              value: MenuItem.item4,
+              child: Text('Payment History'),
+            ),
+            PopupMenuItem(value: MenuItem.item5, child: Text('Wishlist')),
+            PopupMenuItem(
+              value: MenuItem.item6,
+              child: Text('Help and Support'),
+            ),
+            PopupMenuItem(value: MenuItem.item7, child: Text('About Us')),
+          ],
         ),
       ],
     );
@@ -448,20 +484,14 @@ class _HomePageState extends State<HomePage> {
                 color: Colors.red,
                 borderRadius: BorderRadius.circular(8),
               ),
-              constraints: const BoxConstraints(
-                minWidth: 16,
-                minHeight: 16,
-              ),
+              constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
               child: Text(
                 count.toString(),
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 10,
-                ),
+                style: const TextStyle(color: Colors.white, fontSize: 10),
                 textAlign: TextAlign.center,
               ),
             ),
-          )
+          ),
       ],
     );
   }

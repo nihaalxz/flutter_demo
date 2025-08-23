@@ -69,7 +69,7 @@ class _WishlistPageState extends State<WishlistPage> {
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return ListView.builder(
-              itemCount: 6,
+              itemCount: 9,
               itemBuilder: (_, __) => _buildShimmerCard(),
             );
           }

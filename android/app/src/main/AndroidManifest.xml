@@ -2,9 +2,9 @@
 
 
     <application
-        android:label="myfirstflutterapp"
+        android:label="MapleCot"
         android:name="${applicationName}"
-        android:icon="@mipmap/launcher_icon">
+        android:icon="@mipmap/ic_launcher">
 
         <activity
             android:name=".MainActivity"

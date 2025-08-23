@@ -45,17 +45,13 @@ flutter:
     - assets/icons/constant/empty-user-profilepic.webp
 
 flutter_launcher_icons:
-  android: "launcher_icon"
-  ios: true
-  image_path: "assets/icons/app_icon.png"
-
-flutter_native_splash:
-  color: "#FFF5F5" # This is the background color (white)
-  image: assets/icons/splash_screen.png
-  background_image: assets/icons/splash_screen.png
-  branding: assets/icons/splash_screen.png
   android: true
   ios: true
+  image_path: "assets/icons/constant/ic_launcher.png"
+
+flutter_native_splash:
+  color: "#E00707" # This is the background color (white)
+  image: assets/icons/splash_screen.png
 
 android_12:
   color: "#FFF5F5"
