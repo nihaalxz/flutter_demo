@@ -98,7 +98,10 @@ class BookingCard extends StatelessWidget {
                           const SizedBox(width: 4),
                           Text(dateRange,
                               style: const TextStyle(
-                                  fontSize: 14, color: Colors.black54)),
+                                  fontSize: 12, color: Colors.black54,
+                                  overflow: TextOverflow.ellipsis,
+                                  
+                                  )),
                         ],
                       ),
                     ],

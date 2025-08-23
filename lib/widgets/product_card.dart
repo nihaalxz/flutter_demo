@@ -73,6 +73,7 @@ class _ProductCardState extends State<ProductCard> {
 
   @override
   Widget build(BuildContext context) {
+    // ✅ FIX: Safely parse the date string to prevent crashes.
     final String formattedDate = DateFormat.yMMMd().format(widget.product.createdAt);
 
     return Container(
@@ -90,6 +91,7 @@ class _ProductCardState extends State<ProductCard> {
         ],
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start, // Align items to the top
         children: [
           Stack(
             children: [
@@ -119,7 +121,7 @@ class _ProductCardState extends State<ProductCard> {
                 top: 4,
                 right: 4,
                 child: InkWell(
-                  onTap: _toggleWishlist, // Use the new toggle function
+                  onTap: _toggleWishlist,
                   borderRadius: BorderRadius.circular(20),
                   child: Container(
                     padding: const EdgeInsets.all(4),
@@ -152,72 +154,76 @@ class _ProductCardState extends State<ProductCard> {
           ),
           const SizedBox(width: 15),
           Expanded(
-            child: SizedBox(
-              height: 100,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  Text(
-                    widget.product.name,
-                    style: const TextStyle(
-                        fontSize: 16, fontWeight: FontWeight.bold),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  Row(
-                    children: [
-                      Flexible(
-                        child: Text(
-                          'By: ${widget.product.ownerName}',
-                          style:
-                              TextStyle(fontSize: 12, color: Colors.grey[700]),
-                          overflow: TextOverflow.ellipsis,
-                          maxLines: 1,
-                        ),
+            // ✅ FIX: Removed the fixed-height SizedBox to prevent vertical overflow.
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  widget.product.name,
+                  style: const TextStyle(
+                      fontSize: 16, fontWeight: FontWeight.bold),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        'By: ${widget.product.ownerName}',
+                        style:
+                            TextStyle(fontSize: 12, color: Colors.grey[700]),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
                       ),
-                      const SizedBox(width: 4),
-                      Text(
-                        widget.product.availability
-                            ? 'Available'
-                            : 'Not Available',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: widget.product.availability
-                              ? Colors.green
-                              : Colors.red,
-                          fontWeight: FontWeight.bold,
-                        ),
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      widget.product.availability
+                          ? 'Available'
+                          : 'Not Available',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: widget.product.availability
+                            ? Colors.green
+                            : Colors.red,
+                        fontWeight: FontWeight.bold,
                       ),
-                    ],
-                  ),
-                  Row(
-                    children: [
-                      Icon(Icons.location_on, size: 14, color: Colors.grey[600]),
-                      const SizedBox(width: 4),
-                      Text(
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                // ✅ FIX: Use Expanded to prevent horizontal overflow with long text.
+                Row(
+                  children: [
+                    Icon(Icons.location_on, size: 14, color: Colors.grey[600]),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
                         widget.product.location,
                         style:
                             TextStyle(fontSize: 12, color: Colors.grey[600]),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
                       ),
-                      const Spacer(),
-                      Text(
-                        formattedDate,
-                        style:
-                            TextStyle(fontSize: 12, color: Colors.grey[600]),
-                      ),
-                    ],
-                  ),
-                  Text(
-                    '₹${widget.product.price.toStringAsFixed(2)}/day',
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.green,
                     ),
+                    Text(
+                      formattedDate,
+                      style:
+                          TextStyle(fontSize: 12, color: Colors.grey[600]),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '₹${widget.product.price.toStringAsFixed(2)}/day',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.green,
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ],
