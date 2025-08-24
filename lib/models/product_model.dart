@@ -38,7 +38,7 @@ class Product {
   final String location;
 
   @HiveField(11)
-  final bool availability;
+  bool availability;
 
   @HiveField(12)
   final DateTime createdAt;

@@ -1,15 +1,14 @@
-import 'package:flutter/material.dart';
-import 'package:myfirstflutterapp/services/booking_service.dart';
+// ignore: file_names
+import 'package:flutter/foundation.dart';
 import 'package:myfirstflutterapp/services/notification_service.dart';
 
 /// A global state manager for app-wide data like notification counts.
 /// It uses the ChangeNotifier pattern to notify widgets of updates.
 class AppStateManager with ChangeNotifier {
   final NotificationService _notificationService = NotificationService.instance;
-  final BookingService _bookingService = BookingService();
 
   int _unreadNotificationCount = 0;
-  int _pendingBookingCount = 0;
+  final int _pendingBookingCount = 0;
 
   int get unreadNotificationCount => _unreadNotificationCount;
   int get pendingBookingCount => _pendingBookingCount;
@@ -29,7 +28,9 @@ class AppStateManager with ChangeNotifier {
       _unreadNotificationCount = await _notificationService.getUnreadCount();
       notifyListeners(); // This tells the UI to update
     } catch (e) {
-      print("Error fetching notification count: $e");
+      if (kDebugMode) {
+        print("Error fetching notification count: $e");
+      }
     }
   }
 
@@ -41,7 +42,9 @@ class AppStateManager with ChangeNotifier {
       // _pendingBookingCount = await _bookingService.getPendingBookingCount();
       notifyListeners(); // This tells the UI to update
     } catch (e) {
-      print("Error fetching pending booking count: $e");
+      if (kDebugMode) {
+        print("Error fetching pending booking count: $e");
+      }
     }
   }
 }

@@ -166,7 +166,7 @@ class _BookingsPageState extends State<BookingsPage> {
           highlightColor: Colors.grey.shade100,
           child: Container(
             margin: const EdgeInsets.symmetric(vertical: 8),
-            height: 100,
+            height: 200,
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(12),

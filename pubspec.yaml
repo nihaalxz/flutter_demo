@@ -28,6 +28,7 @@ dependencies:
   timeago: ^3.6.1
   shimmer: ^3.0.0
   overlay_support: ^2.1.0
+  image_picker: ^1.2.0
 
 dev_dependencies:
   flutter_test:

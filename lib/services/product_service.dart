@@ -1,6 +1,9 @@
 import 'dart:convert';
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:myfirstflutterapp/models/Product_DTO/Product_update_dto.dart';
 
 // --- Assumed Imports ---
 import '../models/product_model.dart';
@@ -125,29 +128,92 @@ class ProductService {
     }
   }
 
-  /// Updates an existing product.
-  Future<Product> updateProduct(int id, Product product) async {
+    Future<Product> toggleAvailability(int itemId) async {
     final headers = await _getAuthHeaders();
-    final url = Uri.parse('$_baseUrl/item/$id');
-    final response = await http.put(
-      url,
-      headers: headers,
-      body: jsonEncode(product.toJson()),
-    );
+    final url = Uri.parse('$_baseUrl/item/$itemId/toggle-availability'); // Assuming this endpoint
+    final response = await http.patch(url, headers: headers); // Using PATCH is common for partial updates
+
     if (response.statusCode == 200) {
-      return Product.fromJson(jsonDecode(response.body));
+      return Product.fromJson(json.decode(response.body));
     } else {
-      throw Exception('Failed to update product.');
+      throw Exception('Failed to update availability.');
     }
   }
 
+   Future<List<Product>> getMyItems() async {
+    final headers = await _getAuthHeaders();
+    final url = Uri.parse('$_baseUrl/item/my-items'); // Assuming this is your new endpoint
+    final response = await http.get(url, headers: headers);
+
+    if (response.statusCode == 200) {
+      final List<dynamic> data = json.decode(response.body);
+      return data.map((item) => Product.fromJson(item)).toList();
+    } else {
+      throw Exception('Failed to load your items.');
+    }
+  }
+
+  /// Updates an existing product.
+Future<Product> updateItem(int id, ProductUpdateDto dto, {File? imageFile}) async {
+  final headers = await _getAuthHeaders();
+  final url = Uri.parse('$_baseUrl/item/$id');
+
+  // Use Multipart for form-data
+  final request = http.MultipartRequest("PUT", url);
+  request.headers.addAll(headers);
+
+  // Add text fields
+  request.fields['name'] = dto.name;
+    request.fields['description'] = dto.description;
+    request.fields['price'] = dto.price.toString();
+    request.fields['categoryId'] = dto.categoryId.toString();
+    request.fields['location'] = dto.location;
+    request.fields['availability'] = dto.availability.toString();
+
+  // Add image file if selected
+  if (imageFile != null) {
+    request.files.add(await http.MultipartFile.fromPath("image", imageFile.path));
+  }
+
+  final streamedResponse = await request.send();
+  final response = await http.Response.fromStream(streamedResponse);
+
+  if (response.statusCode == 200) {
+    return Product.fromJson(jsonDecode(response.body));
+  } else {
+    throw Exception('Failed to update product: ${response.body}');
+  }
+}
+
   /// Deletes a product by its ID.
-  Future<void> deleteProduct(int id) async {
+  Future<void> deleteItem(int id) async {
     final headers = await _getAuthHeaders();
     final url = Uri.parse('$_baseUrl/item/$id');
     final response = await http.delete(url, headers: headers);
     if (response.statusCode != 204 && response.statusCode != 200) {
       throw Exception('Failed to delete product.');
+    }
+  }
+
+    Future<void> trackView(int itemId) async {
+    final url = Uri.parse("$_baseUrl/Item/$itemId/track-view");
+
+    try {
+      final response = await http.post(url);
+
+      if (response.statusCode == 200) {
+        if (kDebugMode) {
+          print("View tracked successfully");
+        }
+      } else {
+        if (kDebugMode) {
+          print("Failed to track view: ${response.statusCode}");
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print("Error tracking view: $e");
+      }
     }
   }
 }

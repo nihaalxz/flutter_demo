@@ -30,6 +30,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
 
   @override
   void initState() {
+    _productService.trackView(widget.productId);
     super.initState();
     _fetchProduct();
   }
@@ -488,6 +489,23 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                           ),
                         ),
                       ],
+                    ),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.location_on_outlined
+                          ),
+                        Text(product!.location,
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: const Color.fromARGB(255, 0, 0, 0),
+                          // fontFamily:
+                        ),
+                        
+                      ),
+                        Padding(padding: const EdgeInsets.all(16),) 
+                      ], 
                     ),
 
                     const SizedBox(height: 12),

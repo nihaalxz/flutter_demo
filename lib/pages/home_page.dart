@@ -3,6 +3,8 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:myfirstflutterapp/models/user_model.dart';
 import 'package:myfirstflutterapp/pages/Auth/login_page.dart';
+import 'package:myfirstflutterapp/pages/gen/settings_page.dart';
+import 'package:myfirstflutterapp/pages/my_items_page.dart';
 import 'package:myfirstflutterapp/pages/notification_page.dart';
 import 'package:myfirstflutterapp/pages/product/product_details_page.dart';
 import 'package:myfirstflutterapp/pages/wishlist_page.dart';
@@ -38,7 +40,7 @@ class _HomePageState extends State<HomePage> {
 
   @override
   void initState() {
-    super.initState();
+    super.initState();  
     _dataFuture = loadData();
     _loadUserProfile();
   }
@@ -424,8 +426,8 @@ class _HomePageState extends State<HomePage> {
               );
             }
             if (value == MenuItem.item2) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Navigate to My items')),
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (context) => const MyItemsPage()),
               );
             }
             if (value == MenuItem.item3) {
@@ -440,28 +442,65 @@ class _HomePageState extends State<HomePage> {
             }
             if (value == MenuItem.item5) {
               Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (context) => const WishlistPage(),
-                ),
+                MaterialPageRoute(builder: (context) => const WishlistPage()),
               );
             }
-            if (value == MenuItem.item6) {}
+            if (value == MenuItem.item6) {
+               Navigator.of(context).push(
+                MaterialPageRoute(builder: (context) => const SettingsPage()),
+              );
+            }
             if (value == MenuItem.item7) {}
           },
           itemBuilder: (context) => const [
-            PopupMenuItem(value: MenuItem.item1, child: Text('Dashboard')),
-            PopupMenuItem(value: MenuItem.item2, child: Text('My Items')),
-            PopupMenuItem(value: MenuItem.item3, child: Text('Wallet')),
+            PopupMenuItem(value: MenuItem.item1, child: Row(
+              children: [
+                Icon(Icons.speed,color: Colors.black,),
+                SizedBox(width: 4),
+                Text('Dashboard',style: TextStyle(fontSize: 16),),
+              ]
+            ),),
+            PopupMenuItem(value: MenuItem.item2, child: Row(
+              children: [
+                Icon(Icons.shopping_bag,color: Colors.black,),
+                SizedBox(width: 4),
+                Text('My Listed Items',style: TextStyle(fontSize: 16)),
+              ]
+            )),
+            PopupMenuItem(value: MenuItem.item3, child: Row(
+              children: [
+                Icon(Icons.wallet,color: Colors.black,),
+                SizedBox(width: 4),
+                Text('Wallet',style: TextStyle(fontSize: 16)),
+              ]
+            )),
             PopupMenuItem(
               value: MenuItem.item4,
-              child: Text('Payment History'),
+              child: Row(
+                children: [
+                  Icon(Icons.history,color: Colors.black,),
+                  SizedBox(width: 4),
+                  Text('Payment History',style: TextStyle(fontSize: 16)),
+                ]
+              ),
             ),
-            PopupMenuItem(value: MenuItem.item5, child: Text('Wishlist')),
+            PopupMenuItem(value: MenuItem.item5, child:Row(
+              children: [
+                Icon(Icons.favorite,color: Colors.black,),
+                SizedBox(width: 4),
+                Text('Wishlist',style: TextStyle(fontSize: 16)),
+              ]  
+            )),
             PopupMenuItem(
               value: MenuItem.item6,
-              child: Text('Help and Support'),
+              child: Row(
+                children: [
+                  Icon(Icons.settings,color: Colors.black,),
+                  SizedBox(width: 4),
+                  Text('Settings',style: TextStyle(fontSize: 16)),
+                ]
+              ),
             ),
-            PopupMenuItem(value: MenuItem.item7, child: Text('About Us')),
           ],
         ),
       ],

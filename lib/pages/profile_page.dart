@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:intl/intl.dart';
@@ -88,10 +89,10 @@ class _ProfilePageState extends State<ProfilePage> {
         const SizedBox(height: 30),
         _buildSectionTitle("Verification"),
         _buildVerificationMenu(), // New menu for verification info
-        const SizedBox(height: 20),
+        const SizedBox(height: 30),
         _buildSectionTitle("Account"),
         _buildProfileMenu(),
-        const SizedBox(height: 20),
+        const SizedBox(height: 30),
         _buildSectionTitle("General"),
         _buildGeneralMenu(),
       ],
@@ -107,16 +108,24 @@ class _ProfilePageState extends State<ProfilePage> {
         : null;
 
     // Format the "Member Since" date
-    String memberSince = '';
-    if (_currentUser!.joinedAt != null) {
-      try {
-        final date = DateTime.parse(_currentUser!.joinedAt!);
-        memberSince = 'Member since ${DateFormat.yMMMMd().format(date)}';
-      } catch (e) {
-        // Handle potential date parsing errors gracefully
-        print("Error parsing joinedAt date: $e");
-      }
-    }
+String memberSince = '';
+
+if (_currentUser?.joinedAt != null && _currentUser!.joinedAt!.isNotEmpty) {
+  try {
+    // Trim to remove any leading/trailing whitespace
+    final joinedStr = _currentUser!.joinedAt!.trim();
+
+    // Parse ISO 8601 string
+    final date = DateTime.parse(joinedStr); // DateTime.parse supports ISO 8601
+    memberSince = 'Member since ${DateFormat.yMMMMd().format(date)}';
+  } catch (e) {
+    // Fallback: show raw string if parsing fails
+    memberSince = 'Member since ${_currentUser!.joinedAt}';
+    if (kDebugMode) print('Warning: joinedAt not ISO format, showing raw value. $_currentUser!.joinedAt');
+  }
+} else {
+  memberSince = 'Member since unknown';
+}
 
     return Column(
       children: [
@@ -245,6 +254,15 @@ class _ProfilePageState extends State<ProfilePage> {
               );
             },
           ),
+          _buildMenuTile(
+            icon: Icons.support_agent_outlined,
+            title: 'Help and Support',
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (context) => const WishlistPage()),
+              );
+            },
+          ),
         ],
       ),
     );
@@ -261,6 +279,15 @@ class _ProfilePageState extends State<ProfilePage> {
           _buildMenuTile(
             icon: Icons.settings_outlined,
             title: 'Settings',
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (context) => const SettingsPage()),
+              );
+            },
+          ),
+          _buildMenuTile(
+            icon: Icons.info,
+            title: 'About Us',
             onTap: () {
               Navigator.of(context).push(
                 MaterialPageRoute(builder: (context) => const SettingsPage()),

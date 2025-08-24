@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
 
 class AppUser {
@@ -21,37 +22,32 @@ class AppUser {
     this.phoneNumber,
   });
 
-  factory AppUser.fromToken(Map<String, dynamic> decodedToken) {
-    // Helper function to safely convert the numeric timestamp to a formatted date string
-    String? formatJoinedAt(dynamic timestamp) {
-      if (timestamp is int) {
-        try {
-          // JWT timestamps are in seconds, so multiply by 1000 for milliseconds
-          final date = DateTime.fromMillisecondsSinceEpoch(timestamp * 1000);
-          return DateFormat.yMMMMd().format(date);
-        } catch (e) {
-          return null; // Return null if parsing fails
-        }
-      }
-      return null;
+ factory AppUser.fromToken(Map<String, dynamic> decodedToken) {
+String? formatJoinedAt(String? joinedAtStr) {
+  if (joinedAtStr == null) return null;
+
+  try {
+    final date = DateTime.parse(joinedAtStr);
+    return DateFormat.yMMMMd().format(date); // e.g., July 9, 2025
+  } catch (e) {
+    if (kDebugMode) {
+      print("Error parsing joinedAt: $e, raw value: $joinedAtStr");
     }
-
-    return AppUser(
-      // Provide fallback empty strings for required fields to prevent null errors
-      id: decodedToken['nameid'] ?? '',
-      name: decodedToken['unique_name'] ?? '',
-      email: decodedToken['email'] ?? '',
-      fullName: decodedToken['fullname'] ?? decodedToken['unique_name'] ?? '', // Fallback to name if fullname is null
-
-      // These fields are already nullable, so direct assignment is fine
-      pictureUrl: decodedToken['picture'],
-      phoneNumber: decodedToken['phoneNumber'],
-
-      // Safely parse the boolean, defaulting to false if null or invalid
-      isKycVerified: decodedToken['iskycverified'] is bool ? decodedToken['iskycverified'] : false,
-      
-      // Use the helper to correctly parse the date
-      joinedAt: formatJoinedAt(decodedToken['nbf']),
-    );
+    return joinedAtStr;
   }
+}
+
+  return AppUser(
+    id: decodedToken['nameid'] ?? '',
+    name: decodedToken['unique_name'] ?? '',
+    email: decodedToken['email'] ?? '',
+    fullName: decodedToken['fullname'] ?? decodedToken['unique_name'] ?? '',
+    pictureUrl: decodedToken['picture'],
+    phoneNumber: decodedToken['phoneNumber'],
+    joinedAt: formatJoinedAt(decodedToken['joinedAt']),
+    isKycVerified: decodedToken['iskycverified'] is bool
+        ? decodedToken['iskycverified']
+        : false,
+  );
+}
 }

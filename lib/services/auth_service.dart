@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart'
     as googleSignIn; // Prefixed import
 import 'package:http/http.dart' as http;
@@ -93,8 +94,12 @@ class AuthService {
           'IdToken': idToken,
         }), // Your backend expects the token as a JSON string
       );
-      print('Backend Response Status: ${response.statusCode}');
-      print('Backend Response Body: ${response.body}');
+      if (kDebugMode) {
+        print('Backend Response Status: ${response.statusCode}');
+      }
+      if (kDebugMode) {
+        print('Backend Response Body: ${response.body}');
+      }
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -103,7 +108,9 @@ class AuthService {
       }
       return false;
     } catch (e) {
-      print("Google Sign-In Error: $e");
+      if (kDebugMode) {
+        print("Google Sign-In Error: $e");
+      }
       return false;
     }
   }

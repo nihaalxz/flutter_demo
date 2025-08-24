@@ -45,9 +45,8 @@ Future<void> main() async {
 }
 
 Future<void> initialization(BuildContext? context) async {
-  await Future.delayed(const Duration(seconds: 3));
+  await Future.delayed(const Duration(seconds: 1));
 }
-
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
