@@ -63,11 +63,11 @@ class _ProfilePageState extends State<ProfilePage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('My Profile'),
-        backgroundColor: Colors.transparent,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         elevation: 0,
-        foregroundColor: Colors.black87,
+        foregroundColor:Theme.of(context).appBarTheme.foregroundColor,
       ),
-      backgroundColor: Colors.grey[50],
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _currentUser == null
@@ -136,7 +136,7 @@ if (_currentUser?.joinedAt != null && _currentUser!.joinedAt!.isNotEmpty) {
               ? CachedNetworkImageProvider(fullImageUrl!)
               : null,
           child: !hasPicture
-              ? Icon(Icons.person, size: 50, color: Colors.grey[400])
+              ? Icon(Icons.person, size: 50, color: Theme.of(context).iconTheme.color)
               : null,
         ),
         const SizedBox(height: 16),
@@ -147,13 +147,13 @@ if (_currentUser?.joinedAt != null && _currentUser!.joinedAt!.isNotEmpty) {
         const SizedBox(height: 4),
         Text(
           _currentUser!.email,
-          style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+          style: TextStyle(fontSize: 16, color: Theme.of(context).iconTheme.color),
         ),
         if (memberSince.isNotEmpty) ...[
           const SizedBox(height: 8),
           Text(
             memberSince,
-            style: TextStyle(fontSize: 14, color: Colors.grey[500]),
+            style: TextStyle(fontSize: 14, color: Theme.of(context).iconTheme.color),
           ),
         ],
       ],
@@ -192,14 +192,14 @@ if (_currentUser?.joinedAt != null && _currentUser!.joinedAt!.isNotEmpty) {
           ),
           const Divider(height: 1, indent: 16, endIndent: 16),
           ListTile(
-            leading: Icon(Icons.phone_outlined, color: Colors.grey[800]),
+            leading: Icon(Icons.phone_outlined,color: Theme.of(context).iconTheme.color),
             title: const Text(
               'Phone Number',
               style: TextStyle(fontWeight: FontWeight.w500),
             ),
             trailing: Text(
               phoneNumber,
-              style: TextStyle(color: Colors.grey[600], fontSize: 14),
+              style: TextStyle(color: Theme.of(context).iconTheme.color, fontSize: 14),
             ),
           ),
         ],
@@ -209,15 +209,18 @@ if (_currentUser?.joinedAt != null && _currentUser!.joinedAt!.isNotEmpty) {
 
   /// Builds the list of tappable menu items related to the user's account.
   Widget _buildProfileMenu() {
+    final theme=Theme.of(context);
     return Card(
       elevation: 2,
-      shadowColor: Colors.black.withOpacity(0.1),
+      shadowColor: theme.shadowColor.withOpacity(0.1),
+      color: theme.cardColor,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Column(
         children: [
           _buildMenuTile(
             icon: Icons.edit_outlined,
             title: 'Edit Profile',
+            textColor:Theme.of(context).iconTheme.color,
             onTap: () {
               // TODO: Navigate to Edit Profile Page
               ScaffoldMessenger.of(context).showSnackBar(
@@ -228,6 +231,7 @@ if (_currentUser?.joinedAt != null && _currentUser!.joinedAt!.isNotEmpty) {
           _buildMenuTile(
             icon: Icons.list_alt_outlined,
             title: 'My Listings',
+            textColor:Theme.of(context).iconTheme.color,
             onTap: () {
               // TODO: Navigate to My Listings Page
               ScaffoldMessenger.of(context).showSnackBar(
@@ -238,6 +242,7 @@ if (_currentUser?.joinedAt != null && _currentUser!.joinedAt!.isNotEmpty) {
           _buildMenuTile(
             icon: Icons.payment_outlined,
             title: 'Payment Methods',
+            textColor:Theme.of(context).iconTheme.color,
             onTap: () {
               // TODO: Navigate to Payment Methods Page
               ScaffoldMessenger.of(context).showSnackBar(
@@ -248,6 +253,7 @@ if (_currentUser?.joinedAt != null && _currentUser!.joinedAt!.isNotEmpty) {
           _buildMenuTile(
             icon: Icons.heart_broken_rounded,
             title: 'My Wishlists',
+            textColor:Theme.of(context).iconTheme.color,
             onTap: () {
               Navigator.of(context).push(
                 MaterialPageRoute(builder: (context) => const WishlistPage()),
@@ -257,6 +263,7 @@ if (_currentUser?.joinedAt != null && _currentUser!.joinedAt!.isNotEmpty) {
           _buildMenuTile(
             icon: Icons.support_agent_outlined,
             title: 'Help and Support',
+            textColor:Theme.of(context).iconTheme.color,
             onTap: () {
               Navigator.of(context).push(
                 MaterialPageRoute(builder: (context) => const WishlistPage()),
@@ -279,6 +286,7 @@ if (_currentUser?.joinedAt != null && _currentUser!.joinedAt!.isNotEmpty) {
           _buildMenuTile(
             icon: Icons.settings_outlined,
             title: 'Settings',
+            textColor:Theme.of(context).iconTheme.color,
             onTap: () {
               Navigator.of(context).push(
                 MaterialPageRoute(builder: (context) => const SettingsPage()),
@@ -288,6 +296,7 @@ if (_currentUser?.joinedAt != null && _currentUser!.joinedAt!.isNotEmpty) {
           _buildMenuTile(
             icon: Icons.info,
             title: 'About Us',
+            textColor:Theme.of(context).iconTheme.color,
             onTap: () {
               Navigator.of(context).push(
                 MaterialPageRoute(builder: (context) => const SettingsPage()),
@@ -298,7 +307,7 @@ if (_currentUser?.joinedAt != null && _currentUser!.joinedAt!.isNotEmpty) {
           _buildMenuTile(
             icon: Icons.logout,
             title: 'Logout',
-            textColor: Colors.red,
+            textColor: Theme.of(context).colorScheme.error,
             onTap: _logout, // Call the logout method
           ),
         ],

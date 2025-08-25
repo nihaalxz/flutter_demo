@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:myfirstflutterapp/models/user_model.dart';
-import 'package:myfirstflutterapp/pages/Auth/login_page.dart';
 import 'package:myfirstflutterapp/pages/gen/settings_page.dart';
 import 'package:myfirstflutterapp/pages/my_items_page.dart';
 import 'package:myfirstflutterapp/pages/notification_page.dart';
 import 'package:myfirstflutterapp/pages/product/product_details_page.dart';
+import 'package:myfirstflutterapp/pages/profile_page.dart';
 import 'package:myfirstflutterapp/pages/wishlist_page.dart';
 import 'package:myfirstflutterapp/state/AppStateManager.dart';
 import 'package:myfirstflutterapp/services/auth_service.dart';
@@ -40,7 +40,7 @@ class _HomePageState extends State<HomePage> {
 
   @override
   void initState() {
-    super.initState();  
+    super.initState();
     _dataFuture = loadData();
     _loadUserProfile();
   }
@@ -51,16 +51,6 @@ class _HomePageState extends State<HomePage> {
       setState(() {
         _currentUser = user;
       });
-    }
-  }
-
-  Future<void> _logout() async {
-    await _authService.logout();
-    if (mounted) {
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (context) => const LoginPage()),
-        (route) => false,
-      );
     }
   }
 
@@ -106,7 +96,7 @@ class _HomePageState extends State<HomePage> {
       builder: (context, appState, child) {
         return Scaffold(
           appBar: appBar(appState.unreadNotificationCount), // Pass the count
-          backgroundColor: Colors.white,
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
           body: FutureBuilder<Map<String, dynamic>>(
             future: _dataFuture,
             builder: (context, snapshot) {
@@ -152,14 +142,14 @@ class _HomePageState extends State<HomePage> {
                         const SizedBox(height: 20),
                         _buildCategoriesSection(categories),
                         const SizedBox(height: 20),
-                        const Padding(
+                        Padding(
                           padding: EdgeInsets.only(left: 20),
                           child: Text(
                             'All Products',
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
-                              color: Colors.black,
+                              color: Theme.of(context).iconTheme.color,
                             ),
                           ),
                         ),
@@ -293,7 +283,7 @@ class _HomePageState extends State<HomePage> {
                         shape: BoxShape.circle,
                       ),
                       child: SvgPicture.network(
-                        "${AppConfig.ApibaseUrl}${category.icon}",
+                        "${category.icon}",
                         placeholderBuilder: (context) =>
                             const CircularProgressIndicator(strokeWidth: 2),
                         colorFilter: const ColorFilter.mode(
@@ -360,7 +350,7 @@ class _HomePageState extends State<HomePage> {
       child: TextField(
         decoration: InputDecoration(
           filled: true,
-          fillColor: Colors.white,
+          fillColor: Theme.of(context).cardColor,
           hintText: 'Search Products...',
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(15),
@@ -375,33 +365,46 @@ class _HomePageState extends State<HomePage> {
   /// ✅ AppBar now accepts the notification count
   AppBar appBar(int notificationCount) {
     return AppBar(
-      title: const Text(
+      title: Text(
         'Circlo',
         style: TextStyle(
-          color: Colors.black,
+          color: Theme.of(context).appBarTheme.backgroundColor,
           fontSize: 18,
           fontWeight: FontWeight.bold,
         ),
       ),
-      backgroundColor: const Color.fromARGB(255, 255, 255, 255),
+      backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
       elevation: 0.0,
       centerTitle: false,
       leading: Padding(
         padding: const EdgeInsets.all(8.0),
-        child: CircleAvatar(
-          backgroundColor: Colors.grey[200],
-          backgroundImage:
-              _currentUser?.pictureUrl != null &&
-                  _currentUser!.pictureUrl!.isNotEmpty
-              ? CachedNetworkImageProvider(
-                  "${AppConfig.imageBaseUrl}${_currentUser!.pictureUrl}",
-                )
-              : null,
-          child:
-              _currentUser?.pictureUrl == null ||
-                  _currentUser!.pictureUrl!.isEmpty
-              ? const Icon(Icons.person, color: Colors.grey)
-              : null,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(
+            50,
+          ), // ensures ripple stays circular
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const ProfilePage(), // ✅ navigate here
+              ),
+            );
+          },
+          child: CircleAvatar(
+            backgroundColor: Colors.grey[200],
+            backgroundImage:
+                _currentUser?.pictureUrl != null &&
+                    _currentUser!.pictureUrl!.isNotEmpty
+                ? CachedNetworkImageProvider(
+                    "${AppConfig.imageBaseUrl}${_currentUser!.pictureUrl}",
+                  )
+                : null,
+            child:
+                _currentUser?.pictureUrl == null ||
+                    _currentUser!.pictureUrl!.isEmpty
+                ? const Icon(Icons.person, color: Colors.grey)
+                : null,
+          ),
         ),
       ),
       actions: [
@@ -446,59 +449,80 @@ class _HomePageState extends State<HomePage> {
               );
             }
             if (value == MenuItem.item6) {
-               Navigator.of(context).push(
+              Navigator.of(context).push(
                 MaterialPageRoute(builder: (context) => const SettingsPage()),
               );
             }
             if (value == MenuItem.item7) {}
           },
-          itemBuilder: (context) => const [
-            PopupMenuItem(value: MenuItem.item1, child: Row(
-              children: [
-                Icon(Icons.speed,color: Colors.black,),
-                SizedBox(width: 4),
-                Text('Dashboard',style: TextStyle(fontSize: 16),),
-              ]
-            ),),
-            PopupMenuItem(value: MenuItem.item2, child: Row(
-              children: [
-                Icon(Icons.shopping_bag,color: Colors.black,),
-                SizedBox(width: 4),
-                Text('My Listed Items',style: TextStyle(fontSize: 16)),
-              ]
-            )),
-            PopupMenuItem(value: MenuItem.item3, child: Row(
-              children: [
-                Icon(Icons.wallet,color: Colors.black,),
-                SizedBox(width: 4),
-                Text('Wallet',style: TextStyle(fontSize: 16)),
-              ]
-            )),
+          itemBuilder: (context) => [
+            PopupMenuItem(
+              value: MenuItem.item1,
+              child: Row(
+                children: [
+                  Icon(Icons.speed, color: Theme.of(context).iconTheme.color),
+                  SizedBox(width: 4),
+                  Text('Dashboard', style: TextStyle(fontSize: 16)),
+                ],
+              ),
+            ),
+            PopupMenuItem(
+              value: MenuItem.item2,
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.shopping_bag,
+                    color: Theme.of(context).iconTheme.color,
+                  ),
+                  SizedBox(width: 4),
+                  Text('My Listed Items', style: TextStyle(fontSize: 16)),
+                ],
+              ),
+            ),
+            PopupMenuItem(
+              value: MenuItem.item3,
+              child: Row(
+                children: [
+                  Icon(Icons.wallet, color: Theme.of(context).iconTheme.color),
+                  SizedBox(width: 4),
+                  Text('Wallet', style: TextStyle(fontSize: 16)),
+                ],
+              ),
+            ),
             PopupMenuItem(
               value: MenuItem.item4,
               child: Row(
                 children: [
-                  Icon(Icons.history,color: Colors.black,),
+                  Icon(Icons.history, color: Theme.of(context).iconTheme.color),
                   SizedBox(width: 4),
-                  Text('Payment History',style: TextStyle(fontSize: 16)),
-                ]
+                  Text('Payment History', style: TextStyle(fontSize: 16)),
+                ],
               ),
             ),
-            PopupMenuItem(value: MenuItem.item5, child:Row(
-              children: [
-                Icon(Icons.favorite,color: Colors.black,),
-                SizedBox(width: 4),
-                Text('Wishlist',style: TextStyle(fontSize: 16)),
-              ]  
-            )),
+            PopupMenuItem(
+              value: MenuItem.item5,
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.favorite,
+                    color: Theme.of(context).iconTheme.color,
+                  ),
+                  SizedBox(width: 4),
+                  Text('Wishlist', style: TextStyle(fontSize: 16)),
+                ],
+              ),
+            ),
             PopupMenuItem(
               value: MenuItem.item6,
               child: Row(
                 children: [
-                  Icon(Icons.settings,color: Colors.black,),
+                  Icon(
+                    Icons.settings,
+                    color: Theme.of(context).iconTheme.color,
+                  ),
                   SizedBox(width: 4),
-                  Text('Settings',style: TextStyle(fontSize: 16)),
-                ]
+                  Text('Settings', style: TextStyle(fontSize: 16)),
+                ],
               ),
             ),
           ],
@@ -512,7 +536,7 @@ class _HomePageState extends State<HomePage> {
     return Stack(
       clipBehavior: Clip.none,
       children: <Widget>[
-        Icon(icon, color: Colors.black),
+        Icon(icon, color: Theme.of(context).iconTheme.color),
         if (count > 0)
           Positioned(
             right: -4,

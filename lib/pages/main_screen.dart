@@ -121,7 +121,7 @@ class _MainScreenState extends State<MainScreen> {
         onTap: _onItemTapped,
         type: BottomNavigationBarType.fixed,
         selectedItemColor: const Color.fromARGB(255, 255, 0, 0),
-        unselectedItemColor: const Color.fromARGB(255, 0, 0, 0),
+        unselectedItemColor:Theme.of(context).iconTheme.color,
         showUnselectedLabels: true,
       ),
     );

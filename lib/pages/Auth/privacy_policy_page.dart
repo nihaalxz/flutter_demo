@@ -5,31 +5,39 @@ class PrivacyPolicyPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: theme.scaffoldBackgroundColor, // ✅ adapts to dark mode
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           'Privacy Policy',
-          style: TextStyle(color: Colors.black),
+          style: TextStyle(color: theme.appBarTheme.titleTextStyle?.color),
         ),
-        backgroundColor: Colors.white,
+        backgroundColor: theme.appBarTheme.backgroundColor ??
+            theme.scaffoldBackgroundColor, // ✅ theme-based
         elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.black),
+        iconTheme: theme.iconTheme,
       ),
-      body: const SingleChildScrollView(
-        padding: EdgeInsets.all(24.0),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(24.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               'Last updated: August 17, 2025',
-              style: TextStyle(color: Colors.grey),
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.hintColor, // ✅ lighter in light mode, softer in dark mode
+              ),
             ),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
             Text(
               'Welcome to P2P Rental. We are committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our mobile application.',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.textTheme.bodyMedium?.color,
+              ),
             ),
-            SizedBox(height: 24),
+            const SizedBox(height: 24),
             _PolicySection(
               title: '1. Information We Collect',
               content:
@@ -57,7 +65,7 @@ class PrivacyPolicyPage extends StatelessWidget {
               content:
                   'We use administrative, technical, and physical security measures to help protect your personal information. While we have taken reasonable steps to secure the personal information you provide to us, please be aware that despite our efforts, no security measures are perfect or impenetrable, and no method of data transmission can be guaranteed against any interception or other type of misuse.',
             ),
-             _PolicySection(
+            _PolicySection(
               title: '5. Contact Us',
               content:
                   'If you have questions or comments about this Privacy Policy, please contact us at:\n\n'
@@ -79,6 +87,8 @@ class _PolicySection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 24.0),
       child: Column(
@@ -86,7 +96,7 @@ class _PolicySection extends StatelessWidget {
         children: [
           Text(
             title,
-            style: const TextStyle(
+            style: theme.textTheme.titleMedium?.copyWith(
               fontSize: 20,
               fontWeight: FontWeight.bold,
             ),
@@ -94,7 +104,9 @@ class _PolicySection extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             content,
-            style: const TextStyle(height: 1.5),
+            style: theme.textTheme.bodyMedium?.copyWith(
+              height: 1.5,
+            ),
           ),
         ],
       ),

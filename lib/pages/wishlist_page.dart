@@ -38,9 +38,9 @@ class _WishlistPageState extends State<WishlistPage> {
     try {
       await _wishlistService.removeFromWishlist(itemId);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Removed from wishlist."),
-          backgroundColor: Colors.green,
+        SnackBar(
+          content: const Text("Removed from wishlist."),
+          backgroundColor: Theme.of(context).colorScheme.secondary,
         ),
       );
     } catch (e) {
@@ -51,7 +51,7 @@ class _WishlistPageState extends State<WishlistPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(e.toString().replaceAll("Exception: ", "")),
-          backgroundColor: Colors.red,
+          backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
     }
@@ -59,10 +59,12 @@ class _WishlistPageState extends State<WishlistPage> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text("My Wishlist"),
-        backgroundColor: const Color.fromARGB(255, 251, 251, 251),
+        backgroundColor: theme.appBarTheme.backgroundColor,
       ),
       body: FutureBuilder<List<WishlistItemModel>>(
         future: _wishlistFuture,
@@ -70,7 +72,7 @@ class _WishlistPageState extends State<WishlistPage> {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return ListView.builder(
               itemCount: 9,
-              itemBuilder: (_, __) => _buildShimmerCard(),
+              itemBuilder: (_, __) => _buildShimmerCard(context),
             );
           }
 
@@ -101,7 +103,7 @@ class _WishlistPageState extends State<WishlistPage> {
                   Center(
                     child: Text(
                       "Your wishlist is empty.",
-                      style: TextStyle(color: Colors.grey, fontSize: 16),
+                      style: TextStyle(fontSize: 16),
                     ),
                   ),
                 ],
@@ -115,7 +117,7 @@ class _WishlistPageState extends State<WishlistPage> {
               itemCount: wishlistItems.length,
               itemBuilder: (context, index) {
                 final item = wishlistItems[index];
-                return _buildWishlistItemCard(item, index, wishlistItems);
+                return _buildWishlistItemCard(context, item, index, wishlistItems);
               },
             ),
           );
@@ -125,7 +127,10 @@ class _WishlistPageState extends State<WishlistPage> {
   }
 
   // --- Wishlist Item Card ---
-  Widget _buildWishlistItemCard(WishlistItemModel item, int index, List<WishlistItemModel> items) {
+  Widget _buildWishlistItemCard(
+      BuildContext context, WishlistItemModel item, int index, List<WishlistItemModel> items) {
+    final theme = Theme.of(context);
+
     return InkWell(
       onTap: () {
         Navigator.push(
@@ -152,12 +157,12 @@ class _WishlistPageState extends State<WishlistPage> {
                   height: 80,
                   fit: BoxFit.cover,
                   placeholder: (context, url) => Shimmer.fromColors(
-                    baseColor: Colors.grey.shade300,
-                    highlightColor: Colors.grey.shade100,
+                    baseColor: theme.colorScheme.surfaceVariant,
+                    highlightColor: theme.colorScheme.surface,
                     child: Container(width: 80, height: 80, color: Colors.white),
                   ),
                   errorWidget: (context, url, error) =>
-                      const Icon(Icons.broken_image, size: 80, color: Colors.grey),
+                      Icon(Icons.broken_image, size: 80, color: theme.disabledColor),
                 ),
               ),
               const SizedBox(width: 12),
@@ -167,28 +172,32 @@ class _WishlistPageState extends State<WishlistPage> {
                   children: [
                     Text(
                       item.itemName,
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 4),
                     Text(
                       '₹${item.price.toStringAsFixed(2)}/day',
-                      style: const TextStyle(fontSize: 14, color: Colors.green, fontWeight: FontWeight.w600),
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: Color.fromARGB(255, 0, 200, 0),
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       item.availability ? 'Available' : 'Not Available',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: item.availability ? Colors.blueAccent : const Color.fromARGB(255, 255, 0, 0),
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: item.availability
+                            ? theme.colorScheme.primary
+                            : theme.colorScheme.error,
                       ),
                     ),
                   ],
                 ),
               ),
               IconButton(
-                icon: const Icon(Icons.delete_outline, color: Colors.red),
+                icon: Icon(Icons.delete_outline, color: theme.colorScheme.error),
                 tooltip: "Remove from wishlist",
                 onPressed: () => _removeItem(item.itemId, index, items),
               ),
@@ -200,7 +209,9 @@ class _WishlistPageState extends State<WishlistPage> {
   }
 
   // --- Shimmer Loader ---
-  Widget _buildShimmerCard() {
+  Widget _buildShimmerCard(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -209,8 +220,8 @@ class _WishlistPageState extends State<WishlistPage> {
         child: Row(
           children: [
             Shimmer.fromColors(
-              baseColor: Colors.grey.shade300,
-              highlightColor: Colors.grey.shade100,
+              baseColor: theme.colorScheme.surfaceVariant,
+              highlightColor: theme.colorScheme.surface,
               child: Container(width: 80, height: 80, color: Colors.white),
             ),
             const SizedBox(width: 12),
@@ -219,14 +230,14 @@ class _WishlistPageState extends State<WishlistPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Shimmer.fromColors(
-                    baseColor: Colors.grey.shade300,
-                    highlightColor: Colors.grey.shade100,
+                    baseColor: theme.colorScheme.surfaceVariant,
+                    highlightColor: theme.colorScheme.surface,
                     child: Container(height: 16, color: Colors.white),
                   ),
                   const SizedBox(height: 8),
                   Shimmer.fromColors(
-                    baseColor: Colors.grey.shade300,
-                    highlightColor: Colors.grey.shade100,
+                    baseColor: theme.colorScheme.surfaceVariant,
+                    highlightColor: theme.colorScheme.surface,
                     child: Container(height: 14, width: 100, color: Colors.white),
                   ),
                 ],

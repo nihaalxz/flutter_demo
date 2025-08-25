@@ -71,20 +71,21 @@ class BookingCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(title,
-                          style: const TextStyle(
+                          style:TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
-                              overflow: TextOverflow.ellipsis)),
+                              overflow: TextOverflow.ellipsis,
+                              color: Theme.of(context).iconTheme.color)),
                       const SizedBox(height: 6),
                       Row(
                         children: [
-                          const Icon(Icons.person_outline,
-                              size: 16, color: Colors.grey),
+                           Icon(Icons.person_outline,
+                              size: 16, color:Theme.of(context).iconTheme.color),
                           const SizedBox(width: 4),
                           Expanded(
                             child: Text(subtitle,
-                                style: const TextStyle(
-                                    fontSize: 14, color: Colors.black54),
+                                style: TextStyle(
+                                    fontSize: 14, color:Theme.of(context).iconTheme.color),
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis),
                           ),
@@ -93,14 +94,13 @@ class BookingCard extends StatelessWidget {
                       const SizedBox(height: 6),
                       Row(
                         children: [
-                          const Icon(Icons.calendar_today,
-                              size: 16, color: Colors.grey),
+                           Icon(Icons.calendar_today,
+                              size: 16, color:Theme.of(context).iconTheme.color),
                           const SizedBox(width: 4),
                           Text(dateRange,
-                              style: const TextStyle(
-                                  fontSize: 12, color: Colors.black54,
-                                  overflow: TextOverflow.ellipsis,
-                                  
+                              style:  TextStyle(
+                                  fontSize: 12, color: Theme.of(context).iconTheme.color,
+                                  overflow: TextOverflow.ellipsis,  
                                   )),
                         ],
                       ),

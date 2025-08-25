@@ -162,7 +162,7 @@ class _BookingsPageState extends State<BookingsPage> {
       padding: const EdgeInsets.all(8),
       itemBuilder: (context, index) {
         return Shimmer.fromColors(
-          baseColor: Colors.grey.shade300,
+          baseColor: const Color.fromARGB(110, 224, 224, 224),
           highlightColor: Colors.grey.shade100,
           child: Container(
             margin: const EdgeInsets.symmetric(vertical: 8),

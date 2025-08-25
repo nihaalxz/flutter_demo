@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:intl/intl.dart';
+import 'package:myfirstflutterapp/pages/create_listing_page.dart';
 import 'package:myfirstflutterapp/pages/product/product_edit_page.dart';
 import 'package:shimmer/shimmer.dart';
 
@@ -304,7 +305,11 @@ class _MyItemsPageState extends State<MyItemsPage> {
                   style: TextStyle(color: Colors.grey[600])),
               const SizedBox(height: 24),
               FilledButton.icon(
-                onPressed: () {},
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (context) => const CreateListingPage()),
+                  );
+                },
                 icon: const Icon(Icons.add),
                 label: const Text("Post an Item"),
               )

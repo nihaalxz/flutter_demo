@@ -73,6 +73,7 @@ class _ProductCardState extends State<ProductCard> {
 
   @override
   Widget build(BuildContext context) {
+     final theme = Theme.of(context);
     // ✅ FIX: Safely parse the date string to prevent crashes.
     final String formattedDate = DateFormat.yMMMd().format(widget.product.createdAt);
 
@@ -80,11 +81,11 @@ class _ProductCardState extends State<ProductCard> {
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(15),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+           color: Theme.of(context).shadowColor.withOpacity(0.1),
             spreadRadius: 1,
             blurRadius: 10,
           ),
@@ -172,7 +173,7 @@ class _ProductCardState extends State<ProductCard> {
                       child: Text(
                         'By: ${widget.product.ownerName}',
                         style:
-                            TextStyle(fontSize: 12, color: Colors.grey[700]),
+                            TextStyle(fontSize: 12, color: Theme.of(context).textTheme.bodyMedium?.color,),
                         overflow: TextOverflow.ellipsis,
                         maxLines: 1,
                       ),
@@ -196,13 +197,13 @@ class _ProductCardState extends State<ProductCard> {
                 // ✅ FIX: Use Expanded to prevent horizontal overflow with long text.
                 Row(
                   children: [
-                    Icon(Icons.location_on, size: 14, color: Colors.grey[600]),
+                    Icon(Icons.location_on, size: 14, color: Theme.of(context).textTheme.bodyMedium?.color,),
                     const SizedBox(width: 4),
                     Expanded(
                       child: Text(
                         widget.product.location,
                         style:
-                            TextStyle(fontSize: 12, color: Colors.grey[600]),
+                            TextStyle(fontSize: 12,color: Theme.of(context).textTheme.bodyMedium?.color,),
                         overflow: TextOverflow.ellipsis,
                         maxLines: 1,
                       ),
@@ -210,7 +211,7 @@ class _ProductCardState extends State<ProductCard> {
                     Text(
                       formattedDate,
                       style:
-                          TextStyle(fontSize: 12, color: Colors.grey[600]),
+                          TextStyle(fontSize: 12, color: Theme.of(context).textTheme.bodyMedium?.color,),
                     ),
                   ],
                 ),

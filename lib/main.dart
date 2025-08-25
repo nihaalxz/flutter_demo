@@ -67,9 +67,18 @@ class MyApp extends StatelessWidget {
             brightness: Brightness.light,
           ),
           darkTheme: ThemeData(
-            primarySwatch: Colors.blue,
             brightness: Brightness.dark,
-            // You can further customize your dark theme here
+            primarySwatch: Colors.blue,
+
+            // Softer dark mode instead of pure black
+            scaffoldBackgroundColor: const Color(0xFF202020),
+            cardColor: const Color(0xFF2A2A2A),
+
+            colorScheme: const ColorScheme.dark(
+              primary: Color.fromARGB(255, 249, 0, 0),
+              secondary: Colors.amber,
+              surface: Color(0xFF1E1E1E),
+            ),
           ),
           debugShowCheckedModeBanner: false,
           home: const AuthCheckScreen(),

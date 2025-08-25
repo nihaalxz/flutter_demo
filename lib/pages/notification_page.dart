@@ -85,16 +85,7 @@ class _NotificationPageState extends State<NotificationPage> {
       setState(() {
         for (var i = 0; i < _notifications.length; i++) {
           final n = _notifications[i];
-          _notifications[i] = NotificationModel(
-            id: n.id,
-            userId: n.userId,
-            title: n.title,
-            message: n.message,
-            description: n.description,
-            createdAt: n.createdAt,
-            isRead: true,
-            type: n.type,
-          );
+          _notifications[i] = n.copyWith(isRead: true);
         }
       });
 
@@ -109,7 +100,6 @@ class _NotificationPageState extends State<NotificationPage> {
           backgroundColor: Colors.red,
         ),
       );
-      // Refresh from server if needed
       _fetchNotifications();
     }
   }
@@ -120,16 +110,7 @@ class _NotificationPageState extends State<NotificationPage> {
 
     // Optimistic UI
     setState(() {
-      _notifications[index] = NotificationModel(
-        id: orig.id,
-        userId: orig.userId,
-        title: orig.title,
-        message: orig.message,
-        description: orig.description,
-        createdAt: orig.createdAt,
-        isRead: true,
-        type: orig.type,
-      );
+      _notifications[index] = orig.copyWith(isRead: true);
     });
 
     try {
@@ -153,7 +134,7 @@ class _NotificationPageState extends State<NotificationPage> {
     switch (type) {
       case NotificationType.Promotional:
         return Icons.campaign;
-      case NotificationType.Transactional: // Bookings, confirmations, etc.
+      case NotificationType.Transactional:
         return Icons.event_available;
       case NotificationType.Alert:
         return Icons.warning_amber_rounded;
@@ -166,7 +147,6 @@ class _NotificationPageState extends State<NotificationPage> {
     }
   }
 
-  // Strip simple HTML tags like <b>...</b>
   String _stripHtml(String? input) {
     if (input == null) return '';
     final noTags = input.replaceAll(RegExp(r'<[^>]*>'), '');
@@ -179,9 +159,11 @@ class _NotificationPageState extends State<NotificationPage> {
   @override
   Widget build(BuildContext context) {
     final hasUnread = _notifications.any((n) => !n.isRead);
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F8FA),
+      backgroundColor: theme.colorScheme.background,
       appBar: AppBar(
         title: const Text('Notifications'),
         actions: [
@@ -195,12 +177,12 @@ class _NotificationPageState extends State<NotificationPage> {
       ),
       body: RefreshIndicator(
         onRefresh: _fetchNotifications,
-        child: _buildBody(),
+        child: _buildBody(isDark),
       ),
     );
   }
 
-  Widget _buildBody() {
+  Widget _buildBody(bool isDark) {
     if (_isLoading) return _buildShimmerList();
 
     if (_errorMessage != null) {
@@ -237,7 +219,7 @@ class _NotificationPageState extends State<NotificationPage> {
             child: Text(
               "🎉 You're all caught up!\nNo new notifications.",
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey, fontSize: 16),
+              style: TextStyle(fontSize: 16, color: Colors.grey),
             ),
           ),
         ],
@@ -262,7 +244,9 @@ class _NotificationPageState extends State<NotificationPage> {
             ),
             child: Container(
               decoration: BoxDecoration(
-                color: isUnread ? const Color(0xFFE8F1FF) : Colors.white,
+                color: isUnread
+                    ? (isDark ? Colors.blueGrey.shade900 : const Color(0xFFE8F1FF))
+                    : (isDark ? Colors.grey.shade900 : Colors.white),
                 borderRadius: BorderRadius.circular(14),
               ),
               padding: const EdgeInsets.all(14),
@@ -277,10 +261,16 @@ class _NotificationPageState extends State<NotificationPage> {
                         width: 40,
                         height: 40,
                         decoration: BoxDecoration(
-                          color: isUnread ? const Color(0xFFDBE7FF) : const Color(0xFFF0F2F5),
+                          color: isUnread
+                              ? (isDark ? Colors.blueGrey.shade800 : const Color(0xFFDBE7FF))
+                              : (isDark ? Colors.grey.shade800 : const Color(0xFFF0F2F5)),
                           shape: BoxShape.circle,
                         ),
-                        child: Icon(_iconForType(n.type), size: 22, color: const Color(0xFF2D5BFF)),
+                        child: Icon(
+                          _iconForType(n.type),
+                          size: 22,
+                          color: isDark ? Colors.lightBlueAccent : const Color(0xFF2D5BFF),
+                        ),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
@@ -292,7 +282,7 @@ class _NotificationPageState extends State<NotificationPage> {
                               style: TextStyle(
                                 fontSize: 15.5,
                                 fontWeight: isUnread ? FontWeight.w700 : FontWeight.w600,
-                                color: const Color(0xFF1F2937),
+                                color: isDark ? Colors.white : const Color(0xFF1F2937),
                               ),
                             ),
                             const SizedBox(height: 4),
@@ -300,27 +290,33 @@ class _NotificationPageState extends State<NotificationPage> {
                               timeago.format(n.createdAt),
                               style: TextStyle(
                                 fontSize: 12.5,
-                                color: Colors.grey.shade600,
+                                color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
                               ),
                             ),
                           ],
                         ),
                       ),
                       if (isUnread)
-                        const Padding(
-                          padding: EdgeInsets.only(top: 6),
-                          child: Icon(Icons.circle, size: 10, color: Color(0xFF2D5BFF)),
+                        Padding(
+                          padding: const EdgeInsets.only(top: 6),
+                          child: Icon(Icons.circle,
+                              size: 10,
+                              color: isDark ? Colors.lightBlueAccent : const Color(0xFF2D5BFF)),
                         ),
                     ],
                   ),
 
                   const SizedBox(height: 10),
 
-                  // Message (HTML-stripped)
+                  // Message
                   if ((_stripHtml(n.message)).isNotEmpty)
                     Text(
                       _stripHtml(n.message),
-                      style: const TextStyle(fontSize: 14, height: 1.35, color: Color(0xFF111827)),
+                      style: TextStyle(
+                        fontSize: 14,
+                        height: 1.35,
+                        color: isDark ? Colors.grey.shade200 : const Color(0xFF111827),
+                      ),
                     ),
 
                   // Description
@@ -328,7 +324,11 @@ class _NotificationPageState extends State<NotificationPage> {
                     if ((_stripHtml(n.message)).isNotEmpty) const SizedBox(height: 8),
                     Text(
                       n.description!,
-                      style: const TextStyle(fontSize: 13, height: 1.35, color: Color(0xFF6B7280)),
+                      style: TextStyle(
+                        fontSize: 13,
+                        height: 1.35,
+                        color: isDark ? Colors.grey.shade400 : const Color(0xFF6B7280),
+                      ),
                     ),
                   ],
                 ],
@@ -341,7 +341,7 @@ class _NotificationPageState extends State<NotificationPage> {
   }
 
   // ------------------------------
-  // Shimmer skeleton while loading
+  // Shimmer skeleton
   // ------------------------------
   Widget _buildShimmerList() {
     return ListView.builder(
@@ -349,8 +349,8 @@ class _NotificationPageState extends State<NotificationPage> {
       itemCount: 6,
       itemBuilder: (context, index) {
         return Shimmer.fromColors(
-          baseColor: Colors.grey.shade300,
-          highlightColor: Colors.grey.shade100,
+          baseColor: const Color.fromARGB(125, 255, 255, 255),
+          highlightColor: const Color.fromARGB(255, 214, 214, 214),
           child: Card(
             margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
@@ -359,7 +359,6 @@ class _NotificationPageState extends State<NotificationPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // header row placeholders
                   Row(
                     children: [
                       Container(width: 40, height: 40, decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle)),
@@ -377,15 +376,32 @@ class _NotificationPageState extends State<NotificationPage> {
                     ],
                   ),
                   const SizedBox(height: 12),
-                  Container(height: 12, width: double.infinity, color: Colors.white), // message
+                  Container(height: 12, width: double.infinity, color: Colors.white),
                   const SizedBox(height: 8),
-                  Container(height: 12, width: 220, color: Colors.white), // description
+                  Container(height: 12, width: 220, color: Colors.white),
                 ],
               ),
             ),
           ),
         );
       },
+    );
+  }
+}
+
+extension on NotificationModel {
+  NotificationModel copyWith({
+    bool? isRead,
+  }) {
+    return NotificationModel(
+      id: id,
+      userId: userId,
+      title: title,
+      message: message,
+      description: description,
+      createdAt: createdAt,
+      isRead: isRead ?? this.isRead,
+      type: type,
     );
   }
 }

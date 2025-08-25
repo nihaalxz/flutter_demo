@@ -147,6 +147,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
   Widget build(BuildContext context) {
     final currency = NumberFormat.currency(locale: 'en_IN', symbol: '₹');
     final dateFmt = DateFormat.yMMMd();
+    final theme = Theme.of(context);
 
     final createdAtDt = _asDateTime(product?.createdAt);
     final createdAtLabel = createdAtDt != null
@@ -154,21 +155,25 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
         : (product?.createdAt.toString() ?? '');
 
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         title: Text(
           product?.name ?? "",
-          style: const TextStyle(color: Colors.black),
+          style: TextStyle(color: theme.appBarTheme.foregroundColor),
         ),
-        backgroundColor: Colors.white,
+        backgroundColor: theme.appBarTheme.backgroundColor,
+        foregroundColor: theme.appBarTheme.foregroundColor,
         elevation: 1,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          icon: Icon(
+            Icons.arrow_back,
+            color: theme.appBarTheme.foregroundColor,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.share, color: Colors.black),
+            icon: Icon(Icons.share, color: theme.appBarTheme.foregroundColor),
             onPressed: () {
               // TODO: implement share
             },
@@ -453,7 +458,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                           style: const TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w700,
-                            color: Colors.blue,
+                            color: Color.fromARGB(164, 44, 243, 33),
                           ),
                         ),
                       ],
@@ -492,20 +497,18 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                     ),
                     Row(
                       children: [
-                        Icon(
-                          Icons.location_on_outlined
+                        Icon(Icons.location_on_outlined),
+                        Text(
+                          product!.location,
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: theme.appBarTheme.foregroundColor,
+                            // fontFamily:
                           ),
-                        Text(product!.location,
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: const Color.fromARGB(255, 0, 0, 0),
-                          // fontFamily:
                         ),
-                        
-                      ),
-                        Padding(padding: const EdgeInsets.all(16),) 
-                      ], 
+                        Padding(padding: const EdgeInsets.all(16)),
+                      ],
                     ),
 
                     const SizedBox(height: 12),
@@ -624,8 +627,8 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                     // Description
                     Container(
                       padding: const EdgeInsets.all(16),
-                      decoration: const BoxDecoration(
-                        color: Colors.white,
+                      decoration: BoxDecoration(
+                        color: theme.scaffoldBackgroundColor,
                         borderRadius: BorderRadius.all(Radius.circular(12)),
                         boxShadow: [
                           BoxShadow(
@@ -638,15 +641,22 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
+                          Text(
                             "Description",
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
+                              color: theme.appBarTheme.foregroundColor,
                             ),
                           ),
                           const SizedBox(height: 8),
-                          Text(product!.description),
+                          Text(
+                            product!.description,
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: theme.appBarTheme.foregroundColor,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -655,12 +665,13 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
 
                     // Similar products
                     if (similarProducts.isNotEmpty) ...[
-                      const Text(
+                      Text(
                         "Similar Products",
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
                       ),
                       const SizedBox(height: 12),
                       SizedBox(
@@ -672,78 +683,144 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                               const SizedBox(width: 12),
                           itemBuilder: (context, index) {
                             final sim = similarProducts[index];
-                            return Container(
-                              width: 160,
-                              padding: const EdgeInsets.all(8),
-                              decoration: const BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.all(
-                                  Radius.circular(12),
-                                ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black12,
-                                    blurRadius: 6,
-                                    offset: Offset(0, 3),
+                            return GestureDetector(
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) =>
+                                        ProductDetailsPage(productId: sim.id),
                                   ),
-                                ],
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  ClipRRect(
-                                    borderRadius: BorderRadius.circular(8),
-                                    child: AspectRatio(
-                                      aspectRatio: 16 / 9,
-                                      child: CachedNetworkImage(
-                                        imageUrl:
-                                            '${AppConfig.imageBaseUrl}${sim.image}',
-                                        fit: BoxFit.cover,
-                                        placeholder: (context, url) =>
-                                            Container(
-                                              color: Colors.grey[300],
-                                              child: const Center(
-                                                child:
-                                                    CircularProgressIndicator(),
+                                );
+                              },
+                              child: Container(
+                                width: 160,
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: Theme.of(
+                                    context,
+                                  ).cardColor, // ✅ adapts to dark mode
+                                  borderRadius: BorderRadius.circular(12),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.08),
+                                      blurRadius: 6,
+                                      offset: const Offset(0, 3),
+                                    ),
+                                  ],
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(8),
+                                      child: AspectRatio(
+                                        aspectRatio: 16 / 9,
+                                        child: CachedNetworkImage(
+                                          imageUrl:
+                                              '${AppConfig.imageBaseUrl}${sim.image}',
+                                          fit: BoxFit.cover,
+                                          placeholder: (context, url) =>
+                                              Container(
+                                                color: Theme.of(
+                                                  context,
+                                                ).colorScheme.surfaceVariant,
+                                                child: const Center(
+                                                  child:
+                                                      CircularProgressIndicator(),
+                                                ),
                                               ),
-                                            ),
-                                        errorWidget: (context, url, error) =>
-                                            const Icon(Icons.error, size: 40),
+                                          errorWidget: (context, url, error) =>
+                                              Icon(
+                                                Icons.error,
+                                                size: 40,
+                                                color: Theme.of(
+                                                  context,
+                                                ).iconTheme.color,
+                                              ),
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    sim.name,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  Text(
-                                    "${currency.format(sim.price)}/day",
-                                    style: const TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.blue,
-                                    ),
-                                  ),
-                                  const Spacer(),
-                                  TextButton(
-                                    onPressed: () {
-                                      Navigator.pushReplacement(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (_) => ProductDetailsPage(
-                                            productId: sim.id,
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      sim.name,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodyMedium
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.w600,
                                           ),
+                                    ),
+                                    Text(
+                                      "${currency.format(sim.price)}/day",
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodyMedium
+                                          ?.copyWith(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.bold,
+                                            color: Color.fromARGB(
+                                              185,
+                                              0,
+                                              255,
+                                              0,
+                                            ),
+                                          ),
+                                    ),
+
+                                    const SizedBox(height: 8),
+                                    Row(
+                                      children: [
+                                        Icon(
+                                          Icons
+                                              .location_on_outlined, // 📍 location icon
+                                          size: 14,
+                                          color: Theme.of(
+                                            context,
+                                          ).iconTheme.color,
                                         ),
-                                      );
-                                    },
-                                    child: const Text("View"),
-                                  ),
-                                ],
+                                        const SizedBox(width: 4), // spacing
+                                        Text(
+                                          sim.location,
+                                          style: Theme.of(
+                                            context,
+                                          ).textTheme.bodySmall,
+                                        ),
+                                        
+                                      ],
+                                    ),
+                                    Row(
+                                       children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: (sim.availability == true)
+                                ? Colors.green[100]
+                                : Colors.red[100],
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Text(
+                            (sim.availability == true)
+                                ? 'Available for Rent'
+                                : 'Currently Unavailable',
+                            style: TextStyle(
+                              color: (sim.availability == true)
+                                  ? Colors.green[800]
+                                  : Colors.red[800],
+                              fontWeight: FontWeight.w600,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      ],
+                                    )
+                                  ],
+                                ),
                               ),
                             );
                           },
