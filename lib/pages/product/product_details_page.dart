@@ -455,10 +455,10 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                         const SizedBox(width: 12),
                         Text(
                           "${currency.format(product!.price)}/day",
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w700,
-                            color: Color.fromARGB(164, 44, 243, 33),
+                            color:  Colors.green[600],
                           ),
                         ),
                       ],
@@ -761,12 +761,8 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                                           ?.copyWith(
                                             fontSize: 14,
                                             fontWeight: FontWeight.bold,
-                                            color: Color.fromARGB(
-                                              185,
-                                              0,
-                                              255,
-                                              0,
-                                            ),
+                                            color: Colors.green[600],
+                                              
                                           ),
                                     ),
 

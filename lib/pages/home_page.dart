@@ -7,6 +7,7 @@ import 'package:myfirstflutterapp/pages/my_items_page.dart';
 import 'package:myfirstflutterapp/pages/notification_page.dart';
 import 'package:myfirstflutterapp/pages/product/product_details_page.dart';
 import 'package:myfirstflutterapp/pages/profile_page.dart';
+import 'package:myfirstflutterapp/pages/search_screen.dart';
 import 'package:myfirstflutterapp/pages/wishlist_page.dart';
 import 'package:myfirstflutterapp/state/AppStateManager.dart';
 import 'package:myfirstflutterapp/services/auth_service.dart';
@@ -138,7 +139,7 @@ class _HomePageState extends State<HomePage> {
                   slivers: [
                     SliverList(
                       delegate: SliverChildListDelegate([
-                        _SearchBar(),
+                        _SearchBar(context),
                         const SizedBox(height: 20),
                         _buildCategoriesSection(categories),
                         const SizedBox(height: 20),
@@ -173,7 +174,7 @@ class _HomePageState extends State<HomePage> {
       slivers: [
         SliverList(
           delegate: SliverChildListDelegate([
-            _SearchBar(),
+            _SearchBar(context),
             const SizedBox(height: 20),
             _shimmerCategories(),
             const SizedBox(height: 20),
@@ -338,29 +339,40 @@ class _HomePageState extends State<HomePage> {
             }, childCount: products.length),
           );
   }
-
-  Container _SearchBar() {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-      decoration: BoxDecoration(
-        boxShadow: [
-          BoxShadow(blurRadius: 15, color: Colors.black.withOpacity(0.1)),
-        ],
-      ),
-      child: TextField(
-        decoration: InputDecoration(
-          filled: true,
-          fillColor: Theme.of(context).cardColor,
-          hintText: 'Search Products...',
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(15),
-            borderSide: BorderSide.none,
+Widget _SearchBar(BuildContext context) {
+  return Container(
+    margin: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+    decoration: BoxDecoration(
+      boxShadow: [
+        BoxShadow(blurRadius: 15, color: Colors.black.withOpacity(0.1)),
+      ],
+    ),
+    child: InkWell(
+      borderRadius: BorderRadius.circular(15),
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => SearchPage()),
+        );
+      },
+      child: IgnorePointer( // Prevents keyboard from opening
+        child: TextField(
+          enabled: false, // keeps UI but disables typing here
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: Theme.of(context).cardColor,
+            hintText: 'Search Products...',
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(15),
+              borderSide: BorderSide.none,
+            ),
+            prefixIcon: const Icon(Icons.search),
           ),
-          prefixIcon: const Icon(Icons.search),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   /// ✅ AppBar now accepts the notification count
   AppBar appBar(int notificationCount) {
