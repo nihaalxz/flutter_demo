@@ -194,7 +194,7 @@ class _MyItemsPageState extends State<MyItemsPage> {
                             color: Theme.of(context).colorScheme.primary),
                       ),
                       const SizedBox(height: 4),
-                      Text("Location: ${item.location}",
+                      Text("Location: ${item.locationName}",
                           style: TextStyle(color: Colors.grey[600], fontSize: 13,fontStyle: FontStyle.italic)),
                       const SizedBox(height: 4),
                       Text("Views: ${item.views}",

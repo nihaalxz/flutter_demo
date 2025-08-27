@@ -35,7 +35,7 @@ class Product {
   final String ownerName;
 
   @HiveField(10)
-  final String location;
+  final String locationName;
 
   @HiveField(11)
   bool availability;
@@ -51,6 +51,13 @@ class Product {
 
   @HiveField(15) // ✅ FIX: Corrected duplicate Hive index
   bool isWishlisted;
+  
+  @HiveField(16)
+  final double? latitude;
+
+  @HiveField(17)
+  final double? longitude;
+
 
   Product({
     required this.id,
@@ -63,12 +70,14 @@ class Product {
     required this.categoryName,
     required this.ownerId,
     required this.ownerName,
-    required this.location,
+    required this.locationName,
     required this.availability,
     required this.createdAt,
     required this.status,
     required this.views,
     this.isWishlisted = false,
+    required this.latitude,
+    required this.longitude,
   });
 
   /// ✅ FIX: This factory is now safer and provides default values for missing data.
@@ -84,11 +93,13 @@ class Product {
       categoryName: json['categoryName'] ?? 'Uncategorized',
       ownerId: json['ownerId'] ?? '',
       ownerName: json['ownerName'] ?? 'Unknown Owner',
-      location: json['location'] ?? 'Unknown Location',
+      locationName: json['locationName'] ?? 'Unknown Location',
       availability: json['availability'] ?? false,
       createdAt: DateTime.parse(json['createdAt']),
       status: json['status'] ?? 'Unknown',
       views: json['views'] ?? 0,
+      latitude: (json['latitude'] as num?)?.toDouble() ?? 0.0,
+      longitude: (json['longitude'] as num?)?.toDouble() ?? 0.0,
     );
   }
 
@@ -104,7 +115,9 @@ class Product {
       'categoryName': categoryName,
       'ownerId': ownerId,
       'ownerName': ownerName,
-      'location': location,
+      'location': locationName,
+      'latitude': latitude,
+      'longitude': longitude,
       'availability': availability,
       'createdAt': createdAt,
       'status': status,

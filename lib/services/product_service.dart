@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:myfirstflutterapp/models/Product_DTO/Product_update_dto.dart';
-
+import 'package:http_parser/http_parser.dart';
 // --- Assumed Imports ---
 import '../models/product_model.dart';
 import '../environment/env.dart';
@@ -48,7 +48,7 @@ class ProductService {
 
     print("Fetching products from network...");
     final headers = await _getAuthHeaders();
-    final url = Uri.parse('$_baseUrl/item');
+    final url = Uri.parse('$_baseUrl/item/fetchallitems');
     final response = await http.get(url, headers: headers);
 
     if (response.statusCode == 200) {
@@ -113,18 +113,45 @@ class ProductService {
   }
 
   /// Creates a new product.
-  Future<Product> createProduct(Product product) async {
-    final headers = await _getAuthHeaders();
+  Future<Product> createProduct({
+    required Product product,
+    required File image,
+  }) async {
+    final token = await _authService.getToken();
+    if (token == null) throw Exception('User not authenticated.');
+
     final url = Uri.parse('$_baseUrl/item');
-    final response = await http.post(
-      url,
-      headers: headers,
-      body: jsonEncode(product.toJson()),
+    final request = http.MultipartRequest('POST', url);
+
+    // Add headers
+    request.headers['Authorization'] = 'Bearer $token';
+
+    // Add text fields from the product object
+    request.fields['Name'] = product.name;
+    request.fields['Description'] = product.description;
+    request.fields['Price'] = product.price.toString();
+    request.fields['CategoryId'] = product.categoryId.toString();
+    request.fields['Latitude'] = product.latitude.toString();
+    request.fields['Longitude'] = product.longitude.toString();
+    request.fields['LocationName'] = product.locationName;
+    request.fields['Availability'] = 'true'; 
+
+    // Add the image file
+    request.files.add(
+      await http.MultipartFile.fromPath(
+        'Image', // This key must match what your ASP.NET Core backend expects
+        image.path,
+        contentType: MediaType('image', 'jpeg'), // Adjust content type if needed
+      ),
     );
-    if (response.statusCode == 201) {
-      return Product.fromJson(jsonDecode(response.body));
+
+    final streamedResponse = await request.send();
+    final response = await http.Response.fromStream(streamedResponse);
+
+    if (response.statusCode == 201 || response.statusCode == 200) {
+      return Product.fromJson(json.decode(response.body));
     } else {
-      throw Exception('Failed to create product.');
+      throw Exception('Failed to create product. Server responded with ${response.statusCode}: ${response.body}');
     }
   }
 
@@ -167,8 +194,12 @@ Future<Product> updateItem(int id, ProductUpdateDto dto, {File? imageFile}) asyn
     request.fields['description'] = dto.description;
     request.fields['price'] = dto.price.toString();
     request.fields['categoryId'] = dto.categoryId.toString();
-    request.fields['location'] = dto.location;
+    request.fields['locationName'] = dto.locationName;
     request.fields['availability'] = dto.availability.toString();
+    request.fields['latitude'] = dto.latitude.toString();
+    request.fields['longitude'] = dto.longitude.toString();
+    
+
 
   // Add image file if selected
   if (imageFile != null) {

@@ -499,7 +499,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                       children: [
                         Icon(Icons.location_on_outlined),
                         Text(
-                          product!.location,
+                          product!.locationName,
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
@@ -779,7 +779,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                                         ),
                                         const SizedBox(width: 4), // spacing
                                         Text(
-                                          sim.location,
+                                          sim.locationName,
                                           style: Theme.of(
                                             context,
                                           ).textTheme.bodySmall,

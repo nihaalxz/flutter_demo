@@ -201,7 +201,7 @@ class _ProductCardState extends State<ProductCard> {
                     const SizedBox(width: 4),
                     Expanded(
                       child: Text(
-                        widget.product.location,
+                        widget.product.locationName,
                         style:
                             TextStyle(fontSize: 12,color: Theme.of(context).textTheme.bodyMedium?.color,),
                         overflow: TextOverflow.ellipsis,
