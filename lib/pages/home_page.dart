@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:myfirstflutterapp/models/user_model.dart';
 import 'package:myfirstflutterapp/pages/gen/settings_page.dart';

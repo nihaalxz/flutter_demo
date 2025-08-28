@@ -73,7 +73,7 @@ class _ProductCardState extends State<ProductCard> {
 
   @override
   Widget build(BuildContext context) {
-     final theme = Theme.of(context);
+     Theme.of(context);
     // ✅ FIX: Safely parse the date string to prevent crashes.
     final String formattedDate = DateFormat.yMMMd().format(widget.product.createdAt);
 

@@ -25,21 +25,6 @@ class _WalletPageState extends State<WalletPage> {
    _walletDataFuture = _walletService.getWallet();
   }
 
-  /// Fetches both wallet details and transactions concurrently.
-  Future<Map<String, dynamic>> _fetchWalletData() async {
-    try {
-      final results = await Future.wait([
-        _walletService.getWallet(),
-      ]);
-      return {
-        'details': results[0],
-        'transactions': results[1] as List<WalletTransaction>,
-      };
-    } catch (e) {
-      // Re-throw the error to be caught by the FutureBuilder
-      rethrow;
-    }
-  }
 
   void _refreshWalletData() {
     setState(() {
