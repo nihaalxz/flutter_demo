@@ -208,10 +208,10 @@ class _WalletPageState extends State<WalletPage> {
           final isCredit = transaction.type.toLowerCase() == 'credit';
           return ListTile(
             leading: CircleAvatar(
-              backgroundColor: isCredit ? Colors.green[100] : Colors.red[100],
+              backgroundColor: isCredit ? Colors.red[100] : Colors.green[100],
               child: Icon(
                 isCredit ? Icons.arrow_downward : Icons.arrow_upward,
-                color: isCredit ? Colors.green[800] : Colors.red[800],
+                color: isCredit ? Colors.red[800] : Colors.green[800],
               ),
             ),
             // ✅ FIX: Use a placeholder for description as it's not in the model
@@ -219,9 +219,9 @@ class _WalletPageState extends State<WalletPage> {
             // ✅ FIX: Use `timestamp` instead of `date`
             subtitle: Text(DateFormat.yMMMd().add_jm().format(transaction.timestamp.toLocal())),
             trailing: Text(
-              '${isCredit ? '+' : '-'} ${NumberFormat.currency(locale: 'en_IN', symbol: '₹').format(transaction.amount)}',
+              '${isCredit ? '-' : '+'} ${NumberFormat.currency(locale: 'en_IN', symbol: '₹').format(transaction.amount)}',
               style: TextStyle(
-                color: isCredit ? Colors.green : Colors.red,
+                color: isCredit ? Colors.red : Colors.green,
                 fontWeight: FontWeight.bold,
                 fontSize: 16,
               ),
