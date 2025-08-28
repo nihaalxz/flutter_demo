@@ -3,11 +3,12 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:myfirstflutterapp/models/user_model.dart';
 import 'package:myfirstflutterapp/pages/gen/settings_page.dart';
-import 'package:myfirstflutterapp/pages/my_items_page.dart';
+import 'package:myfirstflutterapp/pages/product/my_items_page.dart';
 import 'package:myfirstflutterapp/pages/notification_page.dart';
 import 'package:myfirstflutterapp/pages/product/product_details_page.dart';
-import 'package:myfirstflutterapp/pages/profile_page.dart';
+import 'package:myfirstflutterapp/pages/Auth/profile_page.dart';
 import 'package:myfirstflutterapp/pages/search_screen.dart';
+import 'package:myfirstflutterapp/pages/wallet_page.dart';
 import 'package:myfirstflutterapp/pages/wishlist_page.dart';
 import 'package:myfirstflutterapp/state/AppStateManager.dart';
 import 'package:myfirstflutterapp/services/auth_service.dart';
@@ -113,11 +114,15 @@ class _HomePageState extends State<HomePage> {
       });
 
       _nearbyProducts = _products
-          .where((p) => p.locationName.toLowerCase().contains(city.toLowerCase()))
+          .where(
+            (p) => p.locationName.toLowerCase().contains(city.toLowerCase()),
+          )
           .toList();
 
       _otherProducts = _products
-          .where((p) => !p.locationName.toLowerCase().contains(city.toLowerCase()))
+          .where(
+            (p) => !p.locationName.toLowerCase().contains(city.toLowerCase()),
+          )
           .toList();
 
       // fallback: if no nearby items, just show all in "Other"
@@ -171,11 +176,15 @@ class _HomePageState extends State<HomePage> {
       });
 
       _nearbyProducts = _products
-          .where((p) => p.locationName.toLowerCase().contains(city.toLowerCase()))
+          .where(
+            (p) => p.locationName.toLowerCase().contains(city.toLowerCase()),
+          )
           .toList();
 
       _otherProducts = _products
-          .where((p) => !p.locationName.toLowerCase().contains(city.toLowerCase()))
+          .where(
+            (p) => !p.locationName.toLowerCase().contains(city.toLowerCase()),
+          )
           .toList();
 
       if (_nearbyProducts.isEmpty) {
@@ -646,9 +655,9 @@ class _HomePageState extends State<HomePage> {
         ).push(MaterialPageRoute(builder: (context) => const MyItemsPage()));
         break;
       case MenuItem.item3:
-        ScaffoldMessenger.of(
+        Navigator.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('Navigate to Wallet')));
+        ).push(MaterialPageRoute(builder: (context) => const WalletPage()));
         break;
       case MenuItem.item4:
         ScaffoldMessenger.of(context).showSnackBar(
@@ -719,14 +728,12 @@ class CategoryItem extends StatelessWidget {
               color: Colors.grey[100],
               shape: BoxShape.circle,
             ),
-            child: SvgPicture.network(
-              category.icon,
-              placeholderBuilder: (context) =>
-                  const CircularProgressIndicator(strokeWidth: 2),
-              colorFilter: const ColorFilter.mode(
-                Colors.amber,
-                BlendMode.srcIn,
+            child: CircleAvatar(
+              backgroundImage: CachedNetworkImageProvider(
+                "${AppConfig.imageBaseUrl}${category.iconImage}",
               ),
+              backgroundColor: Colors.transparent,
+              radius: 55,
             ),
           ),
           const SizedBox(height: 8),

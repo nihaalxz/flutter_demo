@@ -14,13 +14,13 @@ class CategoryModel {
   final String description;
 
   @HiveField(3)
-  final String icon;
+  final String iconImage;
 
   CategoryModel({
     required this.id,
     required this.name,
     required this.description,
-    required this.icon,
+    required this.iconImage,
   });
 
   factory CategoryModel.fromJson(Map<String, dynamic> json) {
@@ -28,7 +28,7 @@ class CategoryModel {
       id: json['id'],
       name: json['name'],
       description: json['description'],
-      icon: json['icon'],
+      iconImage: json['iconImage'],
     );
   }
 }

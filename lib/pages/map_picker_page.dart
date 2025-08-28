@@ -70,10 +70,8 @@ class _MapPickerPageState extends State<MapPickerPage> {
       );
       if (placemarks.isNotEmpty) {
         final p = placemarks.first;
-        // Construct a clean address string
         setState(() {
-          _selectedAddress =
-              "${p.locality}, ${p.administrativeArea}, ${p.country}";
+          _selectedAddress = _formatPlacemark(p);
           _isLoading = false;
         });
       }
@@ -84,6 +82,24 @@ class _MapPickerPageState extends State<MapPickerPage> {
       });
     }
   }
+
+  /// ✅ UPDATED: Formats a Placemark object into a detailed address string,
+  /// filtering out confusing "plus codes".
+  String _formatPlacemark(Placemark p) {
+    // Plus codes often appear in the 'street' or 'subLocality' field.
+    // We can filter them out by checking for the '+' symbol.
+    final street = (p.street?.contains('+') ?? false) ? null : p.street;
+    final subLocality = (p.subLocality?.contains('+') ?? false) ? null : p.subLocality;
+
+    return [
+      street,
+      subLocality,
+      p.locality,
+      p.postalCode,
+      p.country,
+    ].where((s) => s != null && s.isNotEmpty).join(', ');
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -137,6 +153,8 @@ class _MapPickerPageState extends State<MapPickerPage> {
                               : Text(
                                   _selectedAddress,
                                   style: const TextStyle(fontWeight: FontWeight.bold),
+                                  maxLines: 2, // Allow for longer addresses
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                         ],
                       ),
@@ -146,7 +164,7 @@ class _MapPickerPageState extends State<MapPickerPage> {
                       onPressed: _isLoading
                           ? null
                           : () {
-                              // ✅ FIX: Return a map containing both the address and coordinates.
+                              // Return a map containing both the address and coordinates.
                               Navigator.of(context).pop({
                                 'address': _selectedAddress,
                                 'coordinates': _selectedPosition,

@@ -4,12 +4,12 @@ import 'package:image_picker/image_picker.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart'; // For LatLng
 
 // --- Assumed Imports ---
-import '../services/product_service.dart';
-import '../services/category_service.dart';
-import '../models/category_model.dart';
-import '../models/product_model.dart';
+import '../../services/product_service.dart';
+import '../../services/category_service.dart';
+import '../../models/category_model.dart';
+import '../../models/product_model.dart';
 import 'my_items_page.dart';
-import 'map_picker_page.dart';
+import '../map_picker_page.dart';
 
 class CreateListingPage extends StatefulWidget {
   const CreateListingPage({super.key});
