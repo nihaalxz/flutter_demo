@@ -4,9 +4,9 @@ import 'package:myfirstflutterapp/services/payment_services/wallet_service.dart'
 import 'package:shimmer/shimmer.dart';
 
 // --- Assumed Imports ---
-import '../models/wallet_DTO/wallet_view.dart';
-import '../models/wallet_DTO/wallet_transaction.dart';
-import '../models/wallet_DTO/withdrawal_request.dart';
+import '../../models/wallet_DTO/wallet_view.dart';
+import '../../models/wallet_DTO/wallet_transaction.dart';
+import '../../models/wallet_DTO/withdrawal_request.dart';
 
 /// A page that displays the user's wallet balance and transaction history.
 class WalletPage extends StatefulWidget {
@@ -247,6 +247,16 @@ class _WalletPageState extends State<WalletPage> {
           const SizedBox(height: 16),
           Container(height: 60, color: Colors.white),
           const SizedBox(height: 12),
+          Container(height: 60, color: Colors.white),
+           const SizedBox(height: 12),
+          Container(height: 60, color: Colors.white),
+           const SizedBox(height: 12),
+          Container(height: 60, color: Colors.white),
+           const SizedBox(height: 12),
+          Container(height: 60, color: Colors.white),
+           const SizedBox(height: 12),
+          Container(height: 60, color: Colors.white),
+           const SizedBox(height: 12),
           Container(height: 60, color: Colors.white),
         ],
       ),

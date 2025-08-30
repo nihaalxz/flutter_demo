@@ -2,12 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:myfirstflutterapp/models/user_model.dart';
 import 'package:myfirstflutterapp/pages/gen/settings_page.dart';
+import 'package:myfirstflutterapp/pages/payments/payment_history_page.dart';
 import 'package:myfirstflutterapp/pages/product/my_items_page.dart';
 import 'package:myfirstflutterapp/pages/notification_page.dart';
 import 'package:myfirstflutterapp/pages/product/product_details_page.dart';
 import 'package:myfirstflutterapp/pages/Auth/profile_page.dart';
 import 'package:myfirstflutterapp/pages/search_screen.dart';
-import 'package:myfirstflutterapp/pages/wallet_page.dart';
+import 'package:myfirstflutterapp/pages/payments/wallet_page.dart';
 import 'package:myfirstflutterapp/pages/wishlist_page.dart';
 import 'package:myfirstflutterapp/state/AppStateManager.dart';
 import 'package:myfirstflutterapp/services/auth_service.dart';
@@ -659,9 +660,9 @@ class _HomePageState extends State<HomePage> {
         ).push(MaterialPageRoute(builder: (context) => const WalletPage()));
         break;
       case MenuItem.item4:
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Navigate to Payment History')),
-        );
+         Navigator.of(
+          context,
+        ).push(MaterialPageRoute(builder: (context) => const PaymentHistoryPage()));
         break;
       case MenuItem.item5:
         Navigator.of(
