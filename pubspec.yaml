@@ -36,6 +36,8 @@ dependencies:
   google_maps_flutter: ^2.12.3
   webview_flutter: ^4.13.0
   flutter_cashfree_pg_sdk: ^2.2.9+47
+  flutter_localizations:
+    sdk: flutter
 permission_handler: ^11.0.1
 
 dev_dependencies:
