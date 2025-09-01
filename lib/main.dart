@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
@@ -61,10 +60,10 @@ class MyApp extends StatelessWidget {
             // ✅ 2. Add these delegates to your CupertinoApp
             // This provides the necessary "language pack" for any Material
             // widgets used within the Cupertino app structure.
-            localizationsDelegates: const [
-              GlobalMaterialLocalizations.delegate,
-              GlobalWidgetsLocalizations.delegate,
-              GlobalCupertinoLocalizations.delegate,
+            localizationsDelegates: [
+              DefaultMaterialLocalizations.delegate,
+              DefaultWidgetsLocalizations.delegate,
+              DefaultCupertinoLocalizations.delegate,
             ],
             supportedLocales: const [
               Locale('en', ''), // English, no country code

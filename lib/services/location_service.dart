@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 
@@ -14,6 +15,10 @@ static Future<Position> getCurrentPosition() async {
     if (permission == LocationPermission.denied) {
       throw Exception('Location permissions are denied');
     }
+    if (kDebugMode) {
+      print("Permission: $permission");
+    }
+
   }
 
   if (permission == LocationPermission.deniedForever) {
@@ -22,6 +27,10 @@ static Future<Position> getCurrentPosition() async {
     throw Exception(
         'Location permissions are permanently denied. Please enable from Settings.');
   }
+  if (kDebugMode) {
+    print("Permission: $permission");
+  }
+
 
   return await Geolocator.getCurrentPosition(
       desiredAccuracy: LocationAccuracy.high);
@@ -36,5 +45,7 @@ static Future<Position> getCurrentPosition() async {
       return placemarks.first.locality ?? "Unknown City";
     }
     return "Unknown City";
+    
   }
+  
 }
