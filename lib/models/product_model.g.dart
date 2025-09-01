@@ -27,18 +27,21 @@ class ProductAdapter extends TypeAdapter<Product> {
       categoryName: fields[7] as String,
       ownerId: fields[8] as String,
       ownerName: fields[9] as String,
-      location: fields[10] as String,
+      locationName: fields[10] as String,
       availability: fields[11] as bool,
       createdAt: fields[12] as DateTime,
       status: fields[13] as String,
       views: fields[14] as int,
+      isWishlisted: fields[15] as bool,
+      latitude: fields[16] as double?,
+      longitude: fields[17] as double?,
     );
   }
 
   @override
   void write(BinaryWriter writer, Product obj) {
     writer
-      ..writeByte(15)
+      ..writeByte(18)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -60,7 +63,7 @@ class ProductAdapter extends TypeAdapter<Product> {
       ..writeByte(9)
       ..write(obj.ownerName)
       ..writeByte(10)
-      ..write(obj.location)
+      ..write(obj.locationName)
       ..writeByte(11)
       ..write(obj.availability)
       ..writeByte(12)
@@ -68,7 +71,13 @@ class ProductAdapter extends TypeAdapter<Product> {
       ..writeByte(13)
       ..write(obj.status)
       ..writeByte(14)
-      ..write(obj.views);
+      ..write(obj.views)
+      ..writeByte(15)
+      ..write(obj.isWishlisted)
+      ..writeByte(16)
+      ..write(obj.latitude)
+      ..writeByte(17)
+      ..write(obj.longitude);
   }
 
   @override

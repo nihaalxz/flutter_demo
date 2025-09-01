@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:intl/intl.dart';
-import 'package:myfirstflutterapp/pages/create_listing_page.dart';
+import 'package:myfirstflutterapp/pages/product/create_listing_page.dart';
 import 'package:myfirstflutterapp/pages/product/product_edit_page.dart';
 import 'package:shimmer/shimmer.dart';
 
-import '../models/product_model.dart';
-import '../services/product_service.dart';
-import '../environment/env.dart';
+import '../../models/product_model.dart';
+import '../../services/product_service.dart';
+import '../../environment/env.dart';
 
 class MyItemsPage extends StatefulWidget {
   const MyItemsPage({super.key});
@@ -194,7 +194,7 @@ class _MyItemsPageState extends State<MyItemsPage> {
                             color: Theme.of(context).colorScheme.primary),
                       ),
                       const SizedBox(height: 4),
-                      Text("Location: ${item.location}",
+                      Text("Location: ${item.locationName}",
                           style: TextStyle(color: Colors.grey[600], fontSize: 13,fontStyle: FontStyle.italic)),
                       const SizedBox(height: 4),
                       Text("Views: ${item.views}",

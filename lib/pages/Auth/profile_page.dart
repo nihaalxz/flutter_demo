@@ -7,7 +7,7 @@ import 'package:myfirstflutterapp/pages/gen/settings_page.dart';
 import 'package:myfirstflutterapp/pages/wishlist_page.dart';
 import 'package:myfirstflutterapp/services/auth_service.dart';
 import 'package:myfirstflutterapp/environment/env.dart';
-import 'Auth/login_page.dart';
+import 'login_page.dart';
 
 /// A complete user profile page that displays user information and provides
 /// menu options for account management and logging out.

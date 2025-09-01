@@ -8,9 +8,9 @@ import 'package:provider/provider.dart';
 
 // --- Assumed Imports ---
 import 'package:myfirstflutterapp/pages/home_page.dart';
-import 'package:myfirstflutterapp/pages/create_listing_page.dart';
+import 'package:myfirstflutterapp/pages/product/create_listing_page.dart';
 import 'package:myfirstflutterapp/pages/bookings_page.dart';
-import 'package:myfirstflutterapp/pages/profile_page.dart';
+import 'package:myfirstflutterapp/pages/Auth/profile_page.dart';
 import 'package:myfirstflutterapp/services/notification_service.dart';
 import 'package:myfirstflutterapp/state/AppStateManager.dart';
 

@@ -25,12 +25,14 @@ class WalletService {
   }
 
   /// Fetches the user's complete wallet view (balances and transactions).
+  /// This correctly calls the GET /api/wallet endpoint.
   Future<WalletView> getWallet() async {
     final headers = await _getAuthHeaders();
     final url = Uri.parse(_walletApiUrl);
     final response = await http.get(url, headers: headers);
 
     if (response.statusCode == 200) {
+      // The response is a single JSON object containing the WalletView data.
       return WalletView.fromJson(jsonDecode(response.body));
     } else {
       throw Exception('Failed to load wallet data.');
@@ -49,7 +51,13 @@ class WalletService {
     );
 
     if (response.statusCode != 200 && response.statusCode != 204) {
-      throw Exception('Failed to make withdrawal request: ${response.body}');
+      // Try to parse a more detailed error message from the backend
+      try {
+        final errorBody = jsonDecode(response.body);
+        throw Exception(errorBody['message'] ?? 'Failed to make withdrawal request.');
+      } catch (_) {
+         throw Exception('Failed to make withdrawal request: ${response.body}');
+      }
     }
   }
 }

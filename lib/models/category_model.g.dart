@@ -20,7 +20,7 @@ class CategoryModelAdapter extends TypeAdapter<CategoryModel> {
       id: fields[0] as int,
       name: fields[1] as String,
       description: fields[2] as String,
-      icon: fields[3] as String,
+      iconImage: fields[3] as String,
     );
   }
 
@@ -35,7 +35,7 @@ class CategoryModelAdapter extends TypeAdapter<CategoryModel> {
       ..writeByte(2)
       ..write(obj.description)
       ..writeByte(3)
-      ..write(obj.icon);
+      ..write(obj.iconImage);
   }
 
   @override

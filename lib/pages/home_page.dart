@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:myfirstflutterapp/models/user_model.dart';
 import 'package:myfirstflutterapp/pages/gen/settings_page.dart';
-import 'package:myfirstflutterapp/pages/my_items_page.dart';
+import 'package:myfirstflutterapp/pages/payments/payment_history_page.dart';
+import 'package:myfirstflutterapp/pages/product/my_items_page.dart';
 import 'package:myfirstflutterapp/pages/notification_page.dart';
 import 'package:myfirstflutterapp/pages/product/product_details_page.dart';
-import 'package:myfirstflutterapp/pages/profile_page.dart';
+import 'package:myfirstflutterapp/pages/Auth/profile_page.dart';
 import 'package:myfirstflutterapp/pages/search_screen.dart';
+import 'package:myfirstflutterapp/pages/payments/wallet_page.dart';
 import 'package:myfirstflutterapp/pages/wishlist_page.dart';
 import 'package:myfirstflutterapp/state/AppStateManager.dart';
 import 'package:myfirstflutterapp/services/auth_service.dart';
@@ -22,6 +23,8 @@ import 'package:bootstrap_icons/bootstrap_icons.dart';
 import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
 import '../widgets/product_card.dart';
+import 'package:myfirstflutterapp/services/location_service.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -34,8 +37,13 @@ enum MenuItem { item1, item2, item3, item4, item5, item6, item7 }
 
 class _HomePageState extends State<HomePage> {
   List<Product> _products = [];
+  List<Product> _nearbyProducts = [];
+  List<Product> _otherProducts = [];
   final AuthService _authService = AuthService();
   AppUser? _currentUser;
+  String _currentCity = "Loading...";
+  List<Product> _filteredProducts = [];
+  bool _locationPermissionDenied = false;
 
   late Future<Map<String, dynamic>> _dataFuture;
 
@@ -78,7 +86,59 @@ class _HomePageState extends State<HomePage> {
 
     _products = fetchedProducts;
 
-    return {'products': fetchedProducts, 'categories': fetchedCategories};
+    try {
+      // Check location permission
+      final status = await Permission.location.status;
+      if (!status.isGranted) {
+        final result = await Permission.location.request();
+        if (!result.isGranted) {
+          setState(() {
+            _locationPermissionDenied = true;
+            _currentCity = "Location access denied";
+          });
+          _nearbyProducts = _products;
+          _otherProducts = [];
+          return {
+            'products': _filteredProducts,
+            'categories': fetchedCategories,
+          };
+        }
+      }
+
+      final position = await LocationService.getCurrentPosition();
+      final city = await LocationService.getCityFromCoordinates(position);
+
+      setState(() {
+        _currentCity = city;
+        _locationPermissionDenied = false;
+      });
+
+      _nearbyProducts = _products
+          .where(
+            (p) => p.locationName.toLowerCase().contains(city.toLowerCase()),
+          )
+          .toList();
+
+      _otherProducts = _products
+          .where(
+            (p) => !p.locationName.toLowerCase().contains(city.toLowerCase()),
+          )
+          .toList();
+
+      // fallback: if no nearby items, just show all in "Other"
+      if (_nearbyProducts.isEmpty) {
+        _nearbyProducts = [];
+        _otherProducts = _products;
+      }
+    } catch (e) {
+      setState(() {
+        _currentCity = "Unable to determine location";
+      });
+      _nearbyProducts = _products;
+      _otherProducts = [];
+    }
+
+    return {'products': _filteredProducts, 'categories': fetchedCategories};
   }
 
   void _onWishlistChanged(int productId, bool isWishlisted) {
@@ -90,13 +150,66 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
+  Future<void> _retryLocation() async {
+    try {
+      final status = await Permission.location.status;
+      if (!status.isGranted) {
+        final result = await Permission.location.request();
+        if (!result.isGranted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Location permission is required to show nearby items',
+              ),
+            ),
+          );
+          return;
+        }
+      }
+
+      final position = await LocationService.getCurrentPosition();
+      final city = await LocationService.getCityFromCoordinates(position);
+
+      setState(() {
+        _currentCity = city;
+        _locationPermissionDenied = false;
+      });
+
+      _nearbyProducts = _products
+          .where(
+            (p) => p.locationName.toLowerCase().contains(city.toLowerCase()),
+          )
+          .toList();
+
+      _otherProducts = _products
+          .where(
+            (p) => !p.locationName.toLowerCase().contains(city.toLowerCase()),
+          )
+          .toList();
+
+      if (_nearbyProducts.isEmpty) {
+        _nearbyProducts = [];
+        _otherProducts = _products;
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to get location: $e')));
+    }
+  }
+
+  Future<void> _refreshData() async {
+    setState(() {
+      _dataFuture = loadData(forceRefresh: true);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    // ✅ Use a Consumer to get the AppStateManager for the notification count
     return Consumer<AppStateManager>(
       builder: (context, appState, child) {
         return Scaffold(
-          appBar: appBar(appState.unreadNotificationCount), // Pass the count
+          appBar: _buildAppBar(appState.unreadNotificationCount),
           backgroundColor: Theme.of(context).scaffoldBackgroundColor,
           body: FutureBuilder<Map<String, dynamic>>(
             future: _dataFuture,
@@ -106,58 +219,32 @@ class _HomePageState extends State<HomePage> {
               }
 
               if (snapshot.hasError) {
-                return Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Text("Failed to load data."),
-                      const SizedBox(height: 16),
-                      ElevatedButton(
-                        onPressed: () {
-                          setState(() {
-                            _dataFuture = loadData(forceRefresh: true);
-                          });
-                        },
-                        child: const Text("Retry"),
-                      ),
-                    ],
-                  ),
-                );
+                return _buildErrorState(snapshot.error);
               }
 
-              final products = snapshot.data!['products'] as List<Product>;
               final categories =
                   snapshot.data!['categories'] as List<CategoryModel>;
 
               return RefreshIndicator(
-                onRefresh: () async {
-                  setState(() {
-                    _dataFuture = loadData(forceRefresh: true);
-                  });
-                },
+                onRefresh: _refreshData,
                 child: CustomScrollView(
                   slivers: [
                     SliverList(
                       delegate: SliverChildListDelegate([
-                        _SearchBar(context),
+                        _buildSearchBar(context),
                         const SizedBox(height: 20),
                         _buildCategoriesSection(categories),
                         const SizedBox(height: 20),
-                        Padding(
-                          padding: EdgeInsets.only(left: 20),
-                          child: Text(
-                            'All Products',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Theme.of(context).iconTheme.color,
-                            ),
-                          ),
-                        ),
+                        _buildLocationSection(),
                         const SizedBox(height: 10),
                       ]),
                     ),
-                    _buildProductsList(products),
+                    if (_nearbyProducts.isNotEmpty)
+                      _buildProductsList(_nearbyProducts),
+                    if (_otherProducts.isNotEmpty) _buildOtherProductsSection(),
+                    if (_otherProducts.isNotEmpty)
+                      _buildProductsList(_otherProducts),
+                    if (_products.isEmpty) _buildEmptyState(),
                   ],
                 ),
               );
@@ -168,15 +255,105 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  /// Shimmer Skeleton
+  Widget _buildLocationSection() {
+    return Padding(
+      padding: const EdgeInsets.only(left: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const SizedBox(width: 8),
+              Text(
+                "Items near ${_currentCity}",
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              Icon(Icons.location_pin),
+              if (_locationPermissionDenied)
+                IconButton(
+                  icon: const Icon(Icons.error_outline, color: Colors.orange),
+                  onPressed: _retryLocation,
+                  tooltip: 'Location access denied. Tap to retry.',
+                ),
+            ],
+          ),
+          if (_locationPermissionDenied)
+            const Padding(
+              padding: EdgeInsets.only(top: 4.0),
+              child: Text(
+                'Location access is needed to show nearby items',
+                style: TextStyle(fontSize: 12, color: Colors.orange),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildErrorState(Object? error) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.error_outline, size: 64, color: Colors.red),
+          const SizedBox(height: 16),
+          const Text("Failed to load data."),
+          Text(
+            error.toString(),
+            style: const TextStyle(color: Colors.red),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 16),
+          ElevatedButton(onPressed: _refreshData, child: const Text("Retry")),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return const SliverFillRemaining(
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.inventory, size: 64, color: Colors.grey),
+            SizedBox(height: 16),
+            Text('No products available'),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOtherProductsSection() {
+    return SliverToBoxAdapter(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: const [
+          Divider(thickness: 1),
+          Padding(
+            padding: EdgeInsets.only(left: 20, top: 10),
+            child: Text(
+              "Other items",
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildShimmerUI() {
     return CustomScrollView(
       slivers: [
         SliverList(
           delegate: SliverChildListDelegate([
-            _SearchBar(context),
+            _buildSearchBar(context),
             const SizedBox(height: 20),
-            _shimmerCategories(),
+            _buildShimmerCategories(),
             const SizedBox(height: 20),
             const Padding(
               padding: EdgeInsets.only(left: 20),
@@ -188,13 +365,12 @@ class _HomePageState extends State<HomePage> {
             const SizedBox(height: 10),
           ]),
         ),
-        _shimmerProducts(),
+        _buildShimmerProducts(),
       ],
     );
   }
 
-  /// Shimmer for categories
-  Widget _shimmerCategories() {
+  Widget _buildShimmerCategories() {
     return SizedBox(
       height: 90,
       child: ListView.builder(
@@ -229,8 +405,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  /// Shimmer for products
-  Widget _shimmerProducts() {
+  Widget _buildShimmerProducts() {
     return SliverList(
       delegate: SliverChildBuilderDelegate((context, index) {
         return Shimmer.fromColors(
@@ -269,44 +444,7 @@ class _HomePageState extends State<HomePage> {
             itemCount: categories.length,
             itemBuilder: (context, index) {
               final category = categories[index];
-              return Container(
-                width: 80,
-                margin: const EdgeInsets.only(right: 10),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Container(
-                      height: 50,
-                      width: 50,
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.grey[100],
-                        shape: BoxShape.circle,
-                      ),
-                      child: SvgPicture.network(
-                        "${category.icon}",
-                        placeholderBuilder: (context) =>
-                            const CircularProgressIndicator(strokeWidth: 2),
-                        colorFilter: const ColorFilter.mode(
-                          Colors.amber,
-                          BlendMode.srcIn,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      category.name,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                      ),
-                      textAlign: TextAlign.center,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ),
-              );
+              return CategoryItem(category: category);
             },
           ),
         ),
@@ -316,9 +454,7 @@ class _HomePageState extends State<HomePage> {
 
   Widget _buildProductsList(List<Product> products) {
     return products.isEmpty
-        ? const SliverFillRemaining(
-            child: Center(child: Text('No products found.')),
-          )
+        ? const SliverToBoxAdapter(child: SizedBox.shrink())
         : SliverList(
             delegate: SliverChildBuilderDelegate((context, index) {
               final product = products[index];
@@ -339,43 +475,43 @@ class _HomePageState extends State<HomePage> {
             }, childCount: products.length),
           );
   }
-Widget _SearchBar(BuildContext context) {
-  return Container(
-    margin: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-    decoration: BoxDecoration(
-      boxShadow: [
-        BoxShadow(blurRadius: 15, color: Colors.black.withOpacity(0.1)),
-      ],
-    ),
-    child: InkWell(
-      borderRadius: BorderRadius.circular(15),
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => SearchPage()),
-        );
-      },
-      child: IgnorePointer( // Prevents keyboard from opening
-        child: TextField(
-          enabled: false, // keeps UI but disables typing here
-          decoration: InputDecoration(
-            filled: true,
-            fillColor: Theme.of(context).cardColor,
-            hintText: 'Search Products...',
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(15),
-              borderSide: BorderSide.none,
+
+  Widget _buildSearchBar(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+      decoration: BoxDecoration(
+        boxShadow: [
+          BoxShadow(blurRadius: 15, color: Colors.black.withOpacity(0.1)),
+        ],
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(15),
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const SearchPage()),
+          );
+        },
+        child: IgnorePointer(
+          child: TextField(
+            enabled: false,
+            decoration: InputDecoration(
+              filled: true,
+              fillColor: Theme.of(context).cardColor,
+              hintText: 'Search Products...',
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(15),
+                borderSide: BorderSide.none,
+              ),
+              prefixIcon: const Icon(Icons.search),
             ),
-            prefixIcon: const Icon(Icons.search),
           ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 
-  /// ✅ AppBar now accepts the notification count
-  AppBar appBar(int notificationCount) {
+  AppBar _buildAppBar(int notificationCount) {
     return AppBar(
       title: Text(
         'Circlo',
@@ -391,15 +527,11 @@ Widget _SearchBar(BuildContext context) {
       leading: Padding(
         padding: const EdgeInsets.all(8.0),
         child: InkWell(
-          borderRadius: BorderRadius.circular(
-            50,
-          ), // ensures ripple stays circular
+          borderRadius: BorderRadius.circular(50),
           onTap: () {
             Navigator.push(
               context,
-              MaterialPageRoute(
-                builder: (context) => const ProfilePage(), // ✅ navigate here
-              ),
+              MaterialPageRoute(builder: (context) => const ProfilePage()),
             );
           },
           child: CircleAvatar(
@@ -421,7 +553,6 @@ Widget _SearchBar(BuildContext context) {
       ),
       actions: [
         IconButton(
-          // ✅ Use the badge helper for the notification icon
           icon: _buildIconWithBadge(
             icon: BootstrapIcons.bell_fill,
             count: notificationCount,
@@ -434,47 +565,15 @@ Widget _SearchBar(BuildContext context) {
           tooltip: 'Notifications',
         ),
         PopupMenuButton<MenuItem>(
-          onSelected: (value) {
-            if (value == MenuItem.item1) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Navigate to Dashboard')),
-              );
-            }
-            if (value == MenuItem.item2) {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (context) => const MyItemsPage()),
-              );
-            }
-            if (value == MenuItem.item3) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Navigate to Wallet')),
-              );
-            }
-            if (value == MenuItem.item4) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Navigate to Payment History')),
-              );
-            }
-            if (value == MenuItem.item5) {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (context) => const WishlistPage()),
-              );
-            }
-            if (value == MenuItem.item6) {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (context) => const SettingsPage()),
-              );
-            }
-            if (value == MenuItem.item7) {}
-          },
+          onSelected: (value) => _handleMenuSelection(value),
           itemBuilder: (context) => [
             PopupMenuItem(
               value: MenuItem.item1,
               child: Row(
                 children: [
                   Icon(Icons.speed, color: Theme.of(context).iconTheme.color),
-                  SizedBox(width: 4),
-                  Text('Dashboard', style: TextStyle(fontSize: 16)),
+                  const SizedBox(width: 4),
+                  const Text('Dashboard', style: TextStyle(fontSize: 16)),
                 ],
               ),
             ),
@@ -486,8 +585,8 @@ Widget _SearchBar(BuildContext context) {
                     Icons.shopping_bag,
                     color: Theme.of(context).iconTheme.color,
                   ),
-                  SizedBox(width: 4),
-                  Text('My Listed Items', style: TextStyle(fontSize: 16)),
+                  const SizedBox(width: 4),
+                  const Text('My Listed Items', style: TextStyle(fontSize: 16)),
                 ],
               ),
             ),
@@ -496,8 +595,8 @@ Widget _SearchBar(BuildContext context) {
               child: Row(
                 children: [
                   Icon(Icons.wallet, color: Theme.of(context).iconTheme.color),
-                  SizedBox(width: 4),
-                  Text('Wallet', style: TextStyle(fontSize: 16)),
+                  const SizedBox(width: 4),
+                  const Text('Wallet', style: TextStyle(fontSize: 16)),
                 ],
               ),
             ),
@@ -506,8 +605,8 @@ Widget _SearchBar(BuildContext context) {
               child: Row(
                 children: [
                   Icon(Icons.history, color: Theme.of(context).iconTheme.color),
-                  SizedBox(width: 4),
-                  Text('Payment History', style: TextStyle(fontSize: 16)),
+                  const SizedBox(width: 4),
+                  const Text('Payment History', style: TextStyle(fontSize: 16)),
                 ],
               ),
             ),
@@ -519,8 +618,8 @@ Widget _SearchBar(BuildContext context) {
                     Icons.favorite,
                     color: Theme.of(context).iconTheme.color,
                   ),
-                  SizedBox(width: 4),
-                  Text('Wishlist', style: TextStyle(fontSize: 16)),
+                  const SizedBox(width: 4),
+                  const Text('Wishlist', style: TextStyle(fontSize: 16)),
                 ],
               ),
             ),
@@ -532,8 +631,8 @@ Widget _SearchBar(BuildContext context) {
                     Icons.settings,
                     color: Theme.of(context).iconTheme.color,
                   ),
-                  SizedBox(width: 4),
-                  Text('Settings', style: TextStyle(fontSize: 16)),
+                  const SizedBox(width: 4),
+                  const Text('Settings', style: TextStyle(fontSize: 16)),
                 ],
               ),
             ),
@@ -543,7 +642,43 @@ Widget _SearchBar(BuildContext context) {
     );
   }
 
-  /// ✅ Helper widget to build an icon with a notification badge.
+  void _handleMenuSelection(MenuItem value) {
+    switch (value) {
+      case MenuItem.item1:
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Navigate to Dashboard')));
+        break;
+      case MenuItem.item2:
+        Navigator.of(
+          context,
+        ).push(MaterialPageRoute(builder: (context) => const MyItemsPage()));
+        break;
+      case MenuItem.item3:
+        Navigator.of(
+          context,
+        ).push(MaterialPageRoute(builder: (context) => const WalletPage()));
+        break;
+      case MenuItem.item4:
+         Navigator.of(
+          context,
+        ).push(MaterialPageRoute(builder: (context) => const PaymentHistoryPage()));
+        break;
+      case MenuItem.item5:
+        Navigator.of(
+          context,
+        ).push(MaterialPageRoute(builder: (context) => const WishlistPage()));
+        break;
+      case MenuItem.item6:
+        Navigator.of(
+          context,
+        ).push(MaterialPageRoute(builder: (context) => const SettingsPage()));
+        break;
+      case MenuItem.item7:
+        break;
+    }
+  }
+
   Widget _buildIconWithBadge({required IconData icon, required int count}) {
     return Stack(
       clipBehavior: Clip.none,
@@ -568,6 +703,49 @@ Widget _SearchBar(BuildContext context) {
             ),
           ),
       ],
+    );
+  }
+}
+
+class CategoryItem extends StatelessWidget {
+  final CategoryModel category;
+
+  const CategoryItem({super.key, required this.category});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 80,
+      margin: const EdgeInsets.only(right: 10),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            height: 50,
+            width: 50,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.grey[100],
+              shape: BoxShape.circle,
+            ),
+            child: CircleAvatar(
+              backgroundImage: CachedNetworkImageProvider(
+                "${AppConfig.imageBaseUrl}${category.iconImage}",
+              ),
+              backgroundColor: Colors.transparent,
+              radius: 55,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            category.name,
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
     );
   }
 }
