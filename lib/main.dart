@@ -4,7 +4,7 @@ import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:myfirstflutterapp/state/AppStateManager.dart';
 import 'package:provider/provider.dart';
-
+import 'package:flutter/cupertino.dart';
 import 'models/product_model.dart';
 import 'models/category_model.dart';
 import 'pages/Auth/auth_check_screen.dart';
@@ -45,19 +45,36 @@ Future<void> initialization(BuildContext? context) async {
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-  @override
+ @override
   Widget build(BuildContext context) {
+    // Use a Consumer to get the theme preference
     return Consumer<ThemeProvider>(
       builder: (context, themeProvider, child) {
-        return MaterialApp(
-          title: 'Flutter Demo',
-          themeMode:
-              themeProvider.isDarkMode ? ThemeMode.dark : ThemeMode.light,
-          theme: lightTheme,     // 🌞 from theme.dart
-          darkTheme: darkTheme, // 🌚 from theme.dart
-          debugShowCheckedModeBanner: false,
-          home: const AuthCheckScreen(),
-        );
+        // ✅ Check the current platform
+        final isIOS = Theme.of(context).platform == TargetPlatform.iOS;
+        
+        // Return the appropriate app widget based on the platform
+        if (isIOS) {
+          // --- iOS App ---
+          return CupertinoApp(
+            title: 'Flutter Demo',
+            debugShowCheckedModeBanner: false,
+            // Apply the correct Cupertino theme
+            theme: themeProvider.isDarkMode ? darkCupertinoTheme : lightCupertinoTheme,
+            home: const AuthCheckScreen(),
+          );
+        } else {
+          // --- Android App ---
+          return MaterialApp(
+            title: 'Flutter Demo',
+            debugShowCheckedModeBanner: false,
+            themeMode: themeProvider.isDarkMode ? ThemeMode.dark : ThemeMode.light,
+            theme: lightTheme,
+            darkTheme: darkTheme,
+
+            home: const AuthCheckScreen(),
+          );
+        }
       },
     );
   }
