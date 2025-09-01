@@ -68,6 +68,8 @@
 		</array>
 		<!-- Optional: Allow HTTP for debugging -->
 		<key>NSAppTransportSecurity</key>
+		<key>NSCameraUsageDescription</key>
+<string>This app needs access to the camera to let you take photos for your listings.</string>
 		<dict>
 			<key>NSAllowsArbitraryLoads</key>
 			<true/>
