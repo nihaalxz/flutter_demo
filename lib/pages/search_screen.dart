@@ -466,7 +466,7 @@ class _SearchPageState extends State<SearchPage> with TickerProviderStateMixin {
         ],
       ),
       child: DropdownButtonFormField<CategoryModel>(
-        initialValue: _selectedCategory,
+        value: _selectedCategory,
         hint: Text(
           'All Categories',
           style: TextStyle(
@@ -533,7 +533,7 @@ class _SearchPageState extends State<SearchPage> with TickerProviderStateMixin {
         ],
       ),
       child: DropdownButtonFormField<String>(
-        initialValue: _selectedLocation,
+        value: _selectedLocation,
         hint: Text(
           'Anywhere',
           style: TextStyle(
