@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:myfirstflutterapp/models/user_model.dart';
@@ -25,6 +26,7 @@ import 'package:shimmer/shimmer.dart';
 import '../widgets/product_card.dart';
 import 'package:myfirstflutterapp/services/location_service.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'dart:io' show Platform;
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -44,6 +46,7 @@ class _HomePageState extends State<HomePage> {
   String _currentCity = "Loading...";
   List<Product> _filteredProducts = [];
   bool _locationPermissionDenied = false;
+  bool _isLoadingLocation = false;
 
   late Future<Map<String, dynamic>> _dataFuture;
 
@@ -61,6 +64,92 @@ class _HomePageState extends State<HomePage> {
         _currentUser = user;
       });
     }
+  }
+
+  Future<bool> _requestLocationPermission() async {
+    try {
+      // Check current status
+      PermissionStatus status = await Permission.location.status;
+
+      // Handle iOS-specific permission states
+      if (Platform.isIOS) {
+        if (status == PermissionStatus.denied) {
+          // First time asking for permission
+          status = await Permission.location.request();
+        } else if (status == PermissionStatus.permanentlyDenied) {
+          // User has permanently denied permission
+          return false;
+        }
+      } else {
+        // Android handling
+        if (status != PermissionStatus.granted) {
+          status = await Permission.location.request();
+        }
+      }
+
+      return status == PermissionStatus.granted;
+    } catch (e) {
+      print('Location permission error: $e');
+      return false;
+    }
+  }
+
+  Future<String?> _getCurrentCity() async {
+    try {
+      setState(() {
+        _isLoadingLocation = true;
+      });
+
+      final position = await LocationService.getCurrentPosition();
+      final city = await LocationService.getCityFromCoordinates(position);
+
+      print('Location Debug: Got city: $city'); // Debug log
+      return city;
+    } catch (e) {
+      print('Location Error: $e'); // Debug log
+      return null;
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoadingLocation = false;
+        });
+      }
+    }
+  }
+
+  List<Product> _filterProductsByLocation(List<Product> products, String city) {
+    if (city.isEmpty ||
+        city == "Loading..." ||
+        city == "Unable to determine location") {
+      return [];
+    }
+
+    // More flexible filtering - check multiple location fields and use case-insensitive matching
+    final cityLower = city.toLowerCase().trim();
+    if (kDebugMode) {
+      print('Filtering Debug: Looking for city: $cityLower');
+    } // Debug log
+
+    final nearby = products.where((product) {
+      final locationName = product.locationName.toLowerCase().trim();
+
+      if (kDebugMode) {
+        print(
+        'Product Debug: ${product.name} - Location: $locationName',
+      );
+      } // Debug log
+
+      // Check if any location field contains the city name
+      return locationName.contains(cityLower) ||
+          cityLower.contains(locationName); // Reverse check
+    }).toList();
+
+    if (kDebugMode) {
+      print(
+      'Filtering Debug: Found ${nearby.length} nearby products out of ${products.length} total',
+    );
+    } // Debug log
+    return nearby;
   }
 
   Future<Map<String, dynamic>> loadData({bool forceRefresh = false}) async {
@@ -86,56 +175,45 @@ class _HomePageState extends State<HomePage> {
 
     _products = fetchedProducts;
 
-    try {
-      // Check location permission
-      final status = await Permission.location.status;
-      if (!status.isGranted) {
-        final result = await Permission.location.request();
-        if (!result.isGranted) {
-          setState(() {
-            _locationPermissionDenied = true;
-            _currentCity = "Location access denied";
-          });
-          _nearbyProducts = _products;
-          _otherProducts = [];
-          return {
-            'products': _filteredProducts,
-            'categories': fetchedCategories,
-          };
-        }
-      }
+    // Handle location-based filtering
+    final hasPermission = await _requestLocationPermission();
 
-      final position = await LocationService.getCurrentPosition();
-      final city = await LocationService.getCityFromCoordinates(position);
+    if (!hasPermission) {
+      setState(() {
+        _locationPermissionDenied = true;
+        _currentCity = "Location access denied";
+        _nearbyProducts = [];
+        _otherProducts = _products;
+      });
 
+      return {'products': _filteredProducts, 'categories': fetchedCategories};
+    }
+
+    // Get current city
+    final city = await _getCurrentCity();
+
+    if (city != null) {
       setState(() {
         _currentCity = city;
         _locationPermissionDenied = false;
       });
 
-      _nearbyProducts = _products
-          .where(
-            (p) => p.locationName.toLowerCase().contains(city.toLowerCase()),
-          )
-          .toList();
-
+      // Filter products by location
+      _nearbyProducts = _filterProductsByLocation(_products, city);
       _otherProducts = _products
-          .where(
-            (p) => !p.locationName.toLowerCase().contains(city.toLowerCase()),
-          )
+          .where((p) => !_nearbyProducts.contains(p))
           .toList();
 
-      // fallback: if no nearby items, just show all in "Other"
+      // If no nearby products found, show all as "other"
       if (_nearbyProducts.isEmpty) {
-        _nearbyProducts = [];
         _otherProducts = _products;
       }
-    } catch (e) {
+    } else {
       setState(() {
         _currentCity = "Unable to determine location";
+        _nearbyProducts = [];
+        _otherProducts = _products;
       });
-      _nearbyProducts = _products;
-      _otherProducts = [];
     }
 
     return {'products': _filteredProducts, 'categories': fetchedCategories};
@@ -151,11 +229,25 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _retryLocation() async {
+    setState(() {
+      _isLoadingLocation = true;
+    });
+
     try {
-      final status = await Permission.location.status;
-      if (!status.isGranted) {
-        final result = await Permission.location.request();
-        if (!result.isGranted) {
+      final hasPermission = await _requestLocationPermission();
+
+      if (!hasPermission) {
+        if (Platform.isIOS) {
+          // Show iOS-specific guidance
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Please enable location access in Settings > Privacy & Security > Location Services',
+              ),
+              duration: Duration(seconds: 4),
+            ),
+          );
+        } else {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text(
@@ -163,35 +255,49 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
           );
-          return;
         }
+        return;
       }
 
-      final position = await LocationService.getCurrentPosition();
-      final city = await LocationService.getCityFromCoordinates(position);
+      final city = await _getCurrentCity();
 
-      setState(() {
-        _currentCity = city;
-        _locationPermissionDenied = false;
-      });
+      if (city != null) {
+        setState(() {
+          _currentCity = city;
+          _locationPermissionDenied = false;
+        });
 
-      _nearbyProducts = _products
-          .where(
-            (p) => p.locationName.toLowerCase().contains(city.toLowerCase()),
-          )
-          .toList();
+        _nearbyProducts = _filterProductsByLocation(_products, city);
+        _otherProducts = _products
+            .where((p) => !_nearbyProducts.contains(p))
+            .toList();
 
-      _otherProducts = _products
-          .where(
-            (p) => !p.locationName.toLowerCase().contains(city.toLowerCase()),
-          )
-          .toList();
+        if (_nearbyProducts.isEmpty) {
+          _nearbyProducts = [];
+          _otherProducts = _products;
+        }
 
-      if (_nearbyProducts.isEmpty) {
-        _nearbyProducts = [];
-        _otherProducts = _products;
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Location updated to: $city')));
+      } else {
+        setState(() {
+          _currentCity = "Unable to determine location";
+          _nearbyProducts = [];
+          _otherProducts = _products;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to get current location')),
+        );
       }
     } catch (e) {
+      setState(() {
+        _currentCity = "Location error";
+        _nearbyProducts = [];
+        _otherProducts = _products;
+      });
+
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Failed to get location: $e')));
@@ -264,14 +370,23 @@ class _HomePageState extends State<HomePage> {
           Row(
             children: [
               const SizedBox(width: 8),
-              Text(
-                "Items near ${_currentCity}",
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
+              Expanded(
+                child: Text(
+                  "Items near $_currentCity",
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
-              Icon(Icons.location_pin),
+              if (_isLoadingLocation)
+                const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              else
+                const Icon(Icons.location_pin),
               if (_locationPermissionDenied)
                 IconButton(
                   icon: const Icon(Icons.error_outline, color: Colors.orange),
@@ -281,11 +396,22 @@ class _HomePageState extends State<HomePage> {
             ],
           ),
           if (_locationPermissionDenied)
-            const Padding(
-              padding: EdgeInsets.only(top: 4.0),
+            Padding(
+              padding: const EdgeInsets.only(top: 4.0),
               child: Text(
-                'Location access is needed to show nearby items',
-                style: TextStyle(fontSize: 12, color: Colors.orange),
+                Platform.isIOS
+                    ? 'Enable location in Settings > Privacy & Security > Location Services'
+                    : 'Location access is needed to show nearby items',
+                style: const TextStyle(fontSize: 12, color: Colors.orange),
+              ),
+            ),
+          // Debug info (remove in production)
+          if (_products.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 4.0),
+              child: Text(
+                'Debug: ${_nearbyProducts.length} nearby, ${_otherProducts.length} other items',
+                style: const TextStyle(fontSize: 10, color: Colors.grey),
               ),
             ),
         ],
@@ -660,9 +786,9 @@ class _HomePageState extends State<HomePage> {
         ).push(MaterialPageRoute(builder: (context) => const WalletPage()));
         break;
       case MenuItem.item4:
-         Navigator.of(
-          context,
-        ).push(MaterialPageRoute(builder: (context) => const PaymentHistoryPage()));
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (context) => const PaymentHistoryPage()),
+        );
         break;
       case MenuItem.item5:
         Navigator.of(
