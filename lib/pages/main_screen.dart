@@ -120,7 +120,7 @@ class _MainScreenState extends State<MainScreen> {
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
         type: BottomNavigationBarType.fixed,
-        selectedItemColor: const Color.fromARGB(255, 255, 0, 0),
+        selectedItemColor: const Color.fromARGB(255, 255, 255, 255),
         unselectedItemColor:Theme.of(context).iconTheme.color,
         showUnselectedLabels: true,
       ),

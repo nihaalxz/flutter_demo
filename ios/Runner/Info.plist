@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
-	<dict>
+<dict>
 	<key>NSLocationWhenInUseUsageDescription</key>
 <string>This app needs your location to show nearby items.</string>
 		<key>CFBundleDevelopmentRegion</key>
@@ -68,8 +68,6 @@
 		</array>
 		<!-- Optional: Allow HTTP for debugging -->
 		<key>NSAppTransportSecurity</key>
-		<key>NSCameraUsageDescription</key>
-<string>This app needs access to the camera to let you take photos for your listings.</string>
 		<dict>
 			<key>NSAllowsArbitraryLoads</key>
 			<true/>

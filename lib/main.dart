@@ -1,3 +1,5 @@
+import 'dart:io';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
@@ -44,23 +46,36 @@ Future<void> initialization(BuildContext? context) async {
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
-
- @override
+@override
   Widget build(BuildContext context) {
-    // Use a Consumer to get the theme preference
     return Consumer<ThemeProvider>(
       builder: (context, themeProvider, child) {
-        // ✅ Check the current platform
-        final isIOS = Theme.of(context).platform == TargetPlatform.iOS;
         
-        // Return the appropriate app widget based on the platform
-        if (isIOS) {
+        if (Platform.isIOS) {
           // --- iOS App ---
           return CupertinoApp(
             title: 'Flutter Demo',
             debugShowCheckedModeBanner: false,
-            // Apply the correct Cupertino theme
             theme: themeProvider.isDarkMode ? darkCupertinoTheme : lightCupertinoTheme,
+            
+            // ✅ 2. Add these delegates to your CupertinoApp
+            // This provides the necessary "language pack" for any Material
+            // widgets used within the Cupertino app structure.
+            localizationsDelegates: const [
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: const [
+              Locale('en', ''), // English, no country code
+            ],
+
+            builder:(context, child){
+              return Material(
+                type: MaterialType.transparency,
+                child: child,
+              );
+            },
             home: const AuthCheckScreen(),
           );
         } else {
@@ -71,7 +86,6 @@ class MyApp extends StatelessWidget {
             themeMode: themeProvider.isDarkMode ? ThemeMode.dark : ThemeMode.light,
             theme: lightTheme,
             darkTheme: darkTheme,
-
             home: const AuthCheckScreen(),
           );
         }
