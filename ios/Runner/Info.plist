@@ -2,65 +2,16 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>NSLocationWhenInUseUsageDescription</key>
-<<<<<<< HEAD
-<string>This app needs your location to show nearby items.</string>
-		<key>CFBundleDevelopmentRegion</key>
-		<string>$(DEVELOPMENT_LANGUAGE)</string>
-		<key>CFBundleDisplayName</key>
-		<string>Myfirstflutterapp</string>
-		<key>CFBundleExecutable</key>
-		<string>$(EXECUTABLE_NAME)</string>
-		<key>CFBundleIdentifier</key>
-		<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
-		<key>CFBundleInfoDictionaryVersion</key>
-		<string>6.0</string>
-		<!-- Google Sign-In URL scheme -->
-		<key>CFBundleURLTypes</key>
-		<array>
-			<dict>
-				<key>CFBundleURLSchemes</key>
-				<array>
-					<string>com.googleusercontent.apps.65125654341-q3ek76obu8sgf3phq2dujs4ge0bo64os</string>
-				</array>
-			</dict>
-		</array>
-		<key>CFBundleName</key>
-		<string>MapleCot</string>
-		<key>CFBundlePackageType</key>
-		<string>APPL</string>
-		<key>CFBundleShortVersionString</key>
-		<string>$(FLUTTER_BUILD_NAME)</string>
-		<key>CFBundleSignature</key>
-		<string>????</string>
-		<key>CFBundleVersion</key>
-		<string>$(FLUTTER_BUILD_NUMBER)</string>
-		<key>LSRequiresIPhoneOS</key>
-=======
-	<string>This app needs your location to show nearby items.</string>
-	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-    <string>This app needs your location even in background for tracking.</string>
-    <key>NSLocationAlwaysUsageDescription</key>
-    <string>This app needs your location always for tracking.</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Myfirstflutterapp</string>
+	<string>MapleCot</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
 	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
-	<key>CFBundleURLTypes</key>
-	<array>
-		<dict>
-			<key>CFBundleURLSchemes</key>
-			<array>
-				<string>com.googleusercontent.apps.65125654341-q3ek76obu8sgf3phq2dujs4ge0bo64os</string>
-			</array>
-		</dict>
-	</array>
 	<key>CFBundleName</key>
 	<string>MapleCot</string>
 	<key>CFBundlePackageType</key>
@@ -94,45 +45,31 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
-	<key>UIStatusBarHidden</key>
-	<false/>
-	<!-- 🔑 Required for debugging on physical device -->
-	<key>NSLocalNetworkUsageDescription</key>
-	<string>This app needs access to the local network to connect the Flutter debugger.</string>
-	<key>NSBonjourServices</key>
-	<array>
-		<string>_dartVmService._tcp</string>
-	</array>
-	<!-- ✅ FIX: Correctly add the camera permission -->
+
+	<!-- ✅ PERMISSIONS SECTION -->
+	<!-- Location -->
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>We use your location to show you relevant items and services nearby.</string>
+	
+	<!-- Camera -->
 	<key>NSCameraUsageDescription</key>
-	<string>This app needs access to the camera to let you take photos for your listings.</string>
-	<!-- ✅ FIX: Correctly pair the App Transport Security key with its dictionary -->
-	<key>NSAppTransportSecurity</key>
-	<dict>
-		<key>NSAllowsArbitraryLoads</key>
->>>>>>> 6f33c2c60364816d4dc28a4d4ae793ad407c8bbe
-		<true/>
-		<key>UILaunchStoryboardName</key>
-		<string>LaunchScreen</string>
-		<key>UIMainStoryboardFile</key>
-		<string>Main</string>
-		<key>UISupportedInterfaceOrientations</key>
-		<array>
-			<string>UIInterfaceOrientationPortrait</string>
-			<string>UIInterfaceOrientationLandscapeLeft</string>
-			<string>UIInterfaceOrientationLandscapeRight</string>
-		</array>
-		<key>UISupportedInterfaceOrientations~ipad</key>
-		<array>
-			<string>UIInterfaceOrientationPortrait</string>
-			<string>UIInterfaceOrientationPortraitUpsideDown</string>
-			<string>UIInterfaceOrientationLandscapeLeft</string>
-			<string>UIInterfaceOrientationLandscapeRight</string>
-		</array>
-		<key>CADisableMinimumFrameDurationOnPhone</key>
-		<true/>
-		<key>UIApplicationSupportsIndirectInputEvents</key>
-		<true/>
-	</dict>
+	<string>We need camera access to let you take photos of your rental items.</string>
+	
+	<!-- Photo Library -->
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>We need photo library access to let you choose pictures for your rental items.</string>
+
+	<!-- Google Sign-In URL Scheme -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.65125654341-q3ek76obu8sgf3phq2dujs4ge0bo64os</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>
