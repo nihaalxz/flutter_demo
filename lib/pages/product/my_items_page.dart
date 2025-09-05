@@ -2,7 +2,6 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:intl/intl.dart';
-import 'package:myfirstflutterapp/models/Product_DTO/Product_update_dto.dart';
 import 'package:myfirstflutterapp/pages/product/create_listing_page.dart';
 import 'package:myfirstflutterapp/pages/product/product_edit_page.dart';
 import 'package:shimmer/shimmer.dart';
