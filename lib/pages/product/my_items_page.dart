@@ -345,6 +345,7 @@ class _MyItemsPageState extends State<MyItemsPage> {
               const SizedBox(height: 8),
               Text("Start by posting an item for rent.",
                   style: TextStyle(color: Colors.grey[600])),
+                  
               const SizedBox(height: 24),
               FilledButton.icon(
                 onPressed: () {
