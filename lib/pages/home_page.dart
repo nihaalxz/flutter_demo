@@ -21,13 +21,11 @@ import 'package:myfirstflutterapp/models/product_model.dart';
 import 'package:myfirstflutterapp/models/wishlist_item_model.dart';
 import 'package:myfirstflutterapp/environment/env.dart';
 import 'package:bootstrap_icons/bootstrap_icons.dart';
-import 'package:permission_handler/permission_handler.dart';
-import 'package:permission_handler/permission_handler.dart' as LocationService;
 import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
 import '../widgets/product_card.dart';
 import 'package:myfirstflutterapp/services/location_service.dart';
-import 'package:permission_handler/permission_handler.dart';
+import 'package:geolocator/geolocator.dart';
 import 'dart:io' show Platform;
 
 class HomePage extends StatefulWidget {
@@ -148,11 +146,9 @@ class _HomePageState extends State<HomePage> {
     final nearby = products.where((product) {
       final locationName = product.locationName.toLowerCase().trim();
 
-      if (kDebugMode) {
-        print(
-        'Product Debug: ${product.name} - Location: $locationName',
-      );
-      } // Debug log
+      if (kDebugMode && product.locationName.isNotEmpty) {
+        print('[HomePage] Product "${product.name}" location: $locationName');
+      }
 
       // Check if any location field contains the city name
       return locationName.contains(cityLower) ||
