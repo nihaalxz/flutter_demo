@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geocoding/geocoding.dart';
-import 'package:geolocator/geolocator.dart';
+import 'package:myfirstflutterapp/services/location_service.dart'; // Using the robust service
 
-/// A page that displays a Google Map, allowing the user to select a location.
-/// It returns a map containing the selected address string and LatLng coordinates.
 class MapPickerPage extends StatefulWidget {
   const MapPickerPage({super.key});
 
@@ -22,7 +20,7 @@ class _MapPickerPageState extends State<MapPickerPage> {
   GoogleMapController? _mapController;
   LatLng _selectedPosition = _initialCameraPosition.target;
   String _selectedAddress = "Move the map to select a location";
-  bool _isLoading = true;
+  bool _isLoadingAddress = true;
 
   @override
   void initState() {
@@ -33,73 +31,90 @@ class _MapPickerPageState extends State<MapPickerPage> {
   /// Tries to get the user's current location and move the map camera to it.
   Future<void> _moveToCurrentUserLocation() async {
     try {
-      final position = await Geolocator.getCurrentPosition();
+      // Use our robust LocationService to handle permissions and get position
+      final position = await LocationService.getCurrentPosition();
       _mapController?.animateCamera(
         CameraUpdate.newLatLngZoom(
           LatLng(position.latitude, position.longitude),
-          14,
+          15, // Zoom in closer for a better user experience
         ),
       );
     } catch (e) {
-      print("Could not get user location: $e");
+      // Handle location errors gracefully
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString())),
+      );
     }
   }
 
-  /// Called when the map camera stops moving.
+  /// Called when the map camera stops moving to update the selected address.
   void _onCameraIdle() async {
+    // Prevent errors if the controller isn't ready
     if (_mapController == null) return;
 
-    // Get the coordinates of the center of the map
-    final latLng = await _mapController!.getLatLng(
-      ScreenCoordinate(
-        x: MediaQuery.of(context).size.width ~/ 2,
-        y: MediaQuery.of(context).size.height ~/ 2,
-      ),
-    );
-
-    setState(() {
-      _selectedPosition = latLng;
-      _isLoading = true;
-    });
-
-    // Convert coordinates to a readable address
+    // Use try-catch for safety, as getLatLng can sometimes fail
     try {
+      final latLng = await _mapController!.getLatLng(
+        ScreenCoordinate(
+          x: MediaQuery.of(context).size.width ~/ 2,
+          y: (MediaQuery.of(context).size.height - kToolbarHeight) ~/ 2,
+        ),
+      );
+
+      setState(() {
+        _selectedPosition = latLng;
+        _isLoadingAddress = true; // Show loading indicator while geocoding
+      });
+
+      // Convert coordinates to a readable address
       final placemarks = await placemarkFromCoordinates(
         latLng.latitude,
         latLng.longitude,
       );
-      if (placemarks.isNotEmpty) {
+
+      if (mounted && placemarks.isNotEmpty) {
         final p = placemarks.first;
         setState(() {
           _selectedAddress = _formatPlacemark(p);
-          _isLoading = false;
+          _isLoadingAddress = false;
         });
       }
     } catch (e) {
-      setState(() {
-        _selectedAddress = "Could not determine address";
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _selectedAddress = "Could not determine address";
+          _isLoadingAddress = false;
+        });
+      }
     }
   }
 
-  /// ✅ UPDATED: Formats a Placemark object into a detailed address string,
-  /// filtering out confusing "plus codes".
+  /// ✅ Formats a Placemark object into a detailed, human-readable address string,
+  /// filtering out confusing "plus codes" and providing a clean structure.
   String _formatPlacemark(Placemark p) {
-    // Plus codes often appear in the 'street' or 'subLocality' field.
-    // We can filter them out by checking for the '+' symbol.
-    final street = (p.street?.contains('+') ?? false) ? null : p.street;
-    final subLocality = (p.subLocality?.contains('+') ?? false) ? null : p.subLocality;
+    // Helper function to check for and exclude plus codes.
+    // Plus codes are useful but not user-friendly in a readable address.
+    bool isPlusCode(String? s) => (s?.contains('+') ?? false) && (s?.length ?? 0) < 15;
 
-    return [
-      street,
-      subLocality,
-      p.locality,
+    // Build the address from the most specific parts to the most general.
+    // This creates a more natural address format.
+    final components = [
+      p.name,
+      p.thoroughfare, // Street name and number
+      p.subLocality,  // Neighborhood or smaller area
+      p.locality,     // City or town
+      p.administrativeArea, // State or province
       p.postalCode,
       p.country,
-    ].where((s) => s != null && s.isNotEmpty).join(', ');
-  }
+    ];
 
+    // Filter out any null, empty, or plus code components.
+    // The 'where' clause ensures we don't have empty commas.
+    return components
+        .where((s) => s != null && s.isNotEmpty && !isPlusCode(s))
+        .toSet() // Use toSet() to remove duplicate parts (e.g., if locality and subLocality are the same)
+        .join(', ');
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -112,6 +127,7 @@ class _MapPickerPageState extends State<MapPickerPage> {
             onCameraIdle: _onCameraIdle,
             myLocationButtonEnabled: true,
             myLocationEnabled: true,
+            zoomControlsEnabled: false, // Cleaner UI
           ),
           // Center marker icon
           const Center(
@@ -147,22 +163,26 @@ class _MapPickerPageState extends State<MapPickerPage> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Text('Selected Location:', style: TextStyle(color: Colors.grey)),
-                          _isLoading
-                              ? const LinearProgressIndicator()
-                              : Text(
-                                  _selectedAddress,
-                                  style: const TextStyle(fontWeight: FontWeight.bold),
-                                  maxLines: 2, // Allow for longer addresses
-                                  overflow: TextOverflow.ellipsis,
-                                ),
+                          const Text('Selected Location:',
+                              style: TextStyle(color: Colors.grey)),
+                          const SizedBox(height: 4),
+                          if (_isLoadingAddress)
+                            const LinearProgressIndicator()
+                          else
+                            Text(
+                              _selectedAddress,
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.bold),
+                              maxLines: 2, // Allow for longer addresses
+                              overflow: TextOverflow.ellipsis,
+                            ),
                         ],
                       ),
                     ),
                     const SizedBox(width: 12),
                     ElevatedButton(
-                      onPressed: _isLoading
-                          ? null
+                      onPressed: _isLoadingAddress
+                          ? null // Disable button while fetching address
                           : () {
                               // Return a map containing both the address and coordinates.
                               Navigator.of(context).pop({
@@ -182,3 +202,4 @@ class _MapPickerPageState extends State<MapPickerPage> {
     );
   }
 }
+

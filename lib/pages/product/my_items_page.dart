@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:intl/intl.dart';
@@ -30,21 +31,57 @@ class _MyItemsPageState extends State<MyItemsPage> {
   }
 
   Future<void> _loadItems() async {
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
+    // Only show the full shimmer on the initial load.
+    // For subsequent refreshes, the RefreshIndicator is enough.
+    if (_myItems.isEmpty) {
+      setState(() {
+        _isLoading = true;
+        _error = null;
+      });
+    }
+
     try {
       final items = await _productService.getMyItems();
-      setState(() {
-        _myItems = items;
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() {
-        _error = e.toString();
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _myItems = items;
+        });
+      }
+    } on SocketException {
+       if (mounted) {
+        setState(() {
+          _error = 'No Internet Connection. Please check your network and try again.';
+        });
+      }
+    } 
+    catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = e.toString();
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+  
+  /// ✅ Handles navigation to the edit page and refreshes the list upon return.
+  void _editItem(Product item) async {
+    // Await the result from the edit page.
+    final result = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (context) => ProductEditPage(product: item),
+      ),
+    );
+
+    // If the edit page returned 'true' (meaning an item was saved),
+    // then refresh the list to show the changes.
+    if (result == true && mounted) {
+      _loadItems();
     }
   }
 
@@ -55,7 +92,8 @@ class _MyItemsPageState extends State<MyItemsPage> {
         return AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           title: const Text('Delete Item'),
-          content: const Text('Are you sure you want to delete this item? This action cannot be undone.'),
+          content: const Text(
+              'Are you sure you want to delete this item? This action cannot be undone.'),
           actions: [
             TextButton(
               child: const Text('Cancel'),
@@ -84,6 +122,7 @@ class _MyItemsPageState extends State<MyItemsPage> {
   void _toggleAvailability(Product item) async {
     final oldAvailability = item.availability;
 
+    // Optimistic UI update
     setState(() {
       final index = _myItems.indexWhere((i) => i.id == item.id);
       if (index != -1) {
@@ -93,6 +132,7 @@ class _MyItemsPageState extends State<MyItemsPage> {
 
     try {
       final updated = await _productService.toggleAvailability(item.id);
+      // Update with server-confirmed data
       setState(() {
         final index = _myItems.indexWhere((i) => i.id == item.id);
         if (index != -1) _myItems[index] = updated;
@@ -102,6 +142,7 @@ class _MyItemsPageState extends State<MyItemsPage> {
         isError: false,
       );
     } catch (_) {
+      // Revert on failure
       setState(() {
         final index = _myItems.indexWhere((i) => i.id == item.id);
         if (index != -1) _myItems[index].availability = oldAvailability;
@@ -111,12 +152,14 @@ class _MyItemsPageState extends State<MyItemsPage> {
   }
 
   void _showSnackBar(String msg, {required bool isError}) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(msg),
-        backgroundColor: isError ? Colors.red[400] : Colors.green[600],
-      ),
-    );
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(msg),
+          backgroundColor: isError ? Colors.red[400] : Colors.green[600],
+        ),
+      );
+    }
   }
 
   @override
@@ -193,20 +236,23 @@ class _MyItemsPageState extends State<MyItemsPage> {
                             fontWeight: FontWeight.bold,
                             color: Theme.of(context).colorScheme.primary),
                       ),
-                      const SizedBox(height: 4),
+                       const SizedBox(height: 4),
                       Text("Location: ${item.locationName}",
-                          style: TextStyle(color: Colors.grey[600], fontSize: 13,fontStyle: FontStyle.italic)),
+                          style: TextStyle(
+                              color: Colors.grey[600],
+                              fontSize: 13,
+                              fontStyle: FontStyle.italic)),
                       const SizedBox(height: 4),
                       Text("Views: ${item.views}",
-                          style: TextStyle(color: Colors.grey[600], fontSize: 13)),
-
-
+                          style:
+                              TextStyle(color: Colors.grey[600], fontSize: 13)),
                     ],
                   ),
                 ),
                 // Status chip
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                   decoration: BoxDecoration(
                     color: item.availability
                         ? Colors.green[50]
@@ -234,11 +280,7 @@ class _MyItemsPageState extends State<MyItemsPage> {
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 OutlinedButton(
-                  onPressed: () {
-                    Navigator.of(context).push(
-                MaterialPageRoute(builder: (context) =>  ProductEditPage(product: item)),
-              );
-                  }, // edit
+                  onPressed: () => _editItem(item), // ✅ Use the new method
                   child: const Text('Edit'),
                 ),
                 const SizedBox(width: 8),
@@ -303,6 +345,7 @@ class _MyItemsPageState extends State<MyItemsPage> {
               const SizedBox(height: 8),
               Text("Start by posting an item for rent.",
                   style: TextStyle(color: Colors.grey[600])),
+                  
               const SizedBox(height: 24),
               FilledButton.icon(
                 onPressed: () {
@@ -318,11 +361,16 @@ class _MyItemsPageState extends State<MyItemsPage> {
         ),
       );
 
-  Widget _buildErrorState(String err) => Center(
+  Widget _buildErrorState(String err) {
+     final isNetworkError = err.contains('No Internet Connection');
+     return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.error_outline, color: Colors.red, size: 48),
+             Icon(
+              isNetworkError ? Icons.wifi_off : Icons.error_outline, 
+              color: Colors.red, size: 48
+            ),
             const SizedBox(height: 12),
             Text(err, textAlign: TextAlign.center),
             const SizedBox(height: 16),
@@ -330,4 +378,5 @@ class _MyItemsPageState extends State<MyItemsPage> {
           ],
         ),
       );
+  }
 }

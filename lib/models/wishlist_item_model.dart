@@ -8,6 +8,7 @@ class WishlistItemModel {
   final String? categoryName;
   final bool availability;
   final DateTime createdAt;
+  final String? locationName;
 
   WishlistItemModel({
     required this.id,
@@ -19,6 +20,7 @@ class WishlistItemModel {
     this.categoryName,
     required this.availability,
     required this.createdAt,
+    required this.locationName,
   });
 
   factory WishlistItemModel.fromJson(Map<String, dynamic> json) {
@@ -32,6 +34,7 @@ class WishlistItemModel {
       categoryName: json['categoryName'],
       availability: json['availability'],
       createdAt: DateTime.parse(json['createdAt']),
+      locationName: json['locationName'],
     );
   }
 }

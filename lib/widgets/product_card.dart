@@ -30,32 +30,30 @@ class _ProductCardState extends State<ProductCard> {
   bool get _isWishlisted => widget.product.isWishlisted;
 
   /// Toggles the wishlist status for the current product.
+/// Toggles the wishlist status using an optimistic UI update.
   Future<void> _toggleWishlist() async {
-    if (_isLoading) return; // Prevent multiple taps
+    // 1. Store the original status in case we need to revert.
+    final originalStatus = _isWishlisted;
 
-    setState(() {
-      _isLoading = true;
-    });
+    // 2. Update the UI immediately, assuming the request will succeed.
+    widget.onWishlistChanged(widget.product.id, !originalStatus);
 
     try {
-      if (_isWishlisted) {
-        // If it's already wishlisted, remove it
+      // 3. Perform the network request silently in the background.
+      if (originalStatus) {
+        // If it WAS wishlisted, the new optimistic state is 'false', so remove it.
         await _wishlistService.removeFromWishlist(widget.product.id);
-        widget.onWishlistChanged(widget.product.id, false); // Notify parent
-        _showSnackBar("Removed from your wishlist.", isError: false);
       } else {
-        // If it's not wishlisted, add it
+        // If it was NOT wishlisted, the new optimistic state is 'true', so add it.
         await _wishlistService.addToWishlist(widget.product.id);
-        widget.onWishlistChanged(widget.product.id, true); // Notify parent
-        _showSnackBar("Added to your wishlist!", isError: false);
       }
     } catch (e) {
+      // 4. If the network call fails, show an error and revert the UI.
       _showSnackBar(e.toString().replaceAll("Exception: ", ""), isError: true);
-    } finally {
+      
       if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
+        // Revert the UI by notifying the parent of the original status.
+        widget.onWishlistChanged(widget.product.id, originalStatus);
       }
     }
   }

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 // --- Assumed Imports ---
 import 'package:myfirstflutterapp/pages/bookings_page.dart';
-import 'package:myfirstflutterapp/pages/main_screen.dart';
 
 
 /// A page shown to the user after a successful payment.
