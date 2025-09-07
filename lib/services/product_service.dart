@@ -127,14 +127,14 @@ class ProductService {
     request.headers['Authorization'] = 'Bearer $token';
 
     // Add text fields from the product object
-    request.fields['Name'] = product.name;
-    request.fields['Description'] = product.description;
-    request.fields['Price'] = product.price.toString();
-    request.fields['CategoryId'] = product.categoryId.toString();
-    request.fields['Latitude'] = product.latitude.toString();
-    request.fields['Longitude'] = product.longitude.toString();
-    request.fields['LocationName'] = product.locationName;
-    request.fields['Availability'] = 'true'; 
+    request.fields['name'] = product.name;
+    request.fields['description'] = product.description;
+    request.fields['price'] = product.price.toString();
+    request.fields['categoryId'] = product.categoryId.toString();
+    request.fields['latitude'] = product.latitude.toString();
+    request.fields['longitude'] = product.longitude.toString();
+    request.fields['locationName'] = product.locationName;
+    request.fields['availability'] = 'true'; 
 
     // Add the image file
     request.files.add(
