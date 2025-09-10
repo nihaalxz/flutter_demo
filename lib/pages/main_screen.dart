@@ -3,7 +3,6 @@ import 'dart:io'; // 👈 1. Import for platform detection
 import 'package:flutter/cupertino.dart'; // 👈 2. Import for iOS widgets
 import 'package:flutter/material.dart';
 import 'package:myfirstflutterapp/models/notification_model.dart';
-import 'package:myfirstflutterapp/pages/messaging/message_page.dart';
 import 'package:overlay_support/overlay_support.dart';
 import 'package:provider/provider.dart';
 
@@ -31,7 +30,6 @@ class _MainScreenState extends State<MainScreen> {
     HomePage(),
     CreateListingPage(),
     BookingsPage(),
-    MessagePage(),
     ProfilePage(),
   ];
 
@@ -113,17 +111,6 @@ class _MainScreenState extends State<MainScreen> {
             ),
             label: 'Bookings',
           ),
-           BottomNavigationBarItem(
-            icon: _buildIconWithBadge(
-              icon: Icons.message_outlined,
-              count: appState.pendingBookingCount,
-            ),
-            activeIcon: _buildIconWithBadge(
-              icon: Icons.message,
-              count: appState.pendingBookingCount,
-            ),
-            label: 'Messages',
-          ),
           const BottomNavigationBarItem(
             icon: Icon(Icons.person_outline),
             activeIcon: Icon(Icons.person),
@@ -159,13 +146,6 @@ class _MainScreenState extends State<MainScreen> {
               count: appState.pendingBookingCount,
             ),
             label: 'Bookings',
-          ),
-           BottomNavigationBarItem(
-            icon: _buildIconWithBadge(
-              icon: Icons.message_outlined,
-              count: appState.pendingBookingCount,
-            ),
-            label: 'Messages',
           ),
           const BottomNavigationBarItem(
             icon: Icon(CupertinoIcons.person),

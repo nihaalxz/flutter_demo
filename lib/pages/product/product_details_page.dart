@@ -1,6 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:myfirstflutterapp/pages/offer_page.dart';
 import '../../environment/env.dart';
 import '../../models/product_model.dart';
 import '../../services/product_service.dart';
@@ -458,7 +459,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w700,
-                            color:  Colors.green[600],
+                            color: Colors.green[600],
                           ),
                         ),
                       ],
@@ -533,10 +534,14 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                       subtitle: Text("Posted on $createdAtLabel"),
                       trailing: OutlinedButton.icon(
                         onPressed: () {
-                          // TODO: open chat
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => const OffersPage(),
+                            ),
+                          );
                         },
-                        icon: const Icon(Icons.chat_bubble_outline),
-                        label: const Text("Chat"),
+                        icon: const Icon(Icons.currency_rupee),
+                        label: const Text("Make an offer"),
                       ),
                       onTap: () {
                         // TODO: navigate to owner products page if needed
@@ -762,7 +767,6 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                                             fontSize: 14,
                                             fontWeight: FontWeight.bold,
                                             color: Colors.green[600],
-                                              
                                           ),
                                     ),
 
@@ -784,37 +788,38 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                                             context,
                                           ).textTheme.bodySmall,
                                         ),
-                                        
                                       ],
                                     ),
                                     Row(
-                                       children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: (sim.availability == true)
-                                ? Colors.green[100]
-                                : Colors.red[100],
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: Text(
-                            (sim.availability == true)
-                                ? 'Available for Rent'
-                                : 'Currently Unavailable',
-                            style: TextStyle(
-                              color: (sim.availability == true)
-                                  ? Colors.green[800]
-                                  : Colors.red[800],
-                              fontWeight: FontWeight.w600,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ),
-                      ],
-                                    )
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 10,
+                                            vertical: 6,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: (sim.availability == true)
+                                                ? Colors.green[100]
+                                                : Colors.red[100],
+                                            borderRadius: BorderRadius.circular(
+                                              16,
+                                            ),
+                                          ),
+                                          child: Text(
+                                            (sim.availability == true)
+                                                ? 'Available for Rent'
+                                                : 'Currently Unavailable',
+                                            style: TextStyle(
+                                              color: (sim.availability == true)
+                                                  ? Colors.green[800]
+                                                  : Colors.red[800],
+                                              fontWeight: FontWeight.w600,
+                                              fontSize: 12,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ],
                                 ),
                               ),
