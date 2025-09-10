@@ -25,6 +25,7 @@ import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
 import '../widgets/product_card.dart';
 import 'package:myfirstflutterapp/services/location_service.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'dart:io' show Platform, SocketException;
 
 class HomePage extends StatefulWidget {
