@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:myfirstflutterapp/models/user_model.dart';
 import 'package:myfirstflutterapp/pages/gen/settings_page.dart';
+import 'package:myfirstflutterapp/pages/offer_page.dart';
 import 'package:myfirstflutterapp/pages/payments/payment_history_page.dart';
 import 'package:myfirstflutterapp/pages/product/my_items_page.dart';
 import 'package:myfirstflutterapp/pages/notification_page.dart';
@@ -25,7 +26,6 @@ import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
 import '../widgets/product_card.dart';
 import 'package:myfirstflutterapp/services/location_service.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'dart:io' show Platform, SocketException;
 
 class HomePage extends StatefulWidget {
@@ -35,7 +35,7 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
-enum MenuItem { item1, item2, item3, item4, item5, item6, item7 }
+enum MenuItem { item1, item2, item3, item4, item5, item6, item7,item8 }
 
 class _HomePageState extends State<HomePage> {
   List<Product> _products = [];
@@ -800,8 +800,21 @@ class _HomePageState extends State<HomePage> {
                 ],
               ),
             ),
-            PopupMenuItem(
+              PopupMenuItem(
               value: MenuItem.item3,
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.currency_rupee,
+                    color: Theme.of(context).iconTheme.color,
+                  ),
+                  const SizedBox(width: 4),
+                  const Text('Offers', style: TextStyle(fontSize: 16)),
+                ],
+              ),
+            ),
+            PopupMenuItem(
+              value: MenuItem.item4,
               child: Row(
                 children: [
                   Icon(Icons.wallet, color: Theme.of(context).iconTheme.color),
@@ -811,7 +824,7 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
             PopupMenuItem(
-              value: MenuItem.item4,
+              value: MenuItem.item5,
               child: Row(
                 children: [
                   Icon(Icons.history, color: Theme.of(context).iconTheme.color),
@@ -821,7 +834,7 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
             PopupMenuItem(
-              value: MenuItem.item5,
+              value: MenuItem.item6,
               child: Row(
                 children: [
                   Icon(
@@ -834,7 +847,7 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
             PopupMenuItem(
-              value: MenuItem.item6,
+              value: MenuItem.item7,
               child: Row(
                 children: [
                   Icon(
@@ -864,27 +877,32 @@ class _HomePageState extends State<HomePage> {
           context,
         ).push(MaterialPageRoute(builder: (context) => const MyItemsPage()));
         break;
-      case MenuItem.item3:
+        case MenuItem.item3:
+        Navigator.of(
+          context,
+        ).push(MaterialPageRoute(builder: (context) => const OffersPage()));
+        break;
+      case MenuItem.item4:
         Navigator.of(
           context,
         ).push(MaterialPageRoute(builder: (context) => const WalletPage()));
         break;
-      case MenuItem.item4:
+      case MenuItem.item5:
         Navigator.of(context).push(
           MaterialPageRoute(builder: (context) => const PaymentHistoryPage()),
         );
         break;
-      case MenuItem.item5:
+      case MenuItem.item6:
         Navigator.of(
           context,
         ).push(MaterialPageRoute(builder: (context) => const WishlistPage()));
         break;
-      case MenuItem.item6:
+      case MenuItem.item7:
         Navigator.of(
           context,
         ).push(MaterialPageRoute(builder: (context) => const SettingsPage()));
         break;
-      case MenuItem.item7:
+      case MenuItem.item8:
         break;
     }
   }
