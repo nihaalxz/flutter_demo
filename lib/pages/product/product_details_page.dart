@@ -1,6 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:myfirstflutterapp/pages/createofferpage.dart';
 import 'package:myfirstflutterapp/pages/offer_page.dart';
 import '../../environment/env.dart';
 import '../../models/product_model.dart';
@@ -536,7 +537,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                         onPressed: () {
                           Navigator.of(context).push(
                             MaterialPageRoute(
-                              builder: (context) => const OffersPage(),
+                              builder: (context) => CreateOfferPage(productName: product!.name, originalPrice: product!.price,productId: product!.id,),
                             ),
                           );
                         },
