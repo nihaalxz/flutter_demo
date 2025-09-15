@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:myfirstflutterapp/pages/createofferpage.dart';
 import 'package:myfirstflutterapp/pages/offer_page.dart';
+import 'package:myfirstflutterapp/services/auth_service.dart';
 import '../../environment/env.dart';
 import '../../models/product_model.dart';
 import '../../services/product_service.dart';
@@ -29,12 +30,21 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
   DateTime? startDate;
   DateTime? endDate;
   double? totalPrice;
+  String? currentUserId;
 
   @override
   void initState() {
     _productService.trackView(widget.productId);
     super.initState();
     _fetchProduct();
+    _loadCurrentUser();
+  }
+
+  Future<void> _loadCurrentUser() async {
+    final id = await AuthService().getUserId(); // async decode from token
+    setState(() {
+      currentUserId = id;
+    });
   }
 
   Future<void> _fetchProduct() async {
@@ -533,17 +543,25 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                       ),
                       title: Text(product!.ownerName),
                       subtitle: Text("Posted on $createdAtLabel"),
-                      trailing: OutlinedButton.icon(
-                        onPressed: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (context) => CreateOfferPage(productName: product!.name, originalPrice: product!.price,productId: product!.id,),
-                            ),
-                          );
-                        },
-                        icon: const Icon(Icons.currency_rupee),
-                        label: const Text("Make an offer"),
-                      ),
+                      trailing:
+                          (currentUserId != null &&
+                              product!.ownerId.toString() != currentUserId)
+                          ? OutlinedButton.icon(
+                              onPressed: () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (context) => CreateOfferPage(
+                                      productName: product!.name,
+                                      originalPrice: product!.price,
+                                      productId: product!.id,
+                                    ),
+                                  ),
+                                );
+                              },
+                              icon: const Icon(Icons.currency_rupee),
+                              label: const Text("Make an offer"),
+                            )
+                          : null,
                       onTap: () {
                         // TODO: navigate to owner products page if needed
                       },
@@ -613,7 +631,9 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                       width: double.infinity,
                       child: ElevatedButton(
                         onPressed:
-                            (product!.availability == true && endDate != null)
+                            (product!.availability == true &&
+                                endDate != null &&
+                                currentUserId != product!.ownerId.toString())
                             ? _requestBooking
                             : null,
                         style: ElevatedButton.styleFrom(

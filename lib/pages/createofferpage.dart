@@ -24,7 +24,8 @@ class _CreateOfferPageState extends State<CreateOfferPage> {
   final OfferService _offerService = OfferService();
 
   bool _isLoading = false;
-  bool _offerSubmitted = false; // 🚀 disables input after offer is made
+  bool _offerSubmitted = false; // Disables input after offer is made
+  String? _errorMessage; // For input validation errors
 
   @override
   void initState() {
@@ -36,53 +37,88 @@ class _CreateOfferPageState extends State<CreateOfferPage> {
     setState(() => _isLoading = true);
 
     try {
-      // 👇 fetch any existing offer for this product
+      // Fetch any existing offer for this product
       OfferResponseDTO? existing =
           await _offerService.getOfferByProduct(widget.productId);
 
       _messages.add({
         "isUser": false,
-        "text": "Seller’s Price: ₹${widget.originalPrice}",
+        "text": "Seller’s Price: ₹${widget.originalPrice.toStringAsFixed(2)}",
+        "icon": Icons.store, // Added icon for visual appeal
       });
 
       if (existing != null) {
         _messages.add({
           "isUser": true,
-          "text": "You offered ₹${existing.offeredPrice}",
+          "text": "You offered ₹${existing.offeredPrice.toStringAsFixed(2)}",
+          "icon": Icons.thumb_up_alt_outlined,
         });
         _messages.add({
           "isUser": false,
-          "text": "Status: ${existing.status}", // e.g., Pending / Accepted / Rejected
+          "text": "Status: ${existing.status}",
+          "icon": _getStatusIcon(existing.status), // Dynamic icon based on status
         });
 
         // If still pending, block user from sending another
         if (existing.status.toLowerCase() == "pending") {
           _offerSubmitted = true;
         }
+      } else {
+        _messages.add({
+          "isUser": false,
+          "text": "No previous offers. Make your best offer!",
+          "icon": Icons.info_outline,
+        });
       }
     } catch (e) {
-      _messages.add({
-        "isUser": false,
-        "text": "⚠️ Could not load offer history: $e",
-      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("⚠️ Could not load offer history: $e")),
+      );
     } finally {
       setState(() => _isLoading = false);
     }
   }
 
-  Future<void> _sendOffer() async {
-    if (_controller.text.trim().isEmpty) return;
+  IconData _getStatusIcon(String status) {
+    switch (status.toLowerCase()) {
+      case 'accepted':
+        return Icons.check_circle_outline;
+      case 'rejected':
+        return Icons.cancel_outlined;
+      case 'pending':
+        return Icons.hourglass_bottom_outlined;
+      default:
+        return Icons.help_outline;
+    }
+  }
 
-    final offerValue = double.tryParse(_controller.text.trim());
-    if (offerValue == null) return;
+  Future<void> _sendOffer() async {
+    final inputText = _controller.text.trim();
+    if (inputText.isEmpty) {
+      setState(() => _errorMessage = "Please enter an offer price.");
+      return;
+    }
+
+    final offerValue = double.tryParse(inputText);
+    if (offerValue == null || offerValue <= 0) {
+      setState(() => _errorMessage = "Please enter a valid positive number.");
+      return;
+    }
+
+    if (offerValue >= widget.originalPrice) {
+      setState(() => _errorMessage = "Offer should be less than the seller's price.");
+      return;
+    }
 
     setState(() {
+      _errorMessage = null;
       _messages.add({
         "isUser": true,
-        "text": "You offered ₹$offerValue",
+        "text": "You offered ₹${offerValue.toStringAsFixed(2)}",
+        "icon": Icons.thumb_up_alt_outlined,
       });
       _isLoading = true;
-      _offerSubmitted = true; // 🚀 disable further input
+      _offerSubmitted = true; // Disable further input
     });
 
     try {
@@ -93,16 +129,26 @@ class _CreateOfferPageState extends State<CreateOfferPage> {
         _messages.add({
           "isUser": false,
           "text": "Offer submitted ✅ (Status: ${response.status})",
+          "icon": Icons.check_circle_outline,
         });
       });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Offer submitted successfully!")),
+      );
     } catch (e) {
       setState(() {
         _messages.add({
           "isUser": false,
           "text": "❌ Failed to submit offer: $e",
+          "icon": Icons.error_outline,
         });
-        _offerSubmitted = false; // allow retry if API failed
+        _offerSubmitted = false; // Allow retry if API failed
       });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Failed to submit offer: $e")),
+      );
     } finally {
       setState(() => _isLoading = false);
       _controller.clear();
@@ -113,63 +159,136 @@ class _CreateOfferPageState extends State<CreateOfferPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("Offer for ${widget.productName}"),
+        title: Text("Make an Offer for ${widget.productName}"),
+        backgroundColor: Colors.blueAccent, // Attractive color
+        elevation: 0, // Modern flat look
       ),
       body: Column(
         children: [
-          Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.all(12),
-              itemCount: _messages.length,
-              itemBuilder: (context, index) {
-                final msg = _messages[index];
-                final isUser = msg["isUser"] as bool;
-
-                return Align(
-                  alignment:
-                      isUser ? Alignment.centerRight : Alignment.centerLeft,
-                  child: Container(
-                    margin: const EdgeInsets.symmetric(vertical: 5),
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: isUser
-                          ? Colors.blueAccent.withOpacity(0.8)
-                          : Colors.grey.shade300,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      msg["text"],
-                      style: TextStyle(
-                        color: isUser ? Colors.white : Colors.black87,
-                        fontSize: 16,
-                      ),
-                    ),
-                  ),
-                );
-              },
+          Container(
+            padding: const EdgeInsets.all(16),
+            color: Colors.blueAccent.withOpacity(0.1), // Subtle header background
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  "Original Price: ₹${widget.originalPrice.toStringAsFixed(2)}",
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const Icon(Icons.local_offer, color: Colors.blueAccent, size: 28),
+              ],
             ),
           ),
-          if (_isLoading) const LinearProgressIndicator(),
+          Expanded(
+            child: _isLoading && _messages.isEmpty
+                ? const Center(child: CircularProgressIndicator())
+                : ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: _messages.length,
+                    itemBuilder: (context, index) {
+                      final msg = _messages[index];
+                      final isUser = msg["isUser"] as bool;
+                      final icon = msg["icon"] as IconData?;
+
+                      return Align(
+                        alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
+                        child: Container(
+                          margin: const EdgeInsets.symmetric(vertical: 8),
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: isUser ? Colors.blueAccent : Colors.grey.shade200,
+                            borderRadius: BorderRadius.only(
+                              topLeft: Radius.circular(isUser ? 20 : 0),
+                              topRight: Radius.circular(isUser ? 0 : 20),
+                              bottomLeft: const Radius.circular(20),
+                              bottomRight: const Radius.circular(20),
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.05),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              if (!isUser && icon != null)
+                                Padding(
+                                  padding: const EdgeInsets.only(right: 8),
+                                  child: Icon(icon, color: Colors.blueAccent, size: 20),
+                                ),
+                              Flexible(
+                                child: Text(
+                                  msg["text"],
+                                  style: TextStyle(
+                                    color: isUser ? Colors.white : Colors.black87,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                              ),
+                              if (isUser && icon != null)
+                                Padding(
+                                  padding: const EdgeInsets.only(left: 8),
+                                  child: Icon(icon, color: Colors.white, size: 20),
+                                ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+          ),
+          if (_isLoading) const LinearProgressIndicator(color: Colors.blueAccent),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            child: Row(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: TextField(
-                    controller: _controller,
-                    enabled: !_offerSubmitted, // 🚀 disabled if offer already sent
-                    keyboardType: TextInputType.number,
-                    decoration: InputDecoration(
-                      hintText: _offerSubmitted
-                          ? "Wait for seller’s response..."
-                          : "Enter your offer price...",
-                      border: const OutlineInputBorder(),
+                if (_errorMessage != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Text(
+                      _errorMessage!,
+                      style: const TextStyle(color: Colors.red, fontSize: 14),
                     ),
                   ),
-                ),
-                IconButton(
-                  onPressed: _offerSubmitted || _isLoading ? null : _sendOffer,
-                  icon: const Icon(Icons.send, color: Colors.blueAccent),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _controller,
+                        enabled: !_offerSubmitted && !_isLoading,
+                        keyboardType: TextInputType.numberWithOptions(decimal: true),
+                        decoration: InputDecoration(
+                          hintText: _offerSubmitted
+                              ? "Waiting for seller’s response..."
+                              : "Enter your offer price (e.g., 500.00)...",
+                          prefixText: "₹ ",
+                          prefixStyle: const TextStyle(color: Color.fromARGB(221, 255, 255, 255)),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          filled: true,
+                          fillColor: const Color.fromARGB(0, 245, 245, 245),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    ElevatedButton.icon(
+                      onPressed: _offerSubmitted || _isLoading ? null : _sendOffer,
+                      icon: const Icon(Icons.send),
+                      label: const Text("Send"),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color.fromARGB(255, 248, 248, 248),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
