@@ -1,9 +1,10 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:myfirstflutterapp/models/Offer_DTO/OfferResponse_DTO.dart';
 import 'package:myfirstflutterapp/pages/createofferpage.dart';
-import 'package:myfirstflutterapp/pages/offer_page.dart';
 import 'package:myfirstflutterapp/services/auth_service.dart';
+import 'package:myfirstflutterapp/services/offers_service.dart';
 import '../../environment/env.dart';
 import '../../models/product_model.dart';
 import '../../services/product_service.dart';
@@ -31,6 +32,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
   DateTime? endDate;
   double? totalPrice;
   String? currentUserId;
+  OfferResponseDTO? _offer;
 
   @override
   void initState() {
@@ -38,6 +40,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
     super.initState();
     _fetchProduct();
     _loadCurrentUser();
+    _fetchOffer();
   }
 
   Future<void> _loadCurrentUser() async {
@@ -45,6 +48,17 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
     setState(() {
       currentUserId = id;
     });
+  }
+
+  Future<void> _fetchOffer() async {
+    try {
+      final offer = await OfferService().getOfferByProduct(widget.productId);
+      setState(() {
+        _offer = offer;
+      });
+    } catch (e) {
+      print("Error fetching offer: $e");
+    }
   }
 
   Future<void> _fetchProduct() async {
@@ -104,49 +118,62 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
     });
   }
 
-  void _calculateTotal() {
-    if (startDate != null && endDate != null && product != null) {
-      final days = endDate!.difference(startDate!).inDays + 1; // inclusive
+void _calculateTotal() {
+  if (startDate != null && endDate != null && product != null) {
+    final days = endDate!.difference(startDate!).inDays + 1;
+
+    if (_offer != null) {
+      totalPrice = _offer!.offeredPrice * days;
+    } else {
       // ignore: unnecessary_type_check
       final pricePerDay = (product!.price is num)
           ? (product!.price as num).toDouble()
           : 0.0;
       totalPrice = pricePerDay * days;
-    } else {
-      totalPrice = null;
     }
+  } else {
+    totalPrice = null;
+  }
+}
+
+void _requestBooking() async {
+  if (product == null ||
+      startDate == null ||
+      endDate == null ||
+      totalPrice == null) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Please select start and end dates")),
+    );
+    return;
   }
 
-  void _requestBooking() async {
-    if (product == null ||
-        startDate == null ||
-        endDate == null ||
-        totalPrice == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please select start and end dates")),
-      );
-      return;
-    }
+  final days = endDate!.difference(startDate!).inDays + 1;
 
-    try {
-      await _bookingService.createBooking(
-        itemId: product!.id,
-        startDate: startDate!,
-        endDate: endDate!,
-        totalPrice: totalPrice!,
-      );
+  // ✅ If offer exists → offeredPrice × days
+  // ✅ Else → already calculated totalPrice
+  final calculatedTotalPrice =
+      _offer != null ? _offer!.offeredPrice * days : totalPrice!;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Booking requested successfully!")),
-      );
+  try {
+    await _bookingService.createBooking(
+      itemId: product!.id,
+      startDate: startDate!,
+      endDate: endDate!,
+      totalPrice: calculatedTotalPrice,
+      offerId: _offer?.id, // null if no offer
+    );
 
-      if (mounted) Navigator.pushNamed(context, "/my-bookings");
-    } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("Booking failed: $e")));
-    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Booking requested successfully!")),
+    );
+
+    if (mounted) Navigator.pushNamed(context, "/my-bookings");
+  } catch (e) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text("Booking failed: $e")));
   }
+}
 
   DateTime? _asDateTime(dynamic value) {
     if (value == null) return null;
@@ -644,7 +671,11 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                             borderRadius: BorderRadius.circular(12),
                           ),
                         ),
-                        child: const Text("Request Rental"),
+                        child: Text(
+                          _offer != null
+                              ? "Book at Offered Price ₹${_offer!.offeredPrice}/day"
+                              : "Request Rental",
+                        ),
                       ),
                     ),
 

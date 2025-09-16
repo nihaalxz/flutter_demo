@@ -50,33 +50,46 @@ class OfferService {
   }
 
   Future<OfferResponseDTO?> getOfferByProduct(int productId) async {
-  try {
-    // Reuse existing method which already handles auth + deserialization.
-    final offers = await getMyOffers();
+  final headers = await _getAuthHeaders();
+  final url = Uri.parse('$_baseUrl/Offer/product/$productId/my-offer');
 
-    // Filter offers that belong to this product
-    final matches = offers.where((o) => o.itemId == productId).toList();
+  final response = await http.get(url, headers: headers);
 
-    if (matches.isEmpty) return null;
-
-    // If there are multiple, try to return the most recent by createdAt (best-effort).
-    // This expects createdAt to be parseable (string) or DateTime-like.
-    matches.sort((a, b) {
-      try {
-        final aDt = DateTime.parse(a.createdAt.toString());
-        final bDt = DateTime.parse(b.createdAt.toString());
-        return bDt.compareTo(aDt); // descending => newest first
-      } catch (_) {
-        return 0; // if parsing fails, keep original order
-      }
-    });
-
-    return matches.first;
-  } catch (e) {
-    // swallow errors and return null — caller can show an error message if needed
-    return null;
+  if (response.statusCode == 200) {
+    final data = json.decode(response.body);
+    return OfferResponseDTO.fromJson(data);
   }
+  return null;
 }
+
+//   Future<OfferResponseDTO?> getOfferByProduct(int productId) async {
+//   try {
+//     // Reuse existing method which already handles auth + deserialization.
+//     final offers = await getMyOffers();
+
+//     // Filter offers that belong to this product
+//     final matches = offers.where((o) => o.itemId == productId).toList();
+
+//     if (matches.isEmpty) return null;
+
+//     // If there are multiple, try to return the most recent by createdAt (best-effort).
+//     // This expects createdAt to be parseable (string) or DateTime-like.
+//     matches.sort((a, b) {
+//       try {
+//         final aDt = DateTime.parse(a.createdAt.toString());
+//         final bDt = DateTime.parse(b.createdAt.toString());
+//         return bDt.compareTo(aDt); // descending => newest first
+//       } catch (_) {
+//         return 0; // if parsing fails, keep original order
+//       }
+//     });
+
+//     return matches.first;
+//   } catch (e) {
+//     // swallow errors and return null — caller can show an error message if needed
+//     return null;
+//   }
+// }
 
   /// Gets a list of offers received for the current user's items.
   Future<List<OfferResponseDTO>> getReceivedOffers() async {

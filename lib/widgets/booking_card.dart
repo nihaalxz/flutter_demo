@@ -35,7 +35,7 @@ class BookingCard extends StatelessWidget {
       margin: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 6.0),
       elevation: 5,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      clipBehavior: Clip.antiAlias, // ensures smooth rounded corners
+      clipBehavior: Clip.antiAlias,
       child: Padding(
         padding: const EdgeInsets.all(14.0),
         child: Column(
@@ -71,7 +71,7 @@ class BookingCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(title,
-                          style:TextStyle(
+                          style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
                               overflow: TextOverflow.ellipsis,
@@ -79,13 +79,14 @@ class BookingCard extends StatelessWidget {
                       const SizedBox(height: 6),
                       Row(
                         children: [
-                           Icon(Icons.person_outline,
-                              size: 16, color:Theme.of(context).iconTheme.color),
+                          Icon(Icons.person_outline,
+                              size: 16, color: Theme.of(context).iconTheme.color),
                           const SizedBox(width: 4),
                           Expanded(
                             child: Text(subtitle,
                                 style: TextStyle(
-                                    fontSize: 14, color:Theme.of(context).iconTheme.color),
+                                    fontSize: 14,
+                                    color: Theme.of(context).iconTheme.color),
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis),
                           ),
@@ -94,14 +95,15 @@ class BookingCard extends StatelessWidget {
                       const SizedBox(height: 6),
                       Row(
                         children: [
-                           Icon(Icons.calendar_today,
-                              size: 16, color:Theme.of(context).iconTheme.color),
+                          Icon(Icons.calendar_today,
+                              size: 16, color: Theme.of(context).iconTheme.color),
                           const SizedBox(width: 4),
                           Text(dateRange,
-                              style:  TextStyle(
-                                  fontSize: 12, color: Theme.of(context).iconTheme.color,
-                                  overflow: TextOverflow.ellipsis,  
-                                  )),
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Theme.of(context).iconTheme.color,
+                                overflow: TextOverflow.ellipsis,
+                              )),
                         ],
                       ),
                     ],
@@ -137,6 +139,31 @@ class BookingCard extends StatelessWidget {
                 bookingId: booking.id,
                 isOwnerView: !isRentalView,
                 onAction: onAction,
+              ),
+
+            // ✅ Show Pay Now button if renter & approved & unpaid
+            if (isRentalView &&
+                booking.status.toLowerCase() == 'approved' &&
+                booking.isPaid == false &&
+                currentUserId == booking.renterId.toLowerCase())
+              Padding(
+                padding: const EdgeInsets.only(top: 16.0),
+                child: ElevatedButton.icon(
+                  icon: const Icon(Icons.payment),
+                  label: const Text("Pay Now"),
+                  onPressed: () {
+                    Navigator.pushNamed(
+                      context,
+                      '/checkout',
+                      arguments: booking, // pass booking to checkout page
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8)),
+                  ),
+                ),
               ),
           ],
         ),
