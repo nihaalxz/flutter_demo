@@ -3,6 +3,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:intl/intl.dart';
 import 'package:myfirstflutterapp/environment/env.dart';
 import 'package:myfirstflutterapp/models/BookingResponseDTO.dart';
+import 'package:myfirstflutterapp/pages/payments/checkout_page.dart';
 import 'package:myfirstflutterapp/services/booking_service.dart';
 
 class BookingCard extends StatelessWidget {
@@ -60,9 +61,11 @@ class BookingCard extends StatelessWidget {
                         child: CircularProgressIndicator(strokeWidth: 2),
                       ),
                     ),
-                    errorWidget: (context, url, error) =>
-                        const Icon(Icons.broken_image,
-                            color: Colors.grey, size: 40),
+                    errorWidget: (context, url, error) => const Icon(
+                      Icons.broken_image,
+                      color: Colors.grey,
+                      size: 40,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -70,40 +73,54 @@ class BookingCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(title,
-                          style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              overflow: TextOverflow.ellipsis,
-                              color: Theme.of(context).iconTheme.color)),
+                      Text(
+                        title,
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          overflow: TextOverflow.ellipsis,
+                          color: Theme.of(context).iconTheme.color,
+                        ),
+                      ),
                       const SizedBox(height: 6),
                       Row(
                         children: [
-                          Icon(Icons.person_outline,
-                              size: 16, color: Theme.of(context).iconTheme.color),
+                          Icon(
+                            Icons.person_outline,
+                            size: 16,
+                            color: Theme.of(context).iconTheme.color,
+                          ),
                           const SizedBox(width: 4),
                           Expanded(
-                            child: Text(subtitle,
-                                style: TextStyle(
-                                    fontSize: 14,
-                                    color: Theme.of(context).iconTheme.color),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis),
+                            child: Text(
+                              subtitle,
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Theme.of(context).iconTheme.color,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
                         ],
                       ),
                       const SizedBox(height: 6),
                       Row(
                         children: [
-                          Icon(Icons.calendar_today,
-                              size: 16, color: Theme.of(context).iconTheme.color),
+                          Icon(
+                            Icons.calendar_today,
+                            size: 16,
+                            color: Theme.of(context).iconTheme.color,
+                          ),
                           const SizedBox(width: 4),
-                          Text(dateRange,
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Theme.of(context).iconTheme.color,
-                                overflow: TextOverflow.ellipsis,
-                              )),
+                          Text(
+                            dateRange,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Theme.of(context).iconTheme.color,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
                         ],
                       ),
                     ],
@@ -121,13 +138,19 @@ class BookingCard extends StatelessWidget {
                 _StatusChip(status: booking.status),
                 Row(
                   children: [
-                    const Icon(Icons.currency_rupee,
-                        size: 18, color: Colors.green),
-                    Text(price,
-                        style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.green)),
+                    const Icon(
+                      Icons.currency_rupee,
+                      size: 18,
+                      color: Colors.green,
+                    ),
+                    Text(
+                      price,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.green,
+                      ),
+                    ),
                   ],
                 ),
               ],
@@ -150,18 +173,20 @@ class BookingCard extends StatelessWidget {
                 padding: const EdgeInsets.only(top: 16.0),
                 child: ElevatedButton.icon(
                   icon: const Icon(Icons.payment),
-                  label: const Text("Pay Now"),
+                  label: const Text("Pay now to start renting"),
                   onPressed: () {
-                    Navigator.pushNamed(
+                    Navigator.push(
                       context,
-                      '/checkout',
-                      arguments: booking, // pass booking to checkout page
+                      MaterialPageRoute(
+                        builder: (context) => CheckoutPage(booking: booking),
+                      ),
                     );
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue,
+                    backgroundColor: const Color.fromARGB(255, 255, 255, 255),
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8)),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                   ),
                 ),
               ),
@@ -204,9 +229,13 @@ class _StatusChip extends StatelessWidget {
 
     return Chip(
       avatar: Icon(icon, color: Colors.white, size: 18),
-      label: Text(status.toUpperCase(),
-          style: const TextStyle(
-              color: Colors.white, fontWeight: FontWeight.bold)),
+      label: Text(
+        status.toUpperCase(),
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
       backgroundColor: color,
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -236,14 +265,16 @@ class _ActionButtons extends StatelessWidget {
         onAction();
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-              content: Text("Action successful!"),
-              backgroundColor: Colors.green),
+            content: Text("Action successful!"),
+            backgroundColor: Colors.green,
+          ),
         );
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-              content: Text("Action failed: ${e.toString()}"),
-              backgroundColor: Colors.red),
+            content: Text("Action failed: ${e.toString()}"),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     }
@@ -257,23 +288,25 @@ class _ActionButtons extends StatelessWidget {
                 ElevatedButton.icon(
                   icon: const Icon(Icons.cancel),
                   label: const Text('Reject'),
-                  onPressed: () =>
-                      handleAction(bookingService.rejectBooking),
+                  onPressed: () => handleAction(bookingService.rejectBooking),
                   style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8))),
+                    backgroundColor: Colors.red,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
                 ),
                 const SizedBox(width: 8),
                 ElevatedButton.icon(
                   icon: const Icon(Icons.check),
                   label: const Text('Approve'),
-                  onPressed: () =>
-                      handleAction(bookingService.approveBooking),
+                  onPressed: () => handleAction(bookingService.approveBooking),
                   style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8))),
+                    backgroundColor: Colors.green,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
                 ),
               ],
             )
@@ -283,13 +316,13 @@ class _ActionButtons extends StatelessWidget {
                 OutlinedButton.icon(
                   icon: const Icon(Icons.cancel),
                   label: const Text('Cancel Request'),
-                  onPressed: () =>
-                      handleAction(bookingService.cancelBooking),
+                  onPressed: () => handleAction(bookingService.cancelBooking),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: Colors.red,
                     side: const BorderSide(color: Colors.red),
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8)),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                   ),
                 ),
               ],

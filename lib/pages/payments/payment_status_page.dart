@@ -1,10 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:myfirstflutterapp/pages/main_screen.dart';
 
-// --- Assumed Imports ---
-import 'package:myfirstflutterapp/pages/bookings_page.dart';
-
-
-/// A page shown to the user after a successful payment.
 class PaymentSuccessPage extends StatelessWidget {
   final String orderId;
   const PaymentSuccessPage({super.key, required this.orderId});
@@ -18,29 +14,29 @@ class PaymentSuccessPage extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.check_circle_outline, color: Colors.green, size: 80),
+              const Icon(Icons.check_circle, color: Colors.green, size: 80),
               const SizedBox(height: 24),
               const Text(
                 'Payment Successful!',
                 style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
               Text(
-                'Your booking has been confirmed. You can view its status on the bookings page.',
-                style: TextStyle(fontSize: 16, color: Colors.grey[700]),
+                'Your payment for order #$orderId has been confirmed.',
+                style: TextStyle(fontSize: 16, color: Colors.grey[600]),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 32),
               ElevatedButton(
                 onPressed: () {
-                  // Navigate to the main screen, specifically to the bookings tab
-                   Navigator.of(context).pushAndRemoveUntil(
-                    MaterialPageRoute(builder: (context) => const BookingsPage()), // Assuming Bookings is at index 2
+                  // Navigate back to the main screen, clearing the navigation stack
+                  Navigator.of(context).pushAndRemoveUntil(
+                    MaterialPageRoute(builder: (context) => const MainScreen()),
                     (Route<dynamic> route) => false,
                   );
                 },
-                child: const Text('View My Bookings'),
+                child: const Text('Back to Home'),
               ),
             ],
           ),
@@ -50,10 +46,10 @@ class PaymentSuccessPage extends StatelessWidget {
   }
 }
 
-/// A page shown to the user after a failed or cancelled payment.
-class PaymentFailedPage extends StatelessWidget {
+class PaymentFailurePage extends StatelessWidget {
   final String orderId;
-  const PaymentFailedPage({super.key, required this.orderId});
+  final String errorMessage;
+  const PaymentFailurePage({super.key, required this.orderId, required this.errorMessage});
 
   @override
   Widget build(BuildContext context) {
@@ -64,24 +60,27 @@ class PaymentFailedPage extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.cancel_outlined, color: Colors.red, size: 80),
+              const Icon(Icons.error, color: Colors.red, size: 80),
               const SizedBox(height: 24),
               const Text(
                 'Payment Failed',
                 style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
               Text(
-                'Something went wrong with your payment. Please try again.',
-                style: TextStyle(fontSize: 16, color: Colors.grey[700]),
+                errorMessage,
+                style: TextStyle(fontSize: 16, color: Colors.grey[600]),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 32),
               ElevatedButton(
                 onPressed: () {
-                  // Go back to the previous screen (e.g., the product details page)
-                  Navigator.of(context).pop();
+                  // Navigate back to the home screen
+                   Navigator.of(context).pushAndRemoveUntil(
+                    MaterialPageRoute(builder: (context) => const MainScreen()),
+                    (Route<dynamic> route) => false,
+                  );
                 },
                 child: const Text('Try Again'),
               ),
