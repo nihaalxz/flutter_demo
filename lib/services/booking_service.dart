@@ -23,36 +23,44 @@ class BookingService {
     };
   }
 
-  /// Creates a new booking request.
-  /// Corresponds to: [POST api/booking]
-  Future<BookingResponseDTO> createBooking({
-    required int itemId,
-    required DateTime startDate,
-    required DateTime endDate,
-    required double totalPrice,
-  }) async {
-    final headers = await _getAuthHeaders();
-    final url = Uri.parse('$_baseUrl/booking');
+/// Creates a new booking request.
+/// Corresponds to: [POST api/booking]
+Future<BookingResponseDTO> createBooking({
+  required int itemId,
+  required DateTime startDate,
+  required DateTime endDate,
+  required double totalPrice,
+  int? offerId, // ✅ optional offerId
+}) async {
+  final headers = await _getAuthHeaders();
+  final url = Uri.parse('$_baseUrl/booking');
 
-    final body = jsonEncode({
-      'itemId': itemId,
-      'startDate': startDate.toIso8601String(),
-      'endDate': endDate.toIso8601String(),
-      'totalPrice': totalPrice,
-    });
+  final body = {
+    'itemId': itemId,
+    'startDate': startDate.toIso8601String(),
+    'endDate': endDate.toIso8601String(),
+    'totalPrice': totalPrice,
+  };
 
-    final response = await http.post(url, headers: headers, body: body);
-
-    if (response.statusCode == 200 || response.statusCode == 201) {
-      // Assuming the backend returns the full booking DTO on creation
-      return BookingResponseDTO.fromJson(jsonDecode(response.body));
-    } else {
-      // You can parse the error message from the backend if available
-      final errorBody = jsonDecode(response.body);
-      throw Exception(
-          'Failed to create booking: ${errorBody['message'] ?? response.reasonPhrase}');
-    }
+  if (offerId != null) {
+    body['offerId'] = offerId; // ✅ include only if booking at offered price
   }
+
+  final response = await http.post(
+    url,
+    headers: headers,
+    body: jsonEncode(body),
+  );
+
+  if (response.statusCode == 200 || response.statusCode == 201) {
+    return BookingResponseDTO.fromJson(jsonDecode(response.body));
+  } else {
+    final errorBody = jsonDecode(response.body);
+    throw Exception(
+      'Failed to create booking: ${errorBody['message'] ?? response.reasonPhrase}',
+    );
+  }
+}
 
   /// Approves a pending booking.
   /// Corresponds to: [POST api/booking/{id}/approve]

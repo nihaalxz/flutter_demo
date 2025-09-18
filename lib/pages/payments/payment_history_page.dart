@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-// --- Assumed Imports ---
-import '../../models/Payment_History_DTO.dart';
+// --- Imports ---
+import '../../models/payment_history_DTO.dart';
 import '../../services/payment_services/payment_service.dart';
 
 /// A page that displays a list of the user's past payment transactions.
@@ -15,14 +15,14 @@ class PaymentHistoryPage extends StatefulWidget {
 
 class _PaymentHistoryPageState extends State<PaymentHistoryPage> {
   final PaymentService _paymentService = PaymentService();
-  late Future<List<PaymentHistoryDto>> _historyFuture;
+  late Future<List<PaymentHistoryDto>> _historyFuture; // Corrected type
 
   @override
   void initState() {
     super.initState();
     _historyFuture = _paymentService.getPaymentHistory();
   }
-
+  
   /// Refreshes the payment history data.
   void _refreshHistory() {
     setState(() {

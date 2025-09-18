@@ -9,6 +9,8 @@ PODS:
     - GoogleUtilities/Environment (~> 8.0)
     - GoogleUtilities/UserDefaults (~> 8.0)
     - PromisesObjC (~> 2.4)
+  - cashfree_pg (0.0.1):
+    - Flutter
   - CashfreeAnalyticsSDK (2.2.0):
     - CFNetworkSDK (= 2.2.0)
   - CashfreePG (2.2.4):
@@ -115,6 +117,7 @@ PODS:
     - FlutterMacOS
 
 DEPENDENCIES:
+  - cashfree_pg (from `.symlinks/plugins/cashfree_pg/ios`)
   - Flutter (from `Flutter`)
   - flutter_cashfree_pg_sdk (from `.symlinks/plugins/flutter_cashfree_pg_sdk/ios`)
   - flutter_image_compress_common (from `.symlinks/plugins/flutter_image_compress_common/ios`)
@@ -154,6 +157,8 @@ SPEC REPOS:
     - SDWebImageWebPCoder
 
 EXTERNAL SOURCES:
+  cashfree_pg:
+    :path: ".symlinks/plugins/cashfree_pg/ios"
   Flutter:
     :path: Flutter
   flutter_cashfree_pg_sdk:
@@ -190,6 +195,7 @@ EXTERNAL SOURCES:
 SPEC CHECKSUMS:
   AppAuth: d4f13a8fe0baf391b2108511793e4b479691fb73
   AppCheckCore: cc8fd0a3a230ddd401f326489c99990b013f0c4f
+  cashfree_pg: 838cb22cdb699a9ec1df062c838704e4247431b5
   CashfreeAnalyticsSDK: ae25b71a54607c920d519103d154d9727ca2c15a
   CashfreePG: 6554c215b8eabc9fa13e59c847262b8ba6f29ff6
   CashfreePGCoreSDK: 133e1ba5aeb8a89bf2188eb3312c88fcad084c75
