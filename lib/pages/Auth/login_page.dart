@@ -84,9 +84,9 @@ class _LoginPageState extends State<LoginPage> {
               const SizedBox(height: 40),
               TextField(
                 controller: _emailController,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   labelText: 'Email address',
-                  border: const UnderlineInputBorder(),
+                  border: UnderlineInputBorder(),
                 ),
                 keyboardType: TextInputType.emailAddress,
               ),
@@ -117,7 +117,8 @@ class _LoginPageState extends State<LoginPage> {
                   onPressed: () {
                     Navigator.of(context).push(
                       MaterialPageRoute(
-                          builder: (context) => const ForgotPasswordPage()),
+                        builder: (context) => const ForgotPasswordPage(),
+                      ),
                     );
                   },
                   child: const Text('Forgot Password?'),
@@ -162,13 +163,13 @@ class _LoginPageState extends State<LoginPage> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text("Don't have an account?",
-                      style: theme.textTheme.bodyMedium),
+                  Text("Don't have an account?", style: theme.textTheme.bodyMedium),
                   TextButton(
                     onPressed: () {
                       Navigator.of(context).push(
                         MaterialPageRoute(
-                            builder: (context) => const RegisterPage()),
+                          builder: (context) => const RegisterPage(),
+                        ),
                       );
                     },
                     child: const Text('Sign Up'),
@@ -183,8 +184,9 @@ class _LoginPageState extends State<LoginPage> {
                   children: [
                     Text(
                       'By continuing you agree to our ',
-                      style: theme.textTheme.bodySmall
-                          ?.copyWith(color: theme.hintColor),
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.hintColor,
+                      ),
                     ),
                     InkWell(
                       onTap: () {
@@ -200,14 +202,16 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                     Text(
                       ' and ',
-                      style: theme.textTheme.bodySmall
-                          ?.copyWith(color: theme.hintColor),
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.hintColor,
+                      ),
                     ),
                     InkWell(
                       onTap: () {
                         Navigator.of(context).push(
                           MaterialPageRoute(
-                              builder: (context) => const PrivacyPolicyPage()),
+                            builder: (context) => const PrivacyPolicyPage(),
+                          ),
                         );
                       },
                       child: Text(
@@ -220,12 +224,14 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                     Text(
                       '.',
-                      style: theme.textTheme.bodySmall
-                          ?.copyWith(color: theme.hintColor),
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.hintColor,
+                      ),
                     ),
                   ],
                 ),
               ),
+              const SizedBox(height: 20), // ✅ ensures bottom safe spacing
             ],
           ),
         ),
@@ -233,8 +239,10 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  Widget _buildSocialButton(
-      {required VoidCallback onPressed, required String iconPath}) {
+  Widget _buildSocialButton({
+    required VoidCallback onPressed,
+    required String iconPath,
+  }) {
     return InkWell(
       onTap: onPressed,
       borderRadius: BorderRadius.circular(30),
@@ -243,12 +251,14 @@ class _LoginPageState extends State<LoginPage> {
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           border: Border.all(
-              color: Theme.of(context).dividerColor.withOpacity(0.5), width: 1),
+            color: Theme.of(context).dividerColor.withOpacity(0.5),
+            width: 1,
+          ),
         ),
         child: SvgPicture.asset(
           iconPath,
           height: 24,
-          width: 24, // optional: adapt google icon color in dark mode
+          width: 24,
         ),
       ),
     );

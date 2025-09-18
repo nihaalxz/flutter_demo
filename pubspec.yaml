@@ -39,7 +39,6 @@ dependencies:
   flutter_localizations:
     sdk: flutter
   flutter_image_compress: ^2.4.0
-  cashfree_pg: ^2.0.12+32
 permission_handler: ^11.0.1
 
 dev_dependencies:

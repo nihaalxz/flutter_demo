@@ -64,7 +64,9 @@ class _OffersPageState extends State<OffersPage> {
             ],
           ),
         ),
-        body: _buildBody(),
+        body: SafeArea( // ✅ Added SafeArea for Material
+          child: _buildBody(),
+        ),
       ),
     );
   }
@@ -74,7 +76,7 @@ class _OffersPageState extends State<OffersPage> {
       navigationBar: const CupertinoNavigationBar(
         middle: Text('My Offers'),
       ),
-      child: SafeArea(
+      child: SafeArea( // ✅ Already had SafeArea here
         child: Column(
           children: [
             Padding(
@@ -115,10 +117,10 @@ class _OffersPageState extends State<OffersPage> {
         final receivedOffers = snapshot.data?['receivedOffers'] ?? [];
         
         if (isCupertino) {
-           return _buildOfferList(
-              _selectedSegment == 0 ? myOffers : receivedOffers,
-              isMyOffers: _selectedSegment == 0,
-            );
+          return _buildOfferList(
+            _selectedSegment == 0 ? myOffers : receivedOffers,
+            isMyOffers: _selectedSegment == 0,
+          );
         } else {
           return TabBarView(
             children: [
@@ -134,7 +136,11 @@ class _OffersPageState extends State<OffersPage> {
   Widget _buildOfferList(List<OfferResponseDTO> offers, {required bool isMyOffers}) {
     if (offers.isEmpty) {
       return Center(
-        child: Text(isMyOffers ? 'You have not made any offers.' : 'You have not received any offers.'),
+        child: Text(
+          isMyOffers
+              ? 'You have not made any offers.'
+              : 'You have not received any offers.',
+        ),
       );
     }
 

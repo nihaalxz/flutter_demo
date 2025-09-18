@@ -82,11 +82,13 @@ class _BookingsPageState extends State<BookingsPage> {
             ],
           ),
         ),
-        body: TabBarView(
-          children: [
-            _buildBookingList(bookings: _myRentals, isRentalView: true),
-            _buildBookingList(bookings: _myItemsBookings, isRentalView: false),
-          ],
+        body: SafeArea( // ✅ SafeArea added
+          child: TabBarView(
+            children: [
+              _buildBookingList(bookings: _myRentals, isRentalView: true),
+              _buildBookingList(bookings: _myItemsBookings, isRentalView: false),
+            ],
+          ),
         ),
       ),
     );

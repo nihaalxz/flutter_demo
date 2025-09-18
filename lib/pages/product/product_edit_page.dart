@@ -41,9 +41,11 @@ class _ProductEditPageState extends State<ProductEditPage> {
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.product.name);
-    _priceController = TextEditingController(text: widget.product.price.toString());
+    _priceController =
+        TextEditingController(text: widget.product.price.toString());
     _descController = TextEditingController(text: widget.product.description);
-    _locationController = TextEditingController(text: widget.product.locationName);
+    _locationController =
+        TextEditingController(text: widget.product.locationName);
     _availability = widget.product.availability;
 
     _fetchCategories();
@@ -62,17 +64,19 @@ class _ProductEditPageState extends State<ProductEditPage> {
         });
       }
     } catch (e) {
-      // Handle error loading categories
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Failed to load categories: $e"), backgroundColor: Colors.red),
+          SnackBar(
+              content: Text("Failed to load categories: $e"),
+              backgroundColor: Colors.red),
         );
       }
     }
   }
 
   Future<void> _pickImage() async {
-    final pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery);
+    final pickedFile =
+        await ImagePicker().pickImage(source: ImageSource.gallery);
     if (pickedFile != null) {
       setState(() => _pickedImage = File(pickedFile.path));
     }
@@ -104,8 +108,10 @@ class _ProductEditPageState extends State<ProductEditPage> {
         categoryId: _selectedCategoryId!,
         locationName: _locationController.text,
         availability: _availability,
-        latitude: _selectedCoordinates?.latitude ?? widget.product.latitude!,
-        longitude: _selectedCoordinates?.longitude ?? widget.product.longitude!,
+        latitude:
+            _selectedCoordinates?.latitude ?? widget.product.latitude!,
+        longitude:
+            _selectedCoordinates?.longitude ?? widget.product.longitude!,
       );
 
       await _productService.updateItem(
@@ -121,7 +127,7 @@ class _ProductEditPageState extends State<ProductEditPage> {
             backgroundColor: Colors.green,
           ),
         );
-        Navigator.pop(context, true); // Return true to indicate success
+        Navigator.pop(context, true);
       }
     } catch (e) {
       if (mounted) {
@@ -152,47 +158,57 @@ class _ProductEditPageState extends State<ProductEditPage> {
       appBar: AppBar(
         title: const Text("Edit Item"),
       ),
-      body: _isSaving
-          ? const Center(child: CircularProgressIndicator())
-          : Form(
-              key: _formKey,
-              child: ListView(
-                padding: const EdgeInsets.all(16.0),
-                children: [
-                  _buildImagePicker(),
-                  const SizedBox(height: 24),
-                  _buildTextField(_nameController, "Item Name", "e.g., Canon EOS R5 Camera"),
-                  const SizedBox(height: 16),
-                  _buildTextField(_descController, "Description", "e.g., Condition, accessories included, etc.", maxLines: 4),
-                  const SizedBox(height: 16),
-                  _buildTextField(_priceController, "Price per Day (₹)", "e.g., 1500", keyboardType: TextInputType.number),
-                  const SizedBox(height: 16),
-                  _buildLocationPicker(),
-                  const SizedBox(height: 16),
-                  _buildCategoryDropdown(),
-                  const SizedBox(height: 16),
-                  SwitchListTile(
-                    title: const Text("Item is available for rent"),
-                    value: _availability,
-                    onChanged: (value) {
-                      setState(() {
-                        _availability = value;
-                      });
-                    },
-                  ),
-                  const SizedBox(height: 24),
-                  ElevatedButton.icon(
-                    icon: const Icon(Icons.save_rounded),
-                    label: const Text("Save Changes"),
-                    onPressed: _saveProduct,
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+      body: SafeArea( // ✅ Added SafeArea
+        child: _isSaving
+            ? const Center(child: CircularProgressIndicator())
+            : Form(
+                key: _formKey,
+                child: ListView(
+                  padding: const EdgeInsets.all(16.0),
+                  children: [
+                    _buildImagePicker(),
+                    const SizedBox(height: 24),
+                    _buildTextField(_nameController, "Item Name",
+                        "e.g., Canon EOS R5 Camera"),
+                    const SizedBox(height: 16),
+                    _buildTextField(
+                        _descController,
+                        "Description",
+                        "e.g., Condition, accessories included, etc.",
+                        maxLines: 4),
+                    const SizedBox(height: 16),
+                    _buildTextField(_priceController, "Price per Day (₹)",
+                        "e.g., 1500",
+                        keyboardType: TextInputType.number),
+                    const SizedBox(height: 16),
+                    _buildLocationPicker(),
+                    const SizedBox(height: 16),
+                    _buildCategoryDropdown(),
+                    const SizedBox(height: 16),
+                    SwitchListTile(
+                      title: const Text("Item is available for rent"),
+                      value: _availability,
+                      onChanged: (value) {
+                        setState(() {
+                          _availability = value;
+                        });
+                      },
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 24),
+                    ElevatedButton.icon(
+                      icon: const Icon(Icons.save_rounded),
+                      label: const Text("Save Changes"),
+                      onPressed: _saveProduct,
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        textStyle: const TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
+      ),
     );
   }
 
@@ -214,21 +230,26 @@ class _ProductEditPageState extends State<ProductEditPage> {
               child: _pickedImage != null
                   ? Image.file(_pickedImage!, fit: BoxFit.cover)
                   : CachedNetworkImage(
-                      imageUrl: "${AppConfig.imageBaseUrl}${widget.product.image}",
+                      imageUrl:
+                          "${AppConfig.imageBaseUrl}${widget.product.image}",
                       fit: BoxFit.cover,
-                      errorWidget: (context, url, error) => const Icon(Icons.broken_image, size: 60, color: Colors.grey),
+                      errorWidget: (context, url, error) =>
+                          const Icon(Icons.broken_image,
+                              size: 60, color: Colors.grey),
                     ),
             ),
           ),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
               color: Colors.black.withOpacity(0.5),
               borderRadius: BorderRadius.circular(20),
             ),
             child: const Text(
               "Change Image",
-              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                  color: Colors.white, fontWeight: FontWeight.bold),
             ),
           ),
         ],
@@ -236,7 +257,9 @@ class _ProductEditPageState extends State<ProductEditPage> {
     );
   }
 
-  Widget _buildTextField(TextEditingController controller, String label, String hint, {int maxLines = 1, TextInputType? keyboardType}) {
+  Widget _buildTextField(TextEditingController controller, String label,
+      String hint,
+      {int maxLines = 1, TextInputType? keyboardType}) {
     return TextFormField(
       controller: controller,
       maxLines: maxLines,
@@ -262,7 +285,8 @@ class _ProductEditPageState extends State<ProductEditPage> {
         decoration: const InputDecoration(
           labelText: 'Location',
           border: OutlineInputBorder(),
-          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+          contentPadding:
+              EdgeInsets.symmetric(horizontal: 12, vertical: 16),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -282,7 +306,9 @@ class _ProductEditPageState extends State<ProductEditPage> {
 
   Widget _buildCategoryDropdown() {
     return DropdownButtonFormField<int>(
-      value: _categories.any((c) => c.id == _selectedCategoryId) ? _selectedCategoryId : null,
+      value: _categories.any((c) => c.id == _selectedCategoryId)
+          ? _selectedCategoryId
+          : null,
       hint: const Text('Select a Category'),
       isExpanded: true,
       onChanged: (int? newValue) {
@@ -300,7 +326,8 @@ class _ProductEditPageState extends State<ProductEditPage> {
         labelText: 'Category',
         border: OutlineInputBorder(),
       ),
-      validator: (value) => value == null ? 'Please select a category' : null,
+      validator: (value) =>
+          value == null ? 'Please select a category' : null,
     );
   }
 }

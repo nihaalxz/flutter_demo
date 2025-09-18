@@ -37,14 +37,13 @@ class _CreateOfferPageState extends State<CreateOfferPage> {
     setState(() => _isLoading = true);
 
     try {
-      // Fetch any existing offer for this product
       OfferResponseDTO? existing =
           await _offerService.getOfferByProduct(widget.productId);
 
       _messages.add({
         "isUser": false,
         "text": "Seller’s Price: ₹${widget.originalPrice.toStringAsFixed(2)}",
-        "icon": Icons.store, // Added icon for visual appeal
+        "icon": Icons.store,
       });
 
       if (existing != null) {
@@ -56,10 +55,9 @@ class _CreateOfferPageState extends State<CreateOfferPage> {
         _messages.add({
           "isUser": false,
           "text": "Status: ${existing.status}",
-          "icon": _getStatusIcon(existing.status), // Dynamic icon based on status
+          "icon": _getStatusIcon(existing.status),
         });
 
-        // If still pending, block user from sending another
         if (existing.status.toLowerCase() == "pending") {
           _offerSubmitted = true;
         }
@@ -118,7 +116,7 @@ class _CreateOfferPageState extends State<CreateOfferPage> {
         "icon": Icons.thumb_up_alt_outlined,
       });
       _isLoading = true;
-      _offerSubmitted = true; // Disable further input
+      _offerSubmitted = true;
     });
 
     try {
@@ -143,7 +141,7 @@ class _CreateOfferPageState extends State<CreateOfferPage> {
           "text": "❌ Failed to submit offer: $e",
           "icon": Icons.error_outline,
         });
-        _offerSubmitted = false; // Allow retry if API failed
+        _offerSubmitted = false;
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -160,140 +158,142 @@ class _CreateOfferPageState extends State<CreateOfferPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text("Make an Offer for ${widget.productName}"),
-        backgroundColor: Colors.blueAccent, // Attractive color
-        elevation: 0, // Modern flat look
+        backgroundColor: Colors.blueAccent,
+        elevation: 0,
       ),
-      body: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(16),
-            color: Colors.blueAccent.withOpacity(0.1), // Subtle header background
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  "Original Price: ₹${widget.originalPrice.toStringAsFixed(2)}",
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                const Icon(Icons.local_offer, color: Colors.blueAccent, size: 28),
-              ],
+      body: SafeArea( // ✅ Added SafeArea
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              color: Colors.blueAccent.withOpacity(0.1),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    "Original Price: ₹${widget.originalPrice.toStringAsFixed(2)}",
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const Icon(Icons.local_offer, color: Colors.blueAccent, size: 28),
+                ],
+              ),
             ),
-          ),
-          Expanded(
-            child: _isLoading && _messages.isEmpty
-                ? const Center(child: CircularProgressIndicator())
-                : ListView.builder(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: _messages.length,
-                    itemBuilder: (context, index) {
-                      final msg = _messages[index];
-                      final isUser = msg["isUser"] as bool;
-                      final icon = msg["icon"] as IconData?;
+            Expanded(
+              child: _isLoading && _messages.isEmpty
+                  ? const Center(child: CircularProgressIndicator())
+                  : ListView.builder(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: _messages.length,
+                      itemBuilder: (context, index) {
+                        final msg = _messages[index];
+                        final isUser = msg["isUser"] as bool;
+                        final icon = msg["icon"] as IconData?;
 
-                      return Align(
-                        alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
-                        child: Container(
-                          margin: const EdgeInsets.symmetric(vertical: 8),
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                          decoration: BoxDecoration(
-                            color: isUser ? Colors.blueAccent : Colors.grey.shade200,
-                            borderRadius: BorderRadius.only(
-                              topLeft: Radius.circular(isUser ? 20 : 0),
-                              topRight: Radius.circular(isUser ? 0 : 20),
-                              bottomLeft: const Radius.circular(20),
-                              bottomRight: const Radius.circular(20),
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.05),
-                                blurRadius: 4,
-                                offset: const Offset(0, 2),
+                        return Align(
+                          alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
+                          child: Container(
+                            margin: const EdgeInsets.symmetric(vertical: 8),
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            decoration: BoxDecoration(
+                              color: isUser ? Colors.blueAccent : Colors.grey.shade200,
+                              borderRadius: BorderRadius.only(
+                                topLeft: Radius.circular(isUser ? 20 : 0),
+                                topRight: Radius.circular(isUser ? 0 : 20),
+                                bottomLeft: const Radius.circular(20),
+                                bottomRight: const Radius.circular(20),
                               ),
-                            ],
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              if (!isUser && icon != null)
-                                Padding(
-                                  padding: const EdgeInsets.only(right: 8),
-                                  child: Icon(icon, color: Colors.blueAccent, size: 20),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.05),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 2),
                                 ),
-                              Flexible(
-                                child: Text(
-                                  msg["text"],
-                                  style: TextStyle(
-                                    color: isUser ? Colors.white : Colors.black87,
-                                    fontSize: 16,
+                              ],
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                if (!isUser && icon != null)
+                                  Padding(
+                                    padding: const EdgeInsets.only(right: 8),
+                                    child: Icon(icon, color: Colors.blueAccent, size: 20),
+                                  ),
+                                Flexible(
+                                  child: Text(
+                                    msg["text"],
+                                    style: TextStyle(
+                                      color: isUser ? Colors.white : Colors.black87,
+                                      fontSize: 16,
+                                    ),
                                   ),
                                 ),
-                              ),
-                              if (isUser && icon != null)
-                                Padding(
-                                  padding: const EdgeInsets.only(left: 8),
-                                  child: Icon(icon, color: Colors.white, size: 20),
-                                ),
-                            ],
+                                if (isUser && icon != null)
+                                  Padding(
+                                    padding: const EdgeInsets.only(left: 8),
+                                    child: Icon(icon, color: Colors.white, size: 20),
+                                  ),
+                              ],
+                            ),
                           ),
-                        ),
-                      );
-                    },
-                  ),
-          ),
-          if (_isLoading) const LinearProgressIndicator(color: Colors.blueAccent),
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (_errorMessage != null)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Text(
-                      _errorMessage!,
-                      style: const TextStyle(color: Colors.red, fontSize: 14),
+                        );
+                      },
                     ),
-                  ),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _controller,
-                        enabled: !_offerSubmitted && !_isLoading,
-                        keyboardType: TextInputType.numberWithOptions(decimal: true),
-                        decoration: InputDecoration(
-                          hintText: _offerSubmitted
-                              ? "Waiting for seller’s response..."
-                              : "Enter your offer price (e.g., 500.00)...",
-                          prefixText: "₹ ",
-                          prefixStyle: const TextStyle(color: Color.fromARGB(221, 255, 255, 255)),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          filled: true,
-                          fillColor: const Color.fromARGB(0, 245, 245, 245),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    ElevatedButton.icon(
-                      onPressed: _offerSubmitted || _isLoading ? null : _sendOffer,
-                      icon: const Icon(Icons.send),
-                      label: const Text("Send"),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color.fromARGB(255, 248, 248, 248),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
             ),
-          ),
-        ],
+            if (_isLoading) const LinearProgressIndicator(color: Colors.blueAccent),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (_errorMessage != null)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Text(
+                        _errorMessage!,
+                        style: const TextStyle(color: Colors.red, fontSize: 14),
+                      ),
+                    ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _controller,
+                          enabled: !_offerSubmitted && !_isLoading,
+                          keyboardType: TextInputType.numberWithOptions(decimal: true),
+                          decoration: InputDecoration(
+                            hintText: _offerSubmitted
+                                ? "Waiting for seller’s response..."
+                                : "Enter your offer price (e.g., 500.00)...",
+                            prefixText: "₹ ",
+                            prefixStyle: const TextStyle(color: Color.fromARGB(221, 255, 255, 255)),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            filled: true,
+                            fillColor: const Color.fromARGB(0, 245, 245, 245),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      ElevatedButton.icon(
+                        onPressed: _offerSubmitted || _isLoading ? null : _sendOffer,
+                        icon: const Icon(Icons.send),
+                        label: const Text("Send"),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color.fromARGB(255, 248, 248, 248),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -163,14 +163,15 @@ class _MyItemsPageState extends State<MyItemsPage> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('My Items'),
-        centerTitle: true,
-        elevation: 0,
-      ),
-      body: _isLoading
+Widget build(BuildContext context) {
+  return Scaffold(
+    appBar: AppBar(
+      title: const Text('My Items'),
+      centerTitle: true,
+      elevation: 0,
+    ),
+    body: SafeArea( // ✅ Added SafeArea here
+      child: _isLoading
           ? _buildShimmerLoader()
           : _error != null
               ? _buildErrorState(_error!)
@@ -185,9 +186,9 @@ class _MyItemsPageState extends State<MyItemsPage> {
                             _buildItemCard(_myItems[i]),
                       ),
                     ),
-    );
-  }
-
+    ),
+  );
+}
   Widget _buildItemCard(Product item) {
     return Card(
       margin: const EdgeInsets.only(bottom: 16),

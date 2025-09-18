@@ -34,38 +34,40 @@ class _PaymentHistoryPageState extends State<PaymentHistoryPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Payment History')),
-      body: FutureBuilder<List<PaymentHistoryDto>>(
-        future: _historyFuture,
-        builder: (context, snapshot) {
-          // --- Loading State ---
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
+      body: SafeArea( // ✅ Added SafeArea
+        child: FutureBuilder<List<PaymentHistoryDto>>(
+          future: _historyFuture,
+          builder: (context, snapshot) {
+            // --- Loading State ---
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
 
-          // --- Error State ---
-          if (snapshot.hasError) {
-            return _buildErrorState(snapshot.error.toString());
-          }
+            // --- Error State ---
+            if (snapshot.hasError) {
+              return _buildErrorState(snapshot.error.toString());
+            }
 
-          final history = snapshot.data ?? [];
+            final history = snapshot.data ?? [];
 
-          // --- Empty State ---
-          if (history.isEmpty) {
-            return _buildEmptyState();
-          }
+            // --- Empty State ---
+            if (history.isEmpty) {
+              return _buildEmptyState();
+            }
 
-          // --- Success State ---
-          return RefreshIndicator(
-            onRefresh: () async => _refreshHistory(),
-            child: ListView.builder(
-              padding: const EdgeInsets.symmetric(vertical: 8.0),
-              itemCount: history.length,
-              itemBuilder: (context, index) {
-                return _buildHistoryCard(history[index]);
-              },
-            ),
-          );
-        },
+            // --- Success State ---
+            return RefreshIndicator(
+              onRefresh: () async => _refreshHistory(),
+              child: ListView.builder(
+                padding: const EdgeInsets.symmetric(vertical: 8.0),
+                itemCount: history.length,
+                itemBuilder: (context, index) {
+                  return _buildHistoryCard(history[index]);
+                },
+              ),
+            );
+          },
+        ),
       ),
     );
   }

@@ -204,34 +204,36 @@ class _CreateListingPageState extends State<CreateListingPage> {
       appBar: AppBar(
         title: const Text('Create New Listing'),
       ),
-      body: Form(
-        key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.all(16.0),
-          children: [
-            _buildImagePicker(),
-            const SizedBox(height: 24),
-            _buildTextField(_nameController, 'Item Name', 'e.g., Canon EOS R5 Camera'),
-            const SizedBox(height: 16),
-            _buildTextField(_descriptionController, 'Description', 'e.g., Condition, accessories included, etc.', maxLines: 4),
-            const SizedBox(height: 16),
-            _buildTextField(_priceController, 'Price per Day (₹)', 'e.g., 1500', keyboardType: TextInputType.number),
-            const SizedBox(height: 16),
-            _buildLocationPicker(),
-            const SizedBox(height: 16),
-            _buildCategoryDropdown(),
-            const SizedBox(height: 32),
-            _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : ElevatedButton(
-                    onPressed: _submitListing,
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+      body: SafeArea( // ✅ Added SafeArea here
+        child: Form(
+          key: _formKey,
+          child: ListView(
+            padding: const EdgeInsets.all(16.0),
+            children: [
+              _buildImagePicker(),
+              const SizedBox(height: 24),
+              _buildTextField(_nameController, 'Item Name', 'e.g., Canon EOS R5 Camera'),
+              const SizedBox(height: 16),
+              _buildTextField(_descriptionController, 'Description', 'e.g., Condition, accessories included, etc.', maxLines: 4),
+              const SizedBox(height: 16),
+              _buildTextField(_priceController, 'Price per Day (₹)', 'e.g., 1500', keyboardType: TextInputType.number),
+              const SizedBox(height: 16),
+              _buildLocationPicker(),
+              const SizedBox(height: 16),
+              _buildCategoryDropdown(),
+              const SizedBox(height: 32),
+              _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : ElevatedButton(
+                      onPressed: _submitListing,
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      ),
+                      child: const Text('Post My Item'),
                     ),
-                    child: const Text('Post My Item'),
-                  ),
-          ],
+            ],
+          ),
         ),
       ),
     );

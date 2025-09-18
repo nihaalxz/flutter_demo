@@ -65,24 +65,27 @@ class _ProfilePageState extends State<ProfilePage> {
         title: const Text('My Profile'),
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         elevation: 0,
-        foregroundColor:Theme.of(context).appBarTheme.foregroundColor,
+        foregroundColor: Theme.of(context).appBarTheme.foregroundColor,
       ),
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _currentUser == null
-          ? _buildErrorView()
-          : RefreshIndicator(
-              onRefresh: _loadUserProfile,
-              child: _buildProfileView(),
-            ),
+              ? _buildErrorView()
+              : RefreshIndicator(
+                  onRefresh: _loadUserProfile,
+                  child: SafeArea(   // ✅ Fix: prevents content from going under iOS bottom bar
+                    child: _buildProfileView(),
+                  ),
+                ),
     );
   }
 
   /// Builds the main profile view with user info and menu options.
   Widget _buildProfileView() {
     return ListView(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0)
+          .copyWith(bottom: 32), // ✅ Extra bottom padding just in case
       children: [
         const SizedBox(height: 20),
         _buildProfileHeader(),
@@ -108,24 +111,23 @@ class _ProfilePageState extends State<ProfilePage> {
         : null;
 
     // Format the "Member Since" date
-String memberSince = '';
+    String memberSince = '';
 
-if (_currentUser?.joinedAt != null && _currentUser!.joinedAt!.isNotEmpty) {
-  try {
-    // Trim to remove any leading/trailing whitespace
-    final joinedStr = _currentUser!.joinedAt!.trim();
-
-    // Parse ISO 8601 string
-    final date = DateTime.parse(joinedStr); // DateTime.parse supports ISO 8601
-    memberSince = 'Member since ${DateFormat.yMMMMd().format(date)}';
-  } catch (e) {
-    // Fallback: show raw string if parsing fails
-    memberSince = 'Member since ${_currentUser!.joinedAt}';
-    if (kDebugMode) print('Warning: joinedAt not ISO format, showing raw value. $_currentUser!.joinedAt');
-  }
-} else {
-  memberSince = 'Member since unknown';
-}
+    if (_currentUser?.joinedAt != null && _currentUser!.joinedAt!.isNotEmpty) {
+      try {
+        final joinedStr = _currentUser!.joinedAt!.trim();
+        final date = DateTime.parse(joinedStr); 
+        memberSince = 'Member since ${DateFormat.yMMMMd().format(date)}';
+      } catch (e) {
+        memberSince = 'Member since ${_currentUser!.joinedAt}';
+        if (kDebugMode) {
+          print(
+              'Warning: joinedAt not ISO format, showing raw value. $_currentUser!.joinedAt');
+        }
+      }
+    } else {
+      memberSince = 'Member since unknown';
+    }
 
     return Column(
       children: [
@@ -136,7 +138,8 @@ if (_currentUser?.joinedAt != null && _currentUser!.joinedAt!.isNotEmpty) {
               ? CachedNetworkImageProvider(fullImageUrl!)
               : null,
           child: !hasPicture
-              ? Icon(Icons.person, size: 50, color: Theme.of(context).iconTheme.color)
+              ? Icon(Icons.person,
+                  size: 50, color: Theme.of(context).iconTheme.color)
               : null,
         ),
         const SizedBox(height: 16),
@@ -147,13 +150,15 @@ if (_currentUser?.joinedAt != null && _currentUser!.joinedAt!.isNotEmpty) {
         const SizedBox(height: 4),
         Text(
           _currentUser!.email,
-          style: TextStyle(fontSize: 16, color: Theme.of(context).iconTheme.color),
+          style: TextStyle(
+              fontSize: 16, color: Theme.of(context).iconTheme.color),
         ),
         if (memberSince.isNotEmpty) ...[
           const SizedBox(height: 8),
           Text(
             memberSince,
-            style: TextStyle(fontSize: 14, color: Theme.of(context).iconTheme.color),
+            style: TextStyle(
+                fontSize: 14, color: Theme.of(context).iconTheme.color),
           ),
         ],
       ],
@@ -192,14 +197,16 @@ if (_currentUser?.joinedAt != null && _currentUser!.joinedAt!.isNotEmpty) {
           ),
           const Divider(height: 1, indent: 16, endIndent: 16),
           ListTile(
-            leading: Icon(Icons.phone_outlined,color: Theme.of(context).iconTheme.color),
+            leading:
+                Icon(Icons.phone_outlined, color: Theme.of(context).iconTheme.color),
             title: const Text(
               'Phone Number',
               style: TextStyle(fontWeight: FontWeight.w500),
             ),
             trailing: Text(
               phoneNumber,
-              style: TextStyle(color: Theme.of(context).iconTheme.color, fontSize: 14),
+              style: TextStyle(
+                  color: Theme.of(context).iconTheme.color, fontSize: 14),
             ),
           ),
         ],
@@ -209,7 +216,7 @@ if (_currentUser?.joinedAt != null && _currentUser!.joinedAt!.isNotEmpty) {
 
   /// Builds the list of tappable menu items related to the user's account.
   Widget _buildProfileMenu() {
-    final theme=Theme.of(context);
+    final theme = Theme.of(context);
     return Card(
       elevation: 2,
       shadowColor: theme.shadowColor.withOpacity(0.1),
@@ -220,9 +227,8 @@ if (_currentUser?.joinedAt != null && _currentUser!.joinedAt!.isNotEmpty) {
           _buildMenuTile(
             icon: Icons.edit_outlined,
             title: 'Edit Profile',
-            textColor:Theme.of(context).iconTheme.color,
+            textColor: Theme.of(context).iconTheme.color,
             onTap: () {
-              // TODO: Navigate to Edit Profile Page
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('Navigate to Edit Profile')),
               );
@@ -231,9 +237,8 @@ if (_currentUser?.joinedAt != null && _currentUser!.joinedAt!.isNotEmpty) {
           _buildMenuTile(
             icon: Icons.list_alt_outlined,
             title: 'My Listings',
-            textColor:Theme.of(context).iconTheme.color,
+            textColor: Theme.of(context).iconTheme.color,
             onTap: () {
-              // TODO: Navigate to My Listings Page
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('Navigate to My Listings')),
               );
@@ -242,9 +247,8 @@ if (_currentUser?.joinedAt != null && _currentUser!.joinedAt!.isNotEmpty) {
           _buildMenuTile(
             icon: Icons.payment_outlined,
             title: 'Payment Methods',
-            textColor:Theme.of(context).iconTheme.color,
+            textColor: Theme.of(context).iconTheme.color,
             onTap: () {
-              // TODO: Navigate to Payment Methods Page
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('Navigate to Payment Methods')),
               );
@@ -253,7 +257,7 @@ if (_currentUser?.joinedAt != null && _currentUser!.joinedAt!.isNotEmpty) {
           _buildMenuTile(
             icon: Icons.heart_broken_rounded,
             title: 'My Wishlists',
-            textColor:Theme.of(context).iconTheme.color,
+            textColor: Theme.of(context).iconTheme.color,
             onTap: () {
               Navigator.of(context).push(
                 MaterialPageRoute(builder: (context) => const WishlistPage()),
@@ -263,7 +267,7 @@ if (_currentUser?.joinedAt != null && _currentUser!.joinedAt!.isNotEmpty) {
           _buildMenuTile(
             icon: Icons.support_agent_outlined,
             title: 'Help and Support',
-            textColor:Theme.of(context).iconTheme.color,
+            textColor: Theme.of(context).iconTheme.color,
             onTap: () {
               Navigator.of(context).push(
                 MaterialPageRoute(builder: (context) => const WishlistPage()),
@@ -286,7 +290,7 @@ if (_currentUser?.joinedAt != null && _currentUser!.joinedAt!.isNotEmpty) {
           _buildMenuTile(
             icon: Icons.settings_outlined,
             title: 'Settings',
-            textColor:Theme.of(context).iconTheme.color,
+            textColor: Theme.of(context).iconTheme.color,
             onTap: () {
               Navigator.of(context).push(
                 MaterialPageRoute(builder: (context) => const SettingsPage()),
@@ -296,7 +300,7 @@ if (_currentUser?.joinedAt != null && _currentUser!.joinedAt!.isNotEmpty) {
           _buildMenuTile(
             icon: Icons.info,
             title: 'About Us',
-            textColor:Theme.of(context).iconTheme.color,
+            textColor: Theme.of(context).iconTheme.color,
             onTap: () {
               Navigator.of(context).push(
                 MaterialPageRoute(builder: (context) => const SettingsPage()),
@@ -308,7 +312,7 @@ if (_currentUser?.joinedAt != null && _currentUser!.joinedAt!.isNotEmpty) {
             icon: Icons.logout,
             title: 'Logout',
             textColor: Theme.of(context).colorScheme.error,
-            onTap: _logout, // Call the logout method
+            onTap: _logout,
           ),
         ],
       ),
