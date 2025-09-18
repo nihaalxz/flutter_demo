@@ -287,7 +287,7 @@ class _ActionButtons extends StatelessWidget {
               children: [
                 ElevatedButton.icon(
                   icon: const Icon(Icons.cancel),
-                  label: const Text('Reject'),
+                  label: const Text('Reject',style: TextStyle(color: Colors.white)),
                   onPressed: () => handleAction(bookingService.rejectBooking),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.red,
@@ -299,7 +299,7 @@ class _ActionButtons extends StatelessWidget {
                 const SizedBox(width: 8),
                 ElevatedButton.icon(
                   icon: const Icon(Icons.check),
-                  label: const Text('Approve'),
+                  label: const Text('Approve',style: TextStyle(color: Colors.white)),
                   onPressed: () => handleAction(bookingService.approveBooking),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.green,

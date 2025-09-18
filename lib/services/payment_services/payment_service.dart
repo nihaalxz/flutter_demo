@@ -1,9 +1,10 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:myfirstflutterapp/models/Order_DTO/OrderResponseDTO.dart';
 
 import '../../environment/env.dart';
 import '../auth_service.dart';
-import '../../models/order_DTO.dart';
+import '../../models/Order_DTO/order_DTO.dart';
 import '../../models/payment_history_DTO.dart';
 
 class PaymentService {
@@ -24,42 +25,29 @@ class PaymentService {
 
   /// --- Start Payment (create Cashfree order) ---
   /// Returns `paymentSessionId` and `orderId` from backend
-  Future<Map<String, String>> startPayment(OrderDto order) async {
-    final headers = await _getAuthHeaders();
-    final url = Uri.parse("$_apiBaseUrl/create-order");
+Future<OrderResponseDto> startPayment(OrderDto order) async {
+  final headers = await _getAuthHeaders();
+  final url = Uri.parse("$_apiBaseUrl/create-order");
 
-    final response = await http.post(
-      url,
-      headers: headers,
-      body: jsonEncode(order.toJson()),
+  final response = await http.post(
+    url,
+    headers: headers,
+    body: jsonEncode(order.toJson()),
+  );
+
+  if (response.statusCode == 200) {
+    final responseBody = jsonDecode(response.body);
+    return OrderResponseDto.fromJson(responseBody);
+  } else {
+    throw Exception(
+      "Failed to create payment order: ${response.statusCode} ${response.body}",
     );
-
-    if (response.statusCode == 200) {
-      final responseBody = jsonDecode(response.body);
-
-      final paymentSessionId = responseBody["paymentSessionId"] ??
-          responseBody["payment_session_id"];
-      final orderId =
-          responseBody["orderId"] ?? responseBody["order_id"];
-
-      if (paymentSessionId == null || orderId == null) {
-        throw Exception(
-            "Server did not return paymentSessionId or orderId");
-      }
-
-      return {
-        "paymentSessionId": paymentSessionId,
-        "orderId": orderId,
-      };
-    } else {
-      throw Exception(
-          "Failed to create payment order: ${response.statusCode} ${response.body}");
-    }
   }
+}
 
   /// --- Get Payment Status ---
   /// Returns backend response for an orderId
-  Future<Map<String, dynamic>> getPaymentStatus(String orderId) async {
+  Future<Map<String, dynamic>> verifyPaymentStatus(String orderId) async {
     final headers = await _getAuthHeaders();
     final url = Uri.parse("$_apiBaseUrl/$orderId/status");
 
@@ -69,7 +57,7 @@ class PaymentService {
       return jsonDecode(response.body);
     } else {
       throw Exception(
-          "Failed to get payment status: ${response.statusCode} ${response.body}");
+          "Failed to verify payment status: ${response.statusCode} ${response.body}");
     }
   }
 
