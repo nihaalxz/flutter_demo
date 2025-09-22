@@ -1,28 +1,28 @@
 class OrderResponseDto {
-  final String paymentSessionId;
-  final String orderId;
-  final double originalAmount;
-  final double tds;
+  final String razorpayKeyId;
+  final String razorpayOrderId;
+  final double baseAmount;
   final double platformFee;
-  final double finalPayable;
+  final double tds;
+  final double totalAmount;
 
   OrderResponseDto({
-    required this.paymentSessionId,
-    required this.orderId,
-    required this.originalAmount,
-    required this.tds,
+    required this.razorpayKeyId,
+    required this.razorpayOrderId,
+    required this.baseAmount,
     required this.platformFee,
-    required this.finalPayable,
+    required this.tds,
+    required this.totalAmount,
   });
 
   factory OrderResponseDto.fromJson(Map<String, dynamic> json) {
     return OrderResponseDto(
-      paymentSessionId: json['paymentSessionId'],
-      orderId: json['orderId'],
-      originalAmount: (json['originalAmount'] as num).toDouble(),
-      tds: (json['tds'] as num).toDouble(),
-      platformFee: (json['platformFee'] as num).toDouble(),
-      finalPayable: (json['finalPayable'] as num).toDouble(),
+      razorpayKeyId: json['razorpayKeyId'] ?? '',
+      razorpayOrderId: json['razorpayOrderId'] ?? '',
+      baseAmount: (json['baseAmount'] as num?)?.toDouble() ?? 0.0,
+      platformFee: (json['platformFee'] as num?)?.toDouble() ?? 0.0,
+      tds: (json['tds'] as num?)?.toDouble() ?? 0.0,
+      totalAmount: (json['totalAmount'] as num?)?.toDouble() ?? 0.0,
     );
   }
 }
