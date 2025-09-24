@@ -1,9 +1,6 @@
 plugins {
     id("com.android.application")
-    // START: FlutterFire Configuration
-    // END: FlutterFire Configuration
     id("kotlin-android")
-    // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
 }
 
@@ -31,25 +28,28 @@ android {
 
     signingConfigs {
         create("release") {
-            keyAlias = "androiddebugkey"
-            keyPassword = "android"
-            storeFile = file("../mykey.jks")
-            storePassword = "android"
+            keyAlias = "my-key-alias"                  // your release alias
+            keyPassword = "PLL98VQP9"          // the key password you set
+            storeFile = file("my-release-key.jks")     // release keystore path
+            storePassword = "PLL98VQP9"   // keystore password
         }
     }
 
     buildTypes {
         release {
             signingConfig = signingConfigs.getByName("release")
-            
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
         }
         debug {
-            signingConfig = signingConfigs.getByName("debug") // or "debug" if you want
+            signingConfig = signingConfigs.getByName("debug")
         }
     }
 }
-
-
 
 flutter {
     source = "../.."

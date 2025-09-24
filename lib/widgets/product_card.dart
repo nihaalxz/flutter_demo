@@ -5,7 +5,8 @@ import 'package:cached_network_image/cached_network_image.dart';
 // --- Assumed Imports ---
 import '../models/product_model.dart';
 import '../services/wishlist_service.dart';
-import '../environment/env.dart'; // For the base URL
+import '../environment/env.dart';
+import '../pages/product/product_details_page.dart';
 
 class ProductCard extends StatefulWidget {
   final Product product;
@@ -22,21 +23,44 @@ class ProductCard extends StatefulWidget {
   State<ProductCard> createState() => _ProductCardState();
 }
 
-class _ProductCardState extends State<ProductCard> {
+class _ProductCardState extends State<ProductCard> with SingleTickerProviderStateMixin {
   bool _isLoading = false;
   final WishlistService _wishlistService = WishlistService();
 
   // The local state now directly reflects the product model's property
   bool get _isWishlisted => widget.product.isWishlisted;
 
-  /// Toggles the wishlist status for the current product.
-/// Toggles the wishlist status using an optimistic UI update.
+  late AnimationController _animationController;
+  late Animation<double> _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 1.2).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
+
+  /// Toggles the wishlist status using an optimistic UI update.
   Future<void> _toggleWishlist() async {
     // 1. Store the original status in case we need to revert.
     final originalStatus = _isWishlisted;
 
     // 2. Update the UI immediately, assuming the request will succeed.
     widget.onWishlistChanged(widget.product.id, !originalStatus);
+
+    // Trigger animation
+    _animationController.forward().then((_) => _animationController.reverse());
 
     try {
       // 3. Perform the network request silently in the background.
@@ -64,168 +88,245 @@ class _ProductCardState extends State<ProductCard> {
         SnackBar(
           content: Text(message),
           backgroundColor: isError ? Colors.red : Colors.green,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         ),
       );
     }
   }
 
+  void _navigateToDetails() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ProductDetailsPage(productId: widget.product.id),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-     Theme.of(context);
-    // ✅ FIX: Safely parse the date string to prevent crashes.
-    final String formattedDate = DateFormat.yMMMd().format(widget.product.createdAt);
+    final String formattedDate =
+        DateFormat.yMMMd().format(widget.product.createdAt);
 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
-        borderRadius: BorderRadius.circular(15),
+        gradient: LinearGradient(
+          colors: [
+            Theme.of(context).cardColor,
+            Theme.of(context).cardColor.withOpacity(0.8),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-           color: Theme.of(context).shadowColor.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 10,
+            color: Theme.of(context).shadowColor.withOpacity(0.2),
+            spreadRadius: 2,
+            blurRadius: 15,
+            offset: const Offset(0, 5),
           ),
         ],
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start, // Align items to the top
-        children: [
-          Stack(
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(10),
-                child: CachedNetworkImage(
-                  imageUrl: "${AppConfig.imageBaseUrl}${widget.product.image}",
-                  width: 100,
-                  height: 100,
-                  fit: BoxFit.cover,
-                  placeholder: (context, url) => Container(
-                    width: 100,
-                    height: 100,
-                    color: Colors.grey[200],
-                    child: const Center(
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    ),
-                  ),
-                  errorWidget: (context, url, error) => SizedBox(
-                    width: 100,
-                    height: 100,
-                    child: Icon(Icons.broken_image, color: Colors.grey[400]),
-                  ),
-                ),
-              ),
-              Positioned(
-                top: 4,
-                right: 4,
-                child: InkWell(
-                  onTap: _toggleWishlist,
-                  borderRadius: BorderRadius.circular(20),
-                  child: Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.4),
-                      shape: BoxShape.circle,
-                    ),
-                    child: _isLoading
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : Icon(
-                            _isWishlisted
-                                ? Icons.favorite
-                                : Icons.favorite_border,
-                            color: _isWishlisted
-                                ? Colors.redAccent
-                                : Colors.white,
-                            size: 18,
-                          ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(width: 15),
-          Expanded(
-            // ✅ FIX: Removed the fixed-height SizedBox to prevent vertical overflow.
-            child: Column(
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(20),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: _navigateToDetails, // Now navigates to details page
+          borderRadius: BorderRadius.circular(20),
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  widget.product.name,
-                  style: const TextStyle(
-                      fontSize: 16, fontWeight: FontWeight.bold),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 4),
-                Row(
+                Stack(
                   children: [
-                    Flexible(
-                      child: Text(
-                        'By: ${widget.product.ownerName}',
-                        style:
-                            TextStyle(fontSize: 12, color: Theme.of(context).textTheme.bodyMedium?.color,),
-                        overflow: TextOverflow.ellipsis,
-                        maxLines: 1,
+                    Hero(
+                      tag: 'product_image_${widget.product.id}',
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(15),
+                        child: CachedNetworkImage(
+                          imageUrl: "${AppConfig.imageBaseUrl}${widget.product.image}",
+                          width: 120,
+                          height: 120,
+                          fit: BoxFit.cover,
+                          placeholder: (context, url) => Container(
+                            width: 120,
+                            height: 120,
+                            decoration: BoxDecoration(
+                              color: Colors.grey[200],
+                              borderRadius: BorderRadius.circular(15),
+                            ),
+                            child: const Center(
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                          ),
+                          errorWidget: (context, url, error) => Container(
+                            width: 120,
+                            height: 120,
+                            decoration: BoxDecoration(
+                              color: Colors.grey[200],
+                              borderRadius: BorderRadius.circular(15),
+                            ),
+                            child: Icon(Icons.broken_image, color: Colors.grey[400]),
+                          ),
+                        ),
                       ),
                     ),
-                    const SizedBox(width: 4),
-                    Text(
-                      widget.product.availability
-                          ? 'Available'
-                          : 'Not Available',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: widget.product.availability
-                            ? Colors.green
-                            : Colors.red,
-                        fontWeight: FontWeight.bold,
+                    Positioned(
+                      top: 8,
+                      right: 8,
+                      child: InkWell(
+                        onTap: _toggleWishlist,
+                        borderRadius: BorderRadius.circular(30),
+                        child: Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.5),
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.3),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: _isLoading
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : ScaleTransition(
+                                  scale: _scaleAnimation,
+                                  child: Icon(
+                                    _isWishlisted
+                                        ? Icons.favorite
+                                        : Icons.favorite_border,
+                                    color: _isWishlisted
+                                        ? Colors.redAccent
+                                        : Colors.white,
+                                    size: 20,
+                                  ),
+                                ),
+                        ),
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 4),
-                // ✅ FIX: Use Expanded to prevent horizontal overflow with long text.
-                Row(
-                  children: [
-                    Icon(Icons.location_on, size: 14, color: Theme.of(context).textTheme.bodyMedium?.color,),
-                    const SizedBox(width: 4),
-                    Expanded(
-                      child: Text(
-                        widget.product.locationName,
-                        style:
-                            TextStyle(fontSize: 12,color: Theme.of(context).textTheme.bodyMedium?.color,),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        widget.product.name,
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Theme.of(context).textTheme.titleLarge?.color,
+                        ),
+                        maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        maxLines: 1,
                       ),
-                    ),
-                    Text(
-                      formattedDate,
-                      style:
-                          TextStyle(fontSize: 12, color: Theme.of(context).textTheme.bodyMedium?.color,),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '₹${widget.product.price.toStringAsFixed(2)}/day',
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.green,
+                      const SizedBox(height: 8),
+                      // ✅ --- UPDATED OWNER INFO ROW ---
+                      Row(
+                        children: [
+                          CircleAvatar(
+                            radius: 18,
+                            backgroundColor: Colors.grey.shade200,
+                            backgroundImage: (widget.product.ownerProfileImage != null && widget.product.ownerProfileImage!.isNotEmpty)
+                                ? CachedNetworkImageProvider("${AppConfig.imageBaseUrl}${widget.product.ownerProfileImage}")
+                                : null,
+                            child: (widget.product.ownerProfileImage == null || widget.product.ownerProfileImage!.isEmpty)
+                                ? Icon(Icons.person, size: 18, color: Colors.grey.shade600)
+                                : null,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              widget.product.ownerName,
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.8),
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: widget.product.availability ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              widget.product.availability ? 'Available' : 'Not Available',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: widget.product.availability ? Colors.green : Colors.red,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      // ---------------------------------
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.location_on,
+                            size: 16,
+                            color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.7),
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              widget.product.locationName,
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.7),
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
+                            ),
+                          ),
+                          Text(
+                            formattedDate,
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.7),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        '₹${widget.product.price.toStringAsFixed(2)}/day',
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.green,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }
