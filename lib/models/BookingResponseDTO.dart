@@ -21,6 +21,10 @@ class BookingResponseDTO {
   final String? startCode;
   final String? returnCode;
   final bool hasBeenReviewed;
+  final String locationName;
+  final double latitude;
+  final double longitude;
+
 
 
   BookingResponseDTO({
@@ -46,6 +50,9 @@ class BookingResponseDTO {
     this.startCode,
     this.returnCode,
    required this.hasBeenReviewed,
+    required this.locationName,
+    required this.latitude,
+    required this.longitude,
   });
 
   factory BookingResponseDTO.fromJson(Map<String, dynamic> json) {
@@ -72,8 +79,9 @@ class BookingResponseDTO {
       startCode: json['startCode'],
       returnCode: json['returnCode'],
       hasBeenReviewed: json['hasBeenReviewed'] ?? false,
-      
-// ✅ This now correctly handles null
+      locationName: json['locationName'],
+      latitude: (json['latitude'] as num).toDouble(),
+      longitude: (json['longitude'] as num).toDouble(),
     );
   }
 }
