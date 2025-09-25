@@ -1,15 +1,22 @@
-import 'package:flutter/material.dart';
+import 'dart:io';
+
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:myfirstflutterapp/environment/env.dart';
-import 'package:myfirstflutterapp/models/BookingResponseDTO.dart';
-import 'package:myfirstflutterapp/pages/payments/checkout_page.dart';
-import 'package:myfirstflutterapp/services/booking_service.dart';
+
+import '../environment/env.dart';
+import '../models/BookingResponseDTO.dart';
+import '../pages/payments/checkout_page.dart';
+import '../pages/rental_handover_page.dart';
+import '../services/booking_service.dart';
+import 'package:flutter/cupertino.dart';
 
 class BookingCard extends StatelessWidget {
   final BookingResponseDTO booking;
   final bool isRentalView;
   final String currentUserId;
+  final Future<void> Function(int bookingId, HandoverAction action)
+      onNavigateToHandover;
   final VoidCallback onAction;
 
   const BookingCard({
@@ -18,6 +25,7 @@ class BookingCard extends StatelessWidget {
     required this.isRentalView,
     required this.currentUserId,
     required this.onAction,
+    required this.onNavigateToHandover,
   });
 
   @override
@@ -29,7 +37,7 @@ class BookingCard extends StatelessWidget {
     final dateFormat = DateFormat('MMM d, y');
     final dateRange =
         "${dateFormat.format(booking.startDate)} - ${dateFormat.format(booking.endDate)}";
-    final price = "${booking.totalPrice.toStringAsFixed(2)}";
+    final price = booking.totalPrice.toStringAsFixed(2);
     final imageUrl = "${AppConfig.imageBaseUrl}${booking.itemImage}";
 
     return Card(
@@ -42,7 +50,6 @@ class BookingCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Top section: Image + details
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -53,19 +60,12 @@ class BookingCard extends StatelessWidget {
                     width: 95,
                     height: 95,
                     fit: BoxFit.cover,
-                    placeholder: (context, url) => Container(
-                      width: 95,
-                      height: 95,
-                      color: Colors.grey[200],
-                      child: const Center(
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      ),
-                    ),
+                    placeholder: (context, url) =>
+                        Container(color: Colors.grey[200]),
                     errorWidget: (context, url, error) => const Icon(
-                      Icons.broken_image,
-                      color: Colors.grey,
-                      size: 40,
-                    ),
+                        Icons.broken_image,
+                        color: Colors.grey,
+                        size: 40),
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -73,54 +73,36 @@ class BookingCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        title,
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          overflow: TextOverflow.ellipsis,
-                          color: Theme.of(context).iconTheme.color,
-                        ),
-                      ),
+                      Text(title,
+                          style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              overflow: TextOverflow.ellipsis)),
                       const SizedBox(height: 6),
                       Row(
                         children: [
-                          Icon(
-                            Icons.person_outline,
-                            size: 16,
-                            color: Theme.of(context).iconTheme.color,
-                          ),
+                          Icon(Icons.person_outline,
+                              size: 16, color: Colors.grey[600]),
                           const SizedBox(width: 4),
                           Expanded(
-                            child: Text(
-                              subtitle,
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Theme.of(context).iconTheme.color,
-                              ),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
+                              child: Text(subtitle,
+                                  style: TextStyle(
+                                      fontSize: 14, color: Colors.grey[700]),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis)),
                         ],
                       ),
                       const SizedBox(height: 6),
                       Row(
                         children: [
-                          Icon(
-                            Icons.calendar_today,
-                            size: 16,
-                            color: Theme.of(context).iconTheme.color,
-                          ),
+                          Icon(Icons.calendar_today,
+                              size: 16, color: Colors.grey[600]),
                           const SizedBox(width: 4),
-                          Text(
-                            dateRange,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Theme.of(context).iconTheme.color,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
+                          Flexible(
+                              child: Text(dateRange,
+                                  style: TextStyle(
+                                      fontSize: 12, color: Colors.grey[700],
+                                      overflow: TextOverflow.ellipsis))),
                         ],
                       ),
                     ],
@@ -128,76 +110,80 @@ class BookingCard extends StatelessWidget {
                 ),
               ],
             ),
-
             const Divider(height: 28),
-
-            // Bottom row: Status + Price
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 _StatusChip(status: booking.status),
                 Row(
                   children: [
-                    const Icon(
-                      Icons.currency_rupee,
-                      size: 18,
-                      color: Colors.green,
-                    ),
-                    Text(
-                      price,
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.green,
-                      ),
-                    ),
+                    const Icon(Icons.currency_rupee,
+                        size: 18, color: Colors.green),
+                    Text(price,
+                        style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.green)),
                   ],
                 ),
               ],
             ),
-
-            // Conditional action buttons
-            if (booking.status.toLowerCase() == 'pending')
-              _ActionButtons(
-                bookingId: booking.id,
-                isOwnerView: !isRentalView,
-                onAction: onAction,
-              ),
-
-            // ✅ Show Pay Now button if renter & approved & unpaid
-            if (isRentalView &&
-                booking.status.toLowerCase() == 'approved' &&
-                booking.isPaid == false &&
-                currentUserId == booking.renterId.toLowerCase())
-              Padding(
-                padding: const EdgeInsets.only(top: 16.0),
-                child: ElevatedButton.icon(
-                  icon: const Icon(Icons.payment),
-                  label: const Text("Pay now to start renting"),
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => CheckoutPage(booking: booking),
-                      ),
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color.fromARGB(255, 255, 255, 255),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                ),
-              ),
+            // ✅ --- ACTION BUTTONS & CODES ---
+            _buildActionSection(context),
           ],
         ),
       ),
     );
   }
+
+  /// Builds the dynamic action section based on the user's role and booking status.
+  Widget _buildActionSection(BuildContext context) {
+    final status = booking.status.toLowerCase();
+
+    // --- Renter's View ---
+    if (isRentalView) {
+      switch (status) {
+        case 'pending':
+          return _ActionButtons(
+              bookingId: booking.id, isOwnerView: false, onAction: onAction);
+        case 'approved':
+          return _PayNowButton(booking: booking);
+        case 'confirmed':
+          return _HandoverButton(
+            label: 'Start Rental',
+            icon: Icons.qr_code_scanner,
+            onPressed: () => onNavigateToHandover(booking.id, HandoverAction.start),
+          );
+        case 'inprogress':
+          return _CodeDisplay(
+              code: booking.returnCode, label: 'Your Return Code:');
+      }
+    }
+    // --- Owner's View ---
+    else {
+      switch (status) {
+        case 'pending':
+          return _ActionButtons(
+              bookingId: booking.id, isOwnerView: true, onAction: onAction);
+        case 'confirmed':
+          return _CodeDisplay(
+              code: booking.startCode, label: 'Renter\'s Start Code:');
+        case 'inprogress':
+          return _HandoverButton(
+            label: 'Confirm Return',
+            icon: Icons.key,
+            onPressed: () => onNavigateToHandover(booking.id, HandoverAction.complete),
+          );
+      }
+    }
+
+    // Return an empty container if no action is needed
+    return const SizedBox.shrink();
+  }
 }
 
-/// Booking status chip
+// --- Helper Widgets for Actions and Status ---
+
 class _StatusChip extends StatelessWidget {
   final String status;
   const _StatusChip({required this.status});
@@ -209,8 +195,17 @@ class _StatusChip extends StatelessWidget {
 
     switch (status.toLowerCase()) {
       case 'approved':
-        color = Colors.green;
+      case 'confirmed':
+        color = Colors.blue;
         icon = Icons.check_circle_outline;
+        break;
+      case 'inprogress':
+        color = Colors.deepPurple;
+        icon = Icons.sync_alt;
+        break;
+      case 'completed':
+        color = Colors.teal;
+        icon = Icons.verified_outlined;
         break;
       case 'rejected':
         color = Colors.red;
@@ -243,7 +238,6 @@ class _StatusChip extends StatelessWidget {
   }
 }
 
-/// Approve/Reject or Cancel actions
 class _ActionButtons extends StatelessWidget {
   final int bookingId;
   final bool isOwnerView;
@@ -265,16 +259,14 @@ class _ActionButtons extends StatelessWidget {
         onAction();
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text("Action successful!"),
-            backgroundColor: Colors.green,
-          ),
+              content: Text("Action successful!"),
+              backgroundColor: Colors.green),
         );
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text("Action failed: ${e.toString()}"),
-            backgroundColor: Colors.red,
-          ),
+              content: Text("Action failed: ${e.toString()}"),
+              backgroundColor: Colors.red),
         );
       }
     }
@@ -287,26 +279,22 @@ class _ActionButtons extends StatelessWidget {
               children: [
                 ElevatedButton.icon(
                   icon: const Icon(Icons.cancel),
-                  label: const Text('Reject',style: TextStyle(color: Colors.white)),
+                  label: const Text('Reject'),
                   onPressed: () => handleAction(bookingService.rejectBooking),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
+                      backgroundColor: Colors.red,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8))),
                 ),
                 const SizedBox(width: 8),
                 ElevatedButton.icon(
                   icon: const Icon(Icons.check),
-                  label: const Text('Approve',style: TextStyle(color: Colors.white)),
+                  label: const Text('Approve'),
                   onPressed: () => handleAction(bookingService.approveBooking),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
+                      backgroundColor: Colors.green,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8))),
                 ),
               ],
             )
@@ -321,8 +309,7 @@ class _ActionButtons extends StatelessWidget {
                     foregroundColor: Colors.red,
                     side: const BorderSide(color: Colors.red),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
+                        borderRadius: BorderRadius.circular(8)),
                   ),
                 ),
               ],
@@ -330,3 +317,83 @@ class _ActionButtons extends StatelessWidget {
     );
   }
 }
+
+
+class _PayNowButton extends StatelessWidget {
+  final BookingResponseDTO booking;
+  const _PayNowButton({required this.booking});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 16.0),
+      child: ElevatedButton.icon(
+        icon: const Icon(Icons.payment),
+        label: const Text("Pay now to confirm"),
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => CheckoutPage(booking: booking),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _HandoverButton extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final VoidCallback onPressed;
+  const _HandoverButton({required this.label, required this.icon, required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 16.0),
+      child: ElevatedButton.icon(
+        icon: Icon(icon),
+        label: Text(label),
+        onPressed: onPressed,
+      ),
+    );
+  }
+}
+
+class _CodeDisplay extends StatelessWidget {
+  final String? code;
+  final String label;
+  const _CodeDisplay({required this.code, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(label, style: TextStyle(color: Colors.grey.shade600)),
+          const SizedBox(height: 4),
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade200,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              code ?? '------',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 8),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
