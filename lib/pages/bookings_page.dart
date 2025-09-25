@@ -82,7 +82,7 @@ class _BookingsPageState extends State<BookingsPage> {
     final result = await Navigator.of(context).push<bool>(
       MaterialPageRoute(
         builder: (context) => RentalHandoverPage(
-          bookingId: bookingId,
+ booking: _myRentals.firstWhere((b) => b.id == bookingId), // Pass the full booking object
           action: action,
         ),
       ),
@@ -255,4 +255,3 @@ class _BookingsPageState extends State<BookingsPage> {
     );
   }
 }
-

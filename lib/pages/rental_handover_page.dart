@@ -1,17 +1,21 @@
 import 'dart:io';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:myfirstflutterapp/models/BookingResponseDTO.dart';
 import 'package:myfirstflutterapp/services/rental_service.dart';
+import 'package:myfirstflutterapp/services/MapLauncherService.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:myfirstflutterapp/environment/env.dart';
 
 enum HandoverAction { start, complete }
 
 class RentalHandoverPage extends StatefulWidget {
-  final int bookingId;
+  final BookingResponseDTO booking; // ✅ Now takes the full booking object
   final HandoverAction action;
 
   const RentalHandoverPage({
     super.key,
-    required this.bookingId,
+    required this.booking,
     required this.action,
   });
 
@@ -28,8 +32,8 @@ class _RentalHandoverPageState extends State<RentalHandoverPage> {
   String get _pageTitle =>
       widget.action == HandoverAction.start ? 'Start Rental' : 'Complete Rental';
   String get _promptText => widget.action == HandoverAction.start
-      ? 'Please enter the 6-digit Start Code provided by the owner to begin your rental.'
-      : 'Please enter the 6-digit Return Code provided by the renter to complete the rental.';
+      ? 'Enter the 6-digit Start Code from the owner to begin your rental.'
+      : 'Enter the 6-digit Return Code from the renter to complete the rental.';
   String get _buttonText =>
       widget.action == HandoverAction.start ? 'Start Rental' : 'Confirm Return';
 
@@ -41,14 +45,13 @@ class _RentalHandoverPageState extends State<RentalHandoverPage> {
 
   Future<void> _submitCode() async {
     if (!_formKey.currentState!.validate()) return;
-
     setState(() => _isSubmitting = true);
 
     try {
       if (widget.action == HandoverAction.start) {
-        await _rentalService.startRental(widget.bookingId, _codeController.text);
+        await _rentalService.startRental(widget.booking.id, _codeController.text);
       } else {
-        await _rentalService.completeRental(widget.bookingId, _codeController.text);
+        await _rentalService.completeRental(widget.booking.id, _codeController.text);
       }
 
       if (mounted) {
@@ -58,7 +61,7 @@ class _RentalHandoverPageState extends State<RentalHandoverPage> {
             backgroundColor: Colors.green,
           ),
         );
-        Navigator.of(context).pop(true); // Return true to signal a refresh
+        Navigator.of(context).pop(true); // ✅ Return true to signal a refresh
       }
     } catch (e) {
       if (mounted) {
@@ -95,14 +98,12 @@ class _RentalHandoverPageState extends State<RentalHandoverPage> {
       child: ListView(
         padding: const EdgeInsets.all(24.0),
         children: [
-          Icon(
-            widget.action == HandoverAction.start
-                ? Icons.qr_code_scanner
-                : Icons.key,
-            size: 80,
-            color: Theme.of(context).primaryColor,
-          ),
+          // ✅ Richer item header
+          _buildItemHeader(),
           const SizedBox(height: 24),
+          const Divider(),
+          const SizedBox(height: 24),
+          
           Text(
             _promptText,
             textAlign: TextAlign.center,
@@ -116,7 +117,7 @@ class _RentalHandoverPageState extends State<RentalHandoverPage> {
             keyboardType: TextInputType.number,
             maxLength: 6,
             decoration: const InputDecoration(
-              counterText: "", // Hide the character counter
+              counterText: "",
               labelText: '6-Digit Code',
               border: OutlineInputBorder(),
             ),
@@ -139,6 +140,59 @@ class _RentalHandoverPageState extends State<RentalHandoverPage> {
               child: Text(_buttonText),
             ),
         ],
+      ),
+    );
+  }
+
+  // ✅ NEW: Widget to show item details and map link
+  Widget _buildItemHeader() {
+    return Card(
+      elevation: 0,
+      color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.5),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8.0),
+                  child: CachedNetworkImage(
+                    imageUrl: "${AppConfig.imageBaseUrl}${widget.booking.itemImage}",
+                    width: 60,
+                    height: 60,
+                    fit: BoxFit.cover,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(widget.booking.itemName, style: Theme.of(context).textTheme.titleMedium),
+                      const SizedBox(height: 4),
+                      Text("Booking ID: #${widget.booking.id}", style: Theme.of(context).textTheme.bodySmall),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const Divider(height: 24),
+            Row(
+              children: [
+                Icon(Icons.location_on, color: Colors.grey.shade600, size: 20),
+                const SizedBox(width: 8),
+                Expanded(child: Text(widget.booking.locationName, style: TextStyle(color: Colors.grey.shade800))),
+                TextButton(
+                  onPressed: () {
+                    MapLauncherService.openMap(widget.booking.latitude, widget.booking.longitude);
+                  },
+                  child: const Text("View on Map"),
+                ),
+              ],
+            )
+          ],
+        ),
       ),
     );
   }
