@@ -10,7 +10,7 @@ import 'package:myfirstflutterapp/environment/env.dart';
 enum HandoverAction { start, complete }
 
 class RentalHandoverPage extends StatefulWidget {
-  final BookingResponseDTO booking; // ✅ Now takes the full booking object
+  final BookingResponseDTO booking;
   final HandoverAction action;
 
   const RentalHandoverPage({
@@ -43,6 +43,7 @@ class _RentalHandoverPageState extends State<RentalHandoverPage> {
     super.dispose();
   }
 
+  /// Handles the submission of the handover code.
   Future<void> _submitCode() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isSubmitting = true);
@@ -55,22 +56,23 @@ class _RentalHandoverPageState extends State<RentalHandoverPage> {
       }
 
       if (mounted) {
+        // On success, show a temporary message and then automatically navigate back.
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Success! The rental has been ${_pageTitle.toLowerCase()}.'),
             backgroundColor: Colors.green,
           ),
         );
-        Navigator.of(context).pop(true); // ✅ Return true to signal a refresh
+        Future.delayed(const Duration(milliseconds: 1500), () {
+          if (mounted) {
+            Navigator.of(context).pop(true); // Return true to signal a refresh
+          }
+        });
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: ${e.toString().replaceAll("Exception: ", "")}'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        // On failure, show a clear, adaptive dialog with the specific error.
+         _showErrorDialog(e.toString().replaceAll("Exception: ", ""));
       }
     } finally {
       if (mounted) {
@@ -79,26 +81,53 @@ class _RentalHandoverPageState extends State<RentalHandoverPage> {
     }
   }
 
+  /// Shows a platform-native dialog to inform the user of an error.
+  void _showErrorDialog(String content) {
+    showAdaptiveDialog(
+      context: context,
+      builder: (context) => AlertDialog.adaptive(
+        title: const Text('Error'),
+        content: Text(content),
+        actions: [
+          TextButton(
+            child: const Text('OK'),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+        ],
+      ),
+    );
+  }
+
+
   @override
   Widget build(BuildContext context) {
     return Platform.isIOS
-        ? CupertinoPageScaffold(
-            navigationBar: CupertinoNavigationBar(middle: Text(_pageTitle)),
-            child: _buildBody(),
-          )
-        : Scaffold(
-            appBar: AppBar(title: Text(_pageTitle)),
-            body: _buildBody(),
-          );
+        ? _buildCupertinoPage()
+        : _buildMaterialPage();
+  }
+
+  Widget _buildMaterialPage() {
+    return Scaffold(
+      appBar: AppBar(title: Text(_pageTitle)),
+      body: _buildBody(),
+    );
+  }
+
+  Widget _buildCupertinoPage() {
+    return CupertinoPageScaffold(
+      navigationBar: CupertinoNavigationBar(middle: Text(_pageTitle)),
+      child: SafeArea(
+        child: _buildBody(),
+      ),
+    );
   }
 
   Widget _buildBody() {
     return Form(
       key: _formKey,
       child: ListView(
-        padding: const EdgeInsets.all(24.0),
+        padding: const EdgeInsets.all(16.0),
         children: [
-          // ✅ Richer item header
           _buildItemHeader(),
           const SizedBox(height: 24),
           const Divider(),
@@ -109,46 +138,63 @@ class _RentalHandoverPageState extends State<RentalHandoverPage> {
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.titleMedium,
           ),
-          const SizedBox(height: 32),
-          TextFormField(
-            controller: _codeController,
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, letterSpacing: 8),
-            keyboardType: TextInputType.number,
-            maxLength: 6,
-            decoration: const InputDecoration(
-              counterText: "",
-              labelText: '6-Digit Code',
-              border: OutlineInputBorder(),
+          const SizedBox(height: 24),
+          
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24.0),
+            child: TextFormField(
+              controller: _codeController,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, letterSpacing: 8),
+              keyboardType: TextInputType.number,
+              maxLength: 6,
+              decoration: const InputDecoration(
+                counterText: "",
+                labelText: '6-Digit Code',
+                border: OutlineInputBorder(),
+              ),
+              validator: (value) {
+                if (value == null || value.length != 6) {
+                  return 'Please enter a valid 6-digit code.';
+                }
+                return null;
+              },
             ),
-            validator: (value) {
-              if (value == null || value.length != 6) {
-                return 'Please enter a valid 6-digit code.';
-              }
-              return null;
-            },
           ),
           const SizedBox(height: 32),
+
           if (_isSubmitting)
             const Center(child: CircularProgressIndicator.adaptive())
           else
-            ElevatedButton(
-              onPressed: _submitCode,
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-              ),
-              child: Text(_buttonText),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: Platform.isIOS
+                ? CupertinoButton.filled(
+                    onPressed: _submitCode,
+                    child: Text(_buttonText),
+                  )
+                : ElevatedButton(
+                    onPressed: _submitCode,
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                    ),
+                    child: Text(_buttonText),
+                  ),
             ),
         ],
       ),
     );
   }
 
-  // ✅ NEW: Widget to show item details and map link
   Widget _buildItemHeader() {
-    return Card(
-      elevation: 0,
-      color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.5),
+    final isIOS = Platform.isIOS;
+    return Container(
+      decoration: BoxDecoration(
+        color: isIOS 
+          ? CupertinoColors.secondarySystemGroupedBackground
+          : Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.5),
+        borderRadius: BorderRadius.circular(12),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -180,7 +226,7 @@ class _RentalHandoverPageState extends State<RentalHandoverPage> {
             const Divider(height: 24),
             Row(
               children: [
-                Icon(Icons.location_on, color: Colors.grey.shade600, size: 20),
+                Icon(isIOS ? CupertinoIcons.location_solid : Icons.location_on, color: Colors.grey.shade600, size: 20),
                 const SizedBox(width: 8),
                 Expanded(child: Text(widget.booking.locationName, style: TextStyle(color: Colors.grey.shade800))),
                 TextButton(
@@ -197,3 +243,4 @@ class _RentalHandoverPageState extends State<RentalHandoverPage> {
     );
   }
 }
+

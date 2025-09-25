@@ -78,21 +78,23 @@ class _BookingsPageState extends State<BookingsPage> {
   }
 
   /// Handles navigation to the code entry page and refreshes the list upon return.
-  Future<void> _navigateToHandover(int bookingId, HandoverAction action) async {
+  Future<void> _navigateToHandover(BookingResponseDTO booking, HandoverAction action) async {
     final result = await Navigator.of(context).push<bool>(
       MaterialPageRoute(
         builder: (context) => RentalHandoverPage(
- booking: _myRentals.firstWhere((b) => b.id == bookingId), // Pass the full booking object
+          // ✅ Pass the full booking object to the handover page.
+          booking: booking,
           action: action,
         ),
       ),
     );
 
-    // If the handover was successful (returned true), refresh the bookings list
+    // If the handover was successful (returned true), refresh the bookings list.
     if (result == true && mounted) {
       _fetchBookings();
     }
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -184,7 +186,7 @@ class _BookingsPageState extends State<BookingsPage> {
             isRentalView: isRentalView,
             currentUserId: _currentUserId!,
             onAction: _fetchBookings,
-            onNavigateToHandover: _navigateToHandover,
+            onNavigateToHandover: (bookingId, action) => _navigateToHandover(booking, action),
           );
         },
       ),
