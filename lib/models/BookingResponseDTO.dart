@@ -18,6 +18,10 @@ class BookingResponseDTO {
   final String renterEmail;
   final String? ownerPhoneNumber; // 👈 FIX: Phone number can be null
   final String? renterPhoneNumber; // 👈 FIX: Phone number can be null
+  final String? startCode;
+  final String? returnCode;
+  final bool hasBeenReviewed;
+
 
   BookingResponseDTO({
     required this.id,
@@ -39,6 +43,9 @@ class BookingResponseDTO {
     required this.renterEmail,
     this.ownerPhoneNumber, // 👈 No 'required' needed
     this.renterPhoneNumber, // 👈 No 'required' needed
+    this.startCode,
+    this.returnCode,
+   required this.hasBeenReviewed,
   });
 
   factory BookingResponseDTO.fromJson(Map<String, dynamic> json) {
@@ -61,7 +68,12 @@ class BookingResponseDTO {
       ownerEmail: json['ownerEmail'],
       renterEmail: json['renterEmail'],
       ownerPhoneNumber: json['ownerPhoneNumber'], // ✅ This now correctly handles null
-      renterPhoneNumber: json['renterPhoneNumber'], // ✅ This now correctly handles null
+      renterPhoneNumber: json['renterPhoneNumber'],
+      startCode: json['startCode'],
+      returnCode: json['returnCode'],
+      hasBeenReviewed: json['hasBeenReviewed'] ?? false,
+      
+// ✅ This now correctly handles null
     );
   }
 }
