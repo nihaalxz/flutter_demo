@@ -16,6 +16,17 @@ class RentalService {
     };
   }
 
+  /// Helper to parse a detailed error message from the server response.
+  String _parseError(http.Response response) {
+    try {
+      final body = json.decode(response.body);
+      // ASP.NET Core validation errors can be complex, so we check multiple keys.
+      return body['message'] ?? body['title'] ?? 'An unknown error occurred.';
+    } catch (e) {
+      return 'Failed to communicate with the server.';
+    }
+  }
+
   /// Called by the renter to start the rental with the owner's code.
   Future<void> startRental(int bookingId, String startCode) async {
     final headers = await _getAuthHeaders();
@@ -28,7 +39,8 @@ class RentalService {
     final response = await http.post(url, headers: headers, body: body);
 
     if (response.statusCode != 200) {
-      throw Exception('Failed to start rental: ${response.body}');
+      // ✅ Use the helper to throw a clean error message
+      throw Exception(_parseError(response));
     }
   }
 
@@ -44,7 +56,8 @@ class RentalService {
     final response = await http.post(url, headers: headers, body: body);
 
     if (response.statusCode != 200) {
-      throw Exception('Failed to complete rental: ${response.body}');
+      // ✅ Use the helper to throw a clean error message
+      throw Exception(_parseError(response));
     }
   }
 }

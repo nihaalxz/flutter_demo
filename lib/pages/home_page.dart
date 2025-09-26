@@ -9,6 +9,7 @@ import 'package:myfirstflutterapp/pages/product/my_items_page.dart';
 import 'package:myfirstflutterapp/pages/notification_page.dart';
 import 'package:myfirstflutterapp/pages/product/product_details_page.dart';
 import 'package:myfirstflutterapp/pages/Auth/profile_page.dart';
+import 'package:myfirstflutterapp/pages/rental_history_page.dart';
 import 'package:myfirstflutterapp/pages/search_screen.dart';
 import 'package:myfirstflutterapp/pages/payments/wallet_page.dart';
 import 'package:myfirstflutterapp/pages/wishlist_page.dart';
@@ -35,7 +36,7 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
-enum MenuItem { item1, item2, item3, item4, item5, item6, item7,item8 }
+enum MenuItem { item1, item2, item3, item4, item5, item6, item7,item8,item9 }
 
 class _HomePageState extends State<HomePage> {
   List<Product> _products = [];
@@ -833,8 +834,18 @@ class _HomePageState extends State<HomePage> {
                 ],
               ),
             ),
-            PopupMenuItem(
+              PopupMenuItem(
               value: MenuItem.item6,
+              child: Row(
+                children: [
+                  Icon(Icons.handshake, color: Theme.of(context).iconTheme.color),
+                  const SizedBox(width: 4),
+                  const Text('Rental History', style: TextStyle(fontSize: 16)),
+                ],
+              ),
+            ),
+            PopupMenuItem(
+              value: MenuItem.item7,
               child: Row(
                 children: [
                   Icon(
@@ -847,7 +858,7 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
             PopupMenuItem(
-              value: MenuItem.item7,
+              value: MenuItem.item8,
               child: Row(
                 children: [
                   Icon(
@@ -892,17 +903,22 @@ class _HomePageState extends State<HomePage> {
           MaterialPageRoute(builder: (context) => const PaymentHistoryPage()),
         );
         break;
-      case MenuItem.item6:
-        Navigator.of(
-          context,
-        ).push(MaterialPageRoute(builder: (context) => const WishlistPage()));
+        case MenuItem.item6:
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (context) => const RentalHistoryPage()),
+        );
         break;
       case MenuItem.item7:
         Navigator.of(
           context,
-        ).push(MaterialPageRoute(builder: (context) => const SettingsPage()));
+        ).push(MaterialPageRoute(builder: (context) => const WishlistPage()));
         break;
       case MenuItem.item8:
+        Navigator.of(
+          context,
+        ).push(MaterialPageRoute(builder: (context) => const SettingsPage()));
+        break;
+      case MenuItem.item9:
         break;
     }
   }
