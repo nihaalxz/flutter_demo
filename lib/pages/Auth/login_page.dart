@@ -1,14 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:provider/provider.dart';
 import 'package:myfirstflutterapp/pages/Auth/privacy_policy_page.dart';
-import 'package:myfirstflutterapp/pages/main_screen.dart';
+import 'package:myfirstflutterapp/state/AppStateManager.dart';
 import '/services/auth_service.dart';
 
 import 'register_page.dart';
-import 'forgot_password_page.dart'; // Import the new page
+import 'forgot_password_page.dart';
 
 class LoginPage extends StatefulWidget {
-  const LoginPage({super.key});
+  // ✅ ADD: Accept callback for when login succeeds
+  final VoidCallback? onLoginSuccess;
+  
+  const LoginPage({
+    super.key,
+    this.onLoginSuccess,
+  });
 
   @override
   State<LoginPage> createState() => _LoginPageState();
@@ -28,38 +35,98 @@ class _LoginPageState extends State<LoginPage> {
       );
       return;
     }
+    
     setState(() => _isLoading = true);
-    final success = await _authService.login(
-      _emailController.text,
-      _passwordController.text,
-    );
-    setState(() => _isLoading = false);
+    
+    try {
+      final success = await _authService.login(
+        _emailController.text.trim(),
+        _passwordController.text,
+      );
 
-    if (success && mounted) {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const MainScreen()),
-      );
-    } else if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Login failed. Please check your credentials.')),
-      );
+      if (mounted) {
+        setState(() => _isLoading = false);
+
+        if (success) {
+          // ✅ IMPORTANT: Update AppStateManager first
+          Provider.of<AppStateManager>(context, listen: false)
+              .initializeLoginStatus(true);
+          
+          // ✅ IMPORTANT: Call callback to notify AuthCheckScreen
+          if (widget.onLoginSuccess != null) {
+            widget.onLoginSuccess!();
+          }
+          
+          // Show success message
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Login successful!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Login failed. Please check your credentials.')),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Login error: ${e.toString()}')),
+        );
+      }
     }
   }
 
   void _googleLogin() async {
     setState(() => _isLoading = true);
-    final success = await _authService.googleLogin();
-    setState(() => _isLoading = false);
+    
+    try {
+      final success = await _authService.googleLogin();
 
-    if (success && mounted) {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const MainScreen()),
-      );
-    } else if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Google Sign-In failed. Please try again.')),
-      );
+      if (mounted) {
+        setState(() => _isLoading = false);
+
+        if (success) {
+          // ✅ IMPORTANT: Update AppStateManager first
+          Provider.of<AppStateManager>(context, listen: false)
+              .initializeLoginStatus(true);
+          
+          // ✅ IMPORTANT: Call callback to notify AuthCheckScreen
+          if (widget.onLoginSuccess != null) {
+            widget.onLoginSuccess!();
+          }
+          
+          // Show success message
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Google Sign-In successful!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Google Sign-In failed. Please try again.')),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Google Sign-In error: ${e.toString()}')),
+        );
+      }
     }
+  }
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
   }
 
   @override
@@ -89,6 +156,7 @@ class _LoginPageState extends State<LoginPage> {
                   border: UnderlineInputBorder(),
                 ),
                 keyboardType: TextInputType.emailAddress,
+                enabled: !_isLoading, // Disable during loading
               ),
               const SizedBox(height: 24),
               TextField(
@@ -103,18 +171,19 @@ class _LoginPageState extends State<LoginPage> {
                           ? Icons.visibility
                           : Icons.visibility_off,
                     ),
-                    onPressed: () {
+                    onPressed: _isLoading ? null : () {
                       setState(() {
                         _isPasswordVisible = !_isPasswordVisible;
                       });
                     },
                   ),
                 ),
+                enabled: !_isLoading, // Disable during loading
               ),
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton(
-                  onPressed: () {
+                  onPressed: _isLoading ? null : () {
                     Navigator.of(context).push(
                       MaterialPageRoute(
                         builder: (context) => const ForgotPasswordPage(),
@@ -155,7 +224,7 @@ class _LoginPageState extends State<LoginPage> {
               const SizedBox(height: 24),
               Center(
                 child: _buildSocialButton(
-                  onPressed: _googleLogin,
+                  onPressed: _isLoading ? () {} : _googleLogin,
                   iconPath: 'assets/icons/google-logo.svg',
                 ),
               ),
@@ -165,7 +234,7 @@ class _LoginPageState extends State<LoginPage> {
                 children: [
                   Text("Don't have an account?", style: theme.textTheme.bodyMedium),
                   TextButton(
-                    onPressed: () {
+                    onPressed: _isLoading ? null : () {
                       Navigator.of(context).push(
                         MaterialPageRoute(
                           builder: (context) => const RegisterPage(),
@@ -189,7 +258,7 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                     ),
                     InkWell(
-                      onTap: () {
+                      onTap: _isLoading ? null : () {
                         // TODO: Navigate to Terms and Conditions page
                       },
                       child: Text(
@@ -207,7 +276,7 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                     ),
                     InkWell(
-                      onTap: () {
+                      onTap: _isLoading ? null : () {
                         Navigator.of(context).push(
                           MaterialPageRoute(
                             builder: (context) => const PrivacyPolicyPage(),
@@ -231,7 +300,7 @@ class _LoginPageState extends State<LoginPage> {
                   ],
                 ),
               ),
-              const SizedBox(height: 20), // ✅ ensures bottom safe spacing
+              const SizedBox(height: 20),
             ],
           ),
         ),

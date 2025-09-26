@@ -1,33 +1,34 @@
-import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:myfirstflutterapp/state/AppStateManager.dart';
+import 'package:overlay_support/overlay_support.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter/cupertino.dart';
+import 'dart:io' show Platform;
+
+// --- Assumed Imports ---
 import 'models/product_model.dart';
 import 'models/category_model.dart';
 import 'pages/Auth/auth_check_screen.dart';
 import 'services/theme_provider.dart';
-import 'Theme/theme.dart'; // 👈 import our new theme file
+import 'Theme/theme.dart';
 
 Future<void> main() async {
+  // Ensure all necessary bindings are initialized before running the app.
   WidgetsFlutterBinding.ensureInitialized();
-
-  // ignore: deprecated_member_use
-  FlutterNativeSplash.removeAfter(initialization);
 
   if (kDebugMode) {
     print("🚀 Flutter main() reached");
   }
 
+  // Initialize Hive for local caching.
   await Hive.initFlutter();
-
   Hive.registerAdapter(ProductAdapter());
   Hive.registerAdapter(CategoryModelAdapter());
   await Hive.openBox('p2p_cache');
 
+  // Use MultiProvider to make global state available to the entire app.
   runApp(
     MultiProvider(
       providers: [
@@ -39,56 +40,58 @@ Future<void> main() async {
   );
 }
 
-Future<void> initialization(BuildContext? context) async {
-  await Future.delayed(const Duration(seconds: 1));
-}
-
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
-@override
+
+  @override
   Widget build(BuildContext context) {
+    // Consumer listens to the ThemeProvider to rebuild the app when the theme changes.
     return Consumer<ThemeProvider>(
       builder: (context, themeProvider, child) {
-        
-        if (Platform.isIOS) {
-          // --- iOS App ---
-          return CupertinoApp(
-            title: 'Flutter Demo',
-            debugShowCheckedModeBanner: false,
-            theme: themeProvider.isDarkMode ? darkCupertinoTheme : lightCupertinoTheme,
-            
-            // ✅ 2. Add these delegates to your CupertinoApp
-            // This provides the necessary "language pack" for any Material
-            // widgets used within the Cupertino app structure.
-            localizationsDelegates: [
-              DefaultMaterialLocalizations.delegate,
-              DefaultWidgetsLocalizations.delegate,
-              DefaultCupertinoLocalizations.delegate,
-            ],
-            supportedLocales: const [
-              Locale('en', ''), // English, no country code
-            ],
+        // OverlaySupport is necessary for showing pop-up notification banners.
+        return OverlaySupport.global(
+          child: Platform.isIOS
+              // --- Build the native-looking iOS App ---
+              ? CupertinoApp(
+                  title: 'MapleCOT',
+                  debugShowCheckedModeBanner: false,
+                  // ✅ Apply the correct light or dark Cupertino theme.
+                  theme: themeProvider.isDarkMode ? darkCupertinoTheme : lightCupertinoTheme,
+                  
+                  // This provides the necessary "language pack" for any Material
+                  // widgets that might be used within the Cupertino app structure.
+                  localizationsDelegates: const [
+                    DefaultMaterialLocalizations.delegate,
+                    DefaultWidgetsLocalizations.delegate,
+                    DefaultCupertinoLocalizations.delegate,
+                  ],
+                  supportedLocales: const [
+                    Locale('en', ''), // English
+                  ],
 
-            builder:(context, child){
-              return Material(
-                type: MaterialType.transparency,
-                child: child,
-              );
-            },
-            home: const AuthCheckScreen(),
-          );
-        } else {
-          // --- Android App ---
-          return MaterialApp(
-            title: 'Flutter Demo',
-            debugShowCheckedModeBanner: false,
-            themeMode: themeProvider.isDarkMode ? ThemeMode.dark : ThemeMode.light,
-            theme: lightTheme,
-            darkTheme: darkTheme,
-            home: const AuthCheckScreen(),
-          );
-        }
+                  // This builder wraps the app in a Material widget, which is a
+                  // robust way to prevent errors if a Material widget is used
+                  // on a page without a Scaffold.
+                  builder: (context, child) {
+                    return Material(
+                      type: MaterialType.transparency,
+                      child: child,
+                    );
+                  },
+                  home: const AuthCheckScreen(),
+                )
+              // --- Build the native-looking Android App ---
+              : MaterialApp(
+                  title: 'MapleCot',
+                  debugShowCheckedModeBanner: false,
+                  themeMode: themeProvider.isDarkMode ? ThemeMode.dark : ThemeMode.light,
+                  theme: lightTheme,
+                  darkTheme: darkTheme,
+                  home: const AuthCheckScreen(),
+                ),
+        );
       },
     );
   }
-} 
+}
+

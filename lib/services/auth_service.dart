@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:jwt_decoder/jwt_decoder.dart';
 import 'package:myfirstflutterapp/models/user_model.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../environment/env.dart';
 
 class AuthService {
@@ -115,9 +116,40 @@ class AuthService {
     }
   }
 
+  // ✅ FIXED: More selective logout - don't clear all storage
   Future<void> logout() async {
-    await _googleSignIn.signOut();
-    await deleteToken();
+    try {
+      // Sign out from Google
+      await _googleSignIn.signOut();
+      
+      // Only delete the JWT token, not all secure storage
+      await deleteToken();
+      
+      // Clear only user-specific preferences, not app settings
+      final prefs = await SharedPreferences.getInstance();
+      
+      // Clear specific user-related keys instead of all preferences
+      // This preserves app settings like theme preferences
+      final userKeys = [
+        'user_id',
+        'user_profile',
+        'user_settings',
+        'cached_user_data',
+        // Add other user-specific keys here, but avoid theme/app settings
+      ];
+      
+      for (String key in userKeys) {
+        await prefs.remove(key);
+      }
+      
+      if (kDebugMode) {
+        print("✅ User logged out successfully");
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print("❌ Error during logout: $e");
+      }
+    }
   }
 
    Future<AppUser?> getUserProfile() async {
@@ -139,29 +171,42 @@ class AuthService {
   }
 
   Future<String?> getUserId() async {
-  final token = await getToken();
-  if (token != null && !JwtDecoder.isExpired(token)) {
-    final decodedToken = JwtDecoder.decode(token);
-    return decodedToken['nameid']?.toString(); // Adjust key if backend uses 'sub' or something else
-  }
-  return null;
-}
-
- Future<bool> isLoggedIn() async {
-    final token = await getToken(); // getToken() already exists
-    if (token == null) {
-      return false; // No token, not logged in
+    final token = await getToken();
+    if (token != null && !JwtDecoder.isExpired(token)) {
+      final decodedToken = JwtDecoder.decode(token);
+      return decodedToken['nameid']?.toString(); // Adjust key if backend uses 'sub' or something else
     }
-
-    // Check if the token is expired
-    if (JwtDecoder.isExpired(token)) {
-      await deleteToken(); // Clean up the expired token
-      return false; // Token is expired, not logged in
-    }
-
-    return true; // Token exists and is not expired
+    return null;
   }
 
+  Future<bool> isLoggedIn() async {
+    try {
+      final token = await getToken(); // getToken() already exists
+      if (token == null) {
+        if (kDebugMode) {
+          print("🔍 No token found - user not logged in");
+        }
+        return false; // No token, not logged in
+      }
 
+      // Check if the token is expired
+      if (JwtDecoder.isExpired(token)) {
+        if (kDebugMode) {
+          print("🔍 Token expired - cleaning up");
+        }
+        await deleteToken(); // Clean up the expired token
+        return false; // Token is expired, not logged in
+      }
 
+      if (kDebugMode) {
+        print("🔍 Valid token found - user is logged in");
+      }
+      return true; // Token exists and is not expired
+    } catch (e) {
+      if (kDebugMode) {
+        print("❌ Error checking login status: $e");
+      }
+      return false;
+    }
+  }
 }
