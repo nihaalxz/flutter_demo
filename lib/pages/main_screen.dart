@@ -3,6 +3,7 @@ import 'dart:io'; // 👈 1. Import for platform detection
 import 'package:flutter/cupertino.dart'; // 👈 2. Import for iOS widgets
 import 'package:flutter/material.dart';
 import 'package:myfirstflutterapp/models/notification_model.dart';
+import 'package:myfirstflutterapp/pages/wishlist_page.dart';
 import 'package:overlay_support/overlay_support.dart';
 import 'package:provider/provider.dart';
 
@@ -25,9 +26,10 @@ class _MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
   StreamSubscription<NotificationModel>? _notificationSubscription;
 
-  // The list of pages is shared between both platforms
+  // ✅ FIX: The list of pages now correctly includes all 5 tabs.
   static const List<Widget> _pages = <Widget>[
     HomePage(),
+    WishlistPage(),
     CreateListingPage(),
     BookingsPage(),
     ProfilePage(),
@@ -37,23 +39,28 @@ class _MainScreenState extends State<MainScreen> {
   void initState() {
     super.initState();
     
+    // Use addPostFrameCallback to safely access the Provider after the first frame.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final appState = Provider.of<AppStateManager>(context, listen: false);
-      appState.fetchNotificationCount();
-      appState.fetchPendingBookingCount();
-    });
-    
-    NotificationService.instance.connectToNotificationHub();
+      
+      // ✅ FIX: Call the single, correct method to fetch all counts.
+      appState.fetchAllCounts();
 
-    _notificationSubscription =
-        NotificationService.instance.notificationStream.listen((notification) {
-      showSimpleNotification(
-        Text(notification.title),
-        subtitle: Text(notification.message ?? ''),
-        background: Colors.blue.shade700,
-        duration: const Duration(seconds: 5),
-      );
+      // Listen for real-time notifications to trigger count updates
+      _notificationSubscription = NotificationService.instance.notificationStream.listen((notification) {
+        // When any real-time notification arrives, tell the state manager to refresh all counts.
+        appState.onNotificationReceived();
+        
+        // Show the pop-up banner for the new notification.
+        showSimpleNotification(
+            Text(notification.title),
+            subtitle: Text(notification.message ?? ''),
+            background: Colors.blue.shade700,
+        );
+      });
     });
+
+    NotificationService.instance.connectToNotificationHub();
   }
 
   @override
@@ -63,7 +70,15 @@ class _MainScreenState extends State<MainScreen> {
     super.dispose();
   }
 
+  /// ✅ FIX: This method now correctly clears the badge when a tab is visited.
   void _onItemTapped(int index) {
+    final appState = Provider.of<AppStateManager>(context, listen: false);
+    
+    // Index 3 corresponds to the BookingsPage in the _pages list.
+    if (index == 3) { 
+      appState.clearUnreadBookings();
+    }
+    
     setState(() {
       _selectedIndex = index;
     });
@@ -71,128 +86,92 @@ class _MainScreenState extends State<MainScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // ✅ 3. Use a Consumer to get the latest state for badges
+    // The Consumer ensures the navigation bar rebuilds when the unread counts change.
     return Consumer<AppStateManager>(
       builder: (context, appState, child) {
-        // ✅ 4. Check the platform and build the appropriate UI
-        if (Platform.isIOS) {
-          return _buildCupertinoScaffold(appState);
-        } else {
-          return _buildMaterialScaffold(appState);
-        }
+        return Platform.isIOS
+            ? _buildCupertinoScaffold(appState)
+            : _buildMaterialScaffold(appState);
       },
     );
   }
 
-  /// Builds the Material Design scaffold for Android.
+  // --- Adaptive UI Builders ---
+
   Widget _buildMaterialScaffold(AppStateManager appState) {
     return Scaffold(
       body: _pages.elementAt(_selectedIndex),
       bottomNavigationBar: BottomNavigationBar(
         items: <BottomNavigationBarItem>[
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.home_outlined),
-            activeIcon: Icon(Icons.home),
-            label: 'Home',
-          ),
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.add_circle_outline),
-            activeIcon: Icon(Icons.add_circle),
-            label: 'Create',
-          ),
+          const BottomNavigationBarItem(icon: Icon(Icons.home_outlined), label: 'Home'),
+          const BottomNavigationBarItem(icon: Icon(Icons.favorite_border), label: 'Wishlist'),
+          const BottomNavigationBarItem(icon: Icon(Icons.add_circle_outline), label: 'Create'),
           BottomNavigationBarItem(
             icon: _buildIconWithBadge(
               icon: Icons.calendar_today_outlined,
-              count: appState.pendingBookingCount,
-            ),
-            activeIcon: _buildIconWithBadge(
-              icon: Icons.calendar_today,
-              count: appState.pendingBookingCount,
+              // ✅ FIX: Use the correct boolean flag from the AppStateManager.
+              showBadge: appState.hasUnreadBookings, 
             ),
             label: 'Bookings',
           ),
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline),
-            activeIcon: Icon(Icons.person),
-            label: 'Profile',
-          ),
+          const BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Profile'),
         ],
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
         type: BottomNavigationBarType.fixed,
-        selectedItemColor: const Color.fromARGB(255, 255, 255, 255),
-        unselectedItemColor:Theme.of(context).iconTheme.color,
-        showUnselectedLabels: true,
+        // Example styling, adjust as needed
+        selectedItemColor: Theme.of(context).primaryColor,
+        unselectedItemColor: Colors.grey,
       ),
     );
   }
 
-  /// Builds the Cupertino Design scaffold for iOS.
   Widget _buildCupertinoScaffold(AppStateManager appState) {
     return CupertinoTabScaffold(
       tabBar: CupertinoTabBar(
         items: <BottomNavigationBarItem>[
-          const BottomNavigationBarItem(
-            icon: Icon(CupertinoIcons.home),
-            label: 'Home',
-          ),
-          const BottomNavigationBarItem(
-            icon: Icon(CupertinoIcons.add_circled),
-            label: 'Create',
-          ),
-          BottomNavigationBarItem(
+           const BottomNavigationBarItem(icon: Icon(CupertinoIcons.home), label: 'Home'),
+           const BottomNavigationBarItem(icon: Icon(CupertinoIcons.heart), label: 'Wishlist'),
+           const BottomNavigationBarItem(icon: Icon(CupertinoIcons.add_circled), label: 'Create'),
+           BottomNavigationBarItem(
             icon: _buildIconWithBadge(
               icon: CupertinoIcons.calendar,
-              count: appState.pendingBookingCount,
+              // ✅ FIX: Use the correct boolean flag from the AppStateManager.
+              showBadge: appState.hasUnreadBookings, 
             ),
             label: 'Bookings',
           ),
-          const BottomNavigationBarItem(
-            icon: Icon(CupertinoIcons.person),
-            label: 'Profile',
-          ),
+           const BottomNavigationBarItem(icon: Icon(CupertinoIcons.person), label: 'Profile'),
         ],
+        currentIndex: _selectedIndex,
+        onTap: _onItemTapped,
       ),
-      tabBuilder: (BuildContext context, int index) {
-        // The tabBuilder handles displaying the correct page automatically.
+      tabBuilder: (context, index) {
         return CupertinoTabView(
-          builder: (BuildContext context) {
-            return _pages[index];
-          },
+          builder: (context) => _pages.elementAt(index),
         );
       },
     );
   }
 
-  /// A helper widget that builds an icon with a notification badge.
-  /// This works for both Material and Cupertino icons.
-  Widget _buildIconWithBadge({required IconData icon, required int count}) {
+  /// ✅ UPDATED: A helper widget that builds an icon with a simple red dot.
+  Widget _buildIconWithBadge({required IconData icon, required bool showBadge}) {
     return Stack(
       clipBehavior: Clip.none,
       children: <Widget>[
         Icon(icon),
-        if (count > 0)
+        if (showBadge)
           Positioned(
-            right: -4,
-            top: -4,
+            right: -2,
+            top: -2,
             child: Container(
               padding: const EdgeInsets.all(2),
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 color: Colors.red,
-                borderRadius: BorderRadius.circular(8),
+                shape: BoxShape.circle,
               ),
-              constraints: const BoxConstraints(
-                minWidth: 16,
-                minHeight: 16,
-              ),
-              child: Text(
-                count.toString(),
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 10,
-                ),
-                textAlign: TextAlign.center,
-              ),
+              // A simple dot without a number for a cleaner look.
+              constraints: const BoxConstraints(minWidth: 8, minHeight: 8),
             ),
           )
       ],

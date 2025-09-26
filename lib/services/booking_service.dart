@@ -88,6 +88,22 @@ Future<BookingResponseDTO> createBooking({
     }
   }
 
+ Future<void> markBookingsAsSeen() async {
+    final headers = await _getAuthHeaders();
+    final url = Uri.parse('$_baseUrl/booking/mark-as-seen');
+    await http.post(url, headers: headers);
+  }
+
+Future<int> getUnreadBookingCount() async {
+    final headers = await _getAuthHeaders();
+    final url = Uri.parse('$_baseUrl/booking/unread-count');
+    final response = await http.get(url, headers: headers);
+    if (response.statusCode == 200) {
+      return json.decode(response.body)['count'] ?? 0;
+    }
+    return 0;
+  }
+
   /// Cancels a pending booking.
   /// Corresponds to: [PUT api/booking/{id}/cancel]
   Future<void> cancelBooking(int bookingId) async {

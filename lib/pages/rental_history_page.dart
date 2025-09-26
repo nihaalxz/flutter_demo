@@ -23,7 +23,6 @@ class _RentalHistoryPageState extends State<RentalHistoryPage> {
   @override
   void initState() {
     super.initState();
-    // First, get the user ID, then fetch the history
     _loadInitialData();
   }
 
@@ -51,63 +50,61 @@ class _RentalHistoryPageState extends State<RentalHistoryPage> {
   Widget _buildMaterialPage() {
     return Scaffold(
       appBar: AppBar(title: const Text('Rental History')),
-      body: _buildBody(),
+      body: SafeArea(child: _buildBody()),
     );
   }
 
   Widget _buildCupertinoPage() {
     return CupertinoPageScaffold(
-      navigationBar: const CupertinoNavigationBar(middle: Text('Rental History')),
-      child: _buildBody(isCupertino: true),
+      navigationBar: const CupertinoNavigationBar(
+        middle: Text('Rental History'),
+      ),
+      child: SafeArea(child: _buildBody(isCupertino: true)),
     );
   }
-
-  Widget _buildBody({bool isCupertino = false}) {
-    // If we haven't fetched the user ID yet, show a loader
-    if (_currentUserId == null) {
-      return const Center(child: CircularProgressIndicator.adaptive());
-    }
-
-    return FutureBuilder<List<BookingResponseDTO>>(
-      future: _historyFuture,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator.adaptive());
-        }
-        if (snapshot.hasError) {
-          return Center(child: Text('Error: ${snapshot.error}'));
-        }
-        final history = snapshot.data ?? [];
-        if (history.isEmpty) {
-          return const Center(child: Text('You have no completed rentals.'));
-        }
-
-        final listView = ListView.builder(
-          padding: const EdgeInsets.all(8.0),
-          itemCount: history.length,
-          itemBuilder: (context, index) {
-            final booking = history[index];
-            // Determine if the current user was the renter for this booking
-            final bool wasRenter = booking.renterId == _currentUserId;
-
-            // ✅ Use the existing BookingCard for a consistent UI
-            return BookingCard(
-              booking: booking,
-              isRentalView: wasRenter,
-              currentUserId: _currentUserId!,
-              // Provide no-op callbacks as actions are not needed on historical items
-              onAction: () {},
-              onNavigateToHandover: (id, action) async {},
-            );
-          },
-        );
-
-        return RefreshIndicator.adaptive(
-          onRefresh: _refreshHistory,
-          child: listView,
-        );
-      },
-    );
+Widget _buildBody({bool isCupertino = false}) {
+  if (_currentUserId == null) {
+    return const Center(child: CircularProgressIndicator.adaptive());
   }
+
+  return FutureBuilder<List<BookingResponseDTO>>(
+    future: _historyFuture,
+    builder: (context, snapshot) {
+      if (snapshot.connectionState == ConnectionState.waiting) {
+        return const Center(child: CircularProgressIndicator.adaptive());
+      }
+      if (snapshot.hasError) {
+        return Center(child: Text('Error: ${snapshot.error}'));
+      }
+      final history = snapshot.data ?? [];
+      if (history.isEmpty) {
+        return const Center(child: Text('You have no completed rentals.'));
+      }
+
+      final bottomPadding = MediaQuery.of(context).padding.bottom;
+
+      final listView = ListView.builder(
+        padding: EdgeInsets.fromLTRB(8, 8, 8, 8 + bottomPadding),
+        itemCount: history.length,
+        itemBuilder: (context, index) {
+          final booking = history[index];
+          final bool wasRenter = booking.renterId == _currentUserId;
+
+          return BookingCard(
+            booking: booking,
+            isRentalView: wasRenter,
+            currentUserId: _currentUserId!,
+            onAction: () {},
+            onNavigateToHandover: (id, action) async {},
+          );
+        },
+      );
+
+      return RefreshIndicator.adaptive(
+        onRefresh: _refreshHistory,
+        child: listView,
+      );
+    },
+  );
 }
-
+}

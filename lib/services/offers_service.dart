@@ -49,6 +49,24 @@ class OfferService {
     }
   }
 
+   Future<int> getUnreadOfferCount() async {
+    final headers = await _getAuthHeaders();
+    final url = Uri.parse('$_baseUrl/offer/unread-count');
+    final response = await http.get(url, headers: headers);
+    if (response.statusCode == 200) {
+      return json.decode(response.body)['count'] ?? 0;
+    }
+    return 0;
+  }
+
+  Future<void> markOffersAsSeen() async {
+    final headers = await _getAuthHeaders();
+    final url = Uri.parse('$_baseUrl/offer/mark-as-seen');
+    await http.post(url, headers: headers);
+  }
+
+
+
   Future<OfferResponseDTO?> getOfferByProduct(int productId) async {
   final headers = await _getAuthHeaders();
   final url = Uri.parse('$_baseUrl/Offer/product/$productId/my-offer');

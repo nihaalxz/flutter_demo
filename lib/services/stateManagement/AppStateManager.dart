@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
-// ✅ Import all the necessary services that the manager will use.
-import '../services/booking_service.dart';
-import '../services/offers_service.dart';
-import '../services/payment_services/payment_service.dart';
-import '../services/notification_service.dart';
+// Import all the necessary services
+import '../booking_service.dart';
+import '../offers_service.dart';
+import '../payment_services/payment_service.dart'; // Corrected import path
+import '../notification_service.dart';
 
 class AppStateManager with ChangeNotifier {
   // Instantiate all the required services.
@@ -13,18 +13,16 @@ class AppStateManager with ChangeNotifier {
   final PaymentService _paymentService = PaymentService();
   final NotificationService _notificationService = NotificationService.instance;
 
-  // --- State Flags for Notification Badges ---
+  // --- State Properties for Notification Badges ---
   bool _hasUnreadBookings = false;
   bool _hasUnreadOffers = false;
   bool _hasUnreadPayments = false;
-  bool _hasUnreadNotifications = false;
   int _unreadNotificationCount = 0;
 
   // --- Public Getters for the UI to listen to ---
   bool get hasUnreadBookings => _hasUnreadBookings;
   bool get hasUnreadOffers => _hasUnreadOffers;
   bool get hasUnreadPayments => _hasUnreadPayments;
-  bool get hasUnreadNotifications => _hasUnreadNotifications;
   int get unreadNotificationCount => _unreadNotificationCount;
 
   AppStateManager() {
@@ -35,6 +33,7 @@ class AppStateManager with ChangeNotifier {
   /// Fetches all unread counts from the backend in parallel.
   Future<void> fetchAllCounts() async {
     try {
+      // Use Future.wait to fetch all counts simultaneously for better performance.
       final results = await Future.wait([
         _bookingService.getUnreadBookingCount(),
         _offerService.getUnreadOfferCount(),
@@ -42,11 +41,13 @@ class AppStateManager with ChangeNotifier {
         _notificationService.getUnreadCount(),
       ]);
 
+      // Update the state based on the counts from the services.
       _hasUnreadBookings = results[0] > 0;
       _hasUnreadOffers = results[1] > 0;
       _hasUnreadPayments = results[2] > 0;
       _unreadNotificationCount = results[3];
 
+      // Notify all listening widgets to rebuild if anything has changed.
       notifyListeners();
     } catch (e) {
       print("Error fetching unread counts: $e");
@@ -57,15 +58,6 @@ class AppStateManager with ChangeNotifier {
   void onNotificationReceived() {
     // A real-time event triggers a full refresh of all counts from the server.
     fetchAllCounts();
-  }
- void updateCountsFromPush(Map<String, dynamic> counts) {
-    _hasUnreadBookings = (counts['bookings'] ?? 0) > 0;
-    _hasUnreadOffers = (counts['offers'] ?? 0) > 0;
-    _hasUnreadPayments = (counts['payments'] ?? 0) > 0;
-    // ✅ THIS IS THE CRITICAL FIX: Update the notification count from the payload.
-    _unreadNotificationCount = counts['notifications'] ?? 0;
-    
-    notifyListeners();
   }
 
   // --- Methods to Clear Badges (called from the UI) ---
@@ -100,12 +92,10 @@ class AppStateManager with ChangeNotifier {
   
   /// Called when the user visits the notifications page.
   Future<void> clearUnreadNotifications() async {
-    if (_hasUnreadNotifications) {
-      _hasUnreadNotifications = false;
+    if (_unreadNotificationCount > 0) {
+      _unreadNotificationCount = 0;
       notifyListeners();
-      // You would also call a markAsSeen method on the NotificationService here.
-      // await _notificationService.markNotificationsAsSeen();
+      await _notificationService.markAllAsRead();
     }
   }
 }
-
