@@ -1,6 +1,6 @@
 import 'dart:async';
-import 'dart:io'; // 👈 1. Import for platform detection
-import 'package:flutter/cupertino.dart'; // 👈 2. Import for iOS widgets
+import 'dart:io';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:myfirstflutterapp/models/notification_model.dart';
 import 'package:myfirstflutterapp/pages/Auth/login_page.dart';
@@ -17,17 +17,23 @@ import 'package:myfirstflutterapp/services/notification_service.dart';
 import 'package:myfirstflutterapp/state/AppStateManager.dart';
 
 class MainScreen extends StatefulWidget {
-  const MainScreen({super.key});
+  // ✅ 1. ADD an optional initialIndex parameter
+  final int initialIndex;
+
+  const MainScreen({
+    super.key,
+    this.initialIndex = 0, // Default to the home page (index 0)
+  });
 
   @override
   State<MainScreen> createState() => _MainScreenState();
 }
 
 class _MainScreenState extends State<MainScreen> {
-  int _selectedIndex = 0;
-  StreamSubscription<NotificationModel>? _notificationSubscription;
+  late int _selectedIndex; // No longer final, will be set in initState
+  StreamSubscription<UnreadUpdate>? _updateSubscription;
 
-  // ✅ FIX: The list of pages now correctly includes all 5 tabs.
+  // Your list of pages
   static const List<Widget> _pages = <Widget>[
     HomePage(),
     WishlistPage(),
@@ -40,24 +46,20 @@ class _MainScreenState extends State<MainScreen> {
   void initState() {
     super.initState();
     
-    // Use addPostFrameCallback to safely access the Provider after the first frame.
+    // ✅ 2. Use the initialIndex from the widget to set the starting tab
+    _selectedIndex = widget.initialIndex;
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final appState = Provider.of<AppStateManager>(context, listen: false);
-      
-      // ✅ FIX: Call the single, correct method to fetch all counts.
       appState.fetchAllCounts();
 
-      // Listen for real-time notifications to trigger count updates
-      _notificationSubscription = NotificationService.instance.notificationStream.listen((notification) {
-        // When any real-time notification arrives, tell the state manager to refresh all counts.
-        appState.onNotificationReceived();
-        
-        // Show the pop-up banner for the new notification.
+      _updateSubscription = NotificationService.instance.unreadUpdateStream.listen((update) {
         showSimpleNotification(
-            Text(notification.title),
-            subtitle: Text(notification.message ?? ''),
-            background: Colors.blue.shade700,
+            Text(update.notification.title),
+            subtitle: Text(update.notification.message ?? ''),
+            background: Theme.of(context).primaryColor,
         );
+        appState.updateCountsFromPush(update.unreadCounts);
       });
     });
 
@@ -66,16 +68,14 @@ class _MainScreenState extends State<MainScreen> {
 
   @override
   void dispose() {
-    _notificationSubscription?.cancel();
+    _updateSubscription?.cancel();
     NotificationService.instance.disconnectFromNotificationHub();
     super.dispose();
   }
 
-  /// ✅ FIX: This method now correctly clears the badge when a tab is visited.
   void _onItemTapped(int index) {
     final appState = Provider.of<AppStateManager>(context, listen: false);
     
-    // Index 3 corresponds to the BookingsPage in the _pages list.
     if (index == 3) { 
       appState.clearUnreadBookings();
     }
@@ -85,36 +85,28 @@ class _MainScreenState extends State<MainScreen> {
     });
   }
 
- @override
+  @override
   Widget build(BuildContext context) {
-    // ✅ --- THIS IS THE KEY FIX ---
-    // The Consumer now also checks the login status.
     return Consumer<AppStateManager>(
       builder: (context, appState, child) {
-        // If the state manager reports the user is logged out,
-        // immediately navigate to the LoginPage.
         if (!appState.isLoggedIn) {
-          // Use a post-frame callback to ensure we don't try to navigate
-          // while the widget tree is still building.
           WidgetsBinding.instance.addPostFrameCallback((_) {
             Navigator.of(context).pushAndRemoveUntil(
               MaterialPageRoute(builder: (context) => const LoginPage()),
               (route) => false
             );
           });
-          // Return a temporary empty container while the navigation happens.
           return const Scaffold(body: Center(child: CircularProgressIndicator()));
         }
         
-        // If the user is logged in, build the normal UI.
         return Platform.isIOS
             ? _buildCupertinoScaffold(appState)
             : _buildMaterialScaffold(appState);
       },
     );
   }
-  // --- Adaptive UI Builders ---
 
+  // --- Adaptive UI Builders ---
   Widget _buildMaterialScaffold(AppStateManager appState) {
     return Scaffold(
       body: _pages.elementAt(_selectedIndex),
@@ -126,8 +118,7 @@ class _MainScreenState extends State<MainScreen> {
           BottomNavigationBarItem(
             icon: _buildIconWithBadge(
               icon: Icons.calendar_today_outlined,
-              // ✅ FIX: Use the correct boolean flag from the AppStateManager.
-              showBadge: appState.hasUnreadBookings, 
+              showBadge: appState.hasUnreadBookings,
             ),
             label: 'Bookings',
           ),
@@ -136,9 +127,6 @@ class _MainScreenState extends State<MainScreen> {
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
         type: BottomNavigationBarType.fixed,
-        // Example styling, adjust as needed
-        selectedItemColor: Theme.of(context).primaryColor,
-        unselectedItemColor: Colors.grey,
       ),
     );
   }
@@ -153,8 +141,7 @@ class _MainScreenState extends State<MainScreen> {
            BottomNavigationBarItem(
             icon: _buildIconWithBadge(
               icon: CupertinoIcons.calendar,
-              // ✅ FIX: Use the correct boolean flag from the AppStateManager.
-              showBadge: appState.hasUnreadBookings, 
+              showBadge: appState.hasUnreadBookings,
             ),
             label: 'Bookings',
           ),
@@ -171,7 +158,6 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 
-  /// ✅ UPDATED: A helper widget that builds an icon with a simple red dot.
   Widget _buildIconWithBadge({required IconData icon, required bool showBadge}) {
     return Stack(
       clipBehavior: Clip.none,
@@ -187,7 +173,6 @@ class _MainScreenState extends State<MainScreen> {
                 color: Colors.red,
                 shape: BoxShape.circle,
               ),
-              // A simple dot without a number for a cleaner look.
               constraints: const BoxConstraints(minWidth: 8, minHeight: 8),
             ),
           )
@@ -195,3 +180,4 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 }
+
