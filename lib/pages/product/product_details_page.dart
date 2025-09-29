@@ -91,6 +91,18 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
   void _selectDate(BuildContext context) async {
     final now = DateTime.now();
 
+    if (Platform.isIOS) {
+      // Use Cupertino date picker for iOS
+      await _showCupertinoDatePicker(context);
+    } else {
+      // Use Material date picker for Android
+      await _showMaterialDatePicker(context);
+    }
+  }
+
+  Future<void> _showMaterialDatePicker(BuildContext context) async {
+    final now = DateTime.now();
+
     final pickedStart = await showDatePicker(
       context: context,
       initialDate: startDate ?? now,
@@ -112,6 +124,111 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
       endDate = pickedEnd;
       _calculateTotal();
     });
+  }
+
+  Future<void> _showCupertinoDatePicker(BuildContext context) async {
+    final now = DateTime.now();
+
+    // Show start date picker
+    showCupertinoModalPopup<void>(
+      context: context,
+      builder: (BuildContext context) => Container(
+        height: 300,
+        padding: const EdgeInsets.only(top: 6.0),
+        margin: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+        ),
+        color: CupertinoColors.systemBackground.resolveFrom(context),
+        child: SafeArea(
+          top: false,
+          child: Column(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  CupertinoButton(
+                    child: const Text('Cancel'),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                  CupertinoButton(
+                    child: const Text('Done'),
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      _showCupertinoEndDatePicker(context);
+                    },
+                  ),
+                ],
+              ),
+              Expanded(
+                child: CupertinoDatePicker(
+                  mode: CupertinoDatePickerMode.date,
+                  initialDateTime: startDate ?? now,
+                  minimumDate: now,
+                  maximumDate: DateTime(now.year + 2),
+                  onDateTimeChanged: (DateTime newDate) {
+                    setState(() {
+                      startDate = newDate;
+                    });
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showCupertinoEndDatePicker(BuildContext context) {
+    final start = startDate ?? DateTime.now();
+
+    showCupertinoModalPopup<void>(
+      context: context,
+      builder: (BuildContext context) => Container(
+        height: 300,
+        padding: const EdgeInsets.only(top: 6.0),
+        margin: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+        ),
+        color: CupertinoColors.systemBackground.resolveFrom(context),
+        child: SafeArea(
+          top: false,
+          child: Column(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  CupertinoButton(
+                    child: const Text('Cancel'),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                  CupertinoButton(
+                    child: const Text('Done'),
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      _calculateTotal();
+                    },
+                  ),
+                ],
+              ),
+              Expanded(
+                child: CupertinoDatePicker(
+                  mode: CupertinoDatePickerMode.date,
+                  initialDateTime: endDate ?? start.add(const Duration(days: 1)),
+                  minimumDate: start,
+                  maximumDate: DateTime(start.year + 2),
+                  onDateTimeChanged: (DateTime newDate) {
+                    setState(() {
+                      endDate = newDate;
+                    });
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   void _clearDates() {
@@ -188,6 +305,39 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
       );
 
       _showSnackBar("Booking requested successfully!");
+
+      if (mounted) {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(
+            builder: (context) => const MainScreen(initialIndex: 3),
+          ),
+          (route) => false,
+        );
+      }
+    } catch (e) {
+      _showSnackBar("Booking failed: $e", isError: true);
+    }
+  }
+
+  void _requestBookingAtOriginalPrice() async {
+    if (product == null || startDate == null || endDate == null) {
+      _showSnackBar("Please select start and end dates", isError: true);
+      return;
+    }
+
+    final days = endDate!.difference(startDate!).inDays + 1;
+    final calculatedTotalPrice = product!.price * days;
+
+    try {
+      await _bookingService.createBooking(
+        itemId: product!.id,
+        startDate: startDate!,
+        endDate: endDate!,
+        totalPrice: calculatedTotalPrice,
+        offerId: null, // Explicitly not using any offer
+      );
+
+      _showSnackBar("Booking requested successfully at original price!");
 
       if (mounted) {
         Navigator.of(context).pushAndRemoveUntil(
@@ -317,6 +467,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
               endDate: endDate,
               offer: _offer,
               onRequestBooking: _requestBooking,
+              onBookAtOriginalPrice: _requestBookingAtOriginalPrice,
             ),
             const SizedBox(height: 24),
             ProductDescriptionWidget(description: product!.description),
