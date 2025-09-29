@@ -1,3 +1,5 @@
+import 'dart:io';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:myfirstflutterapp/models/Offer_DTO/OfferResponse_DTO.dart';
 import 'package:myfirstflutterapp/models/product_model.dart';
@@ -137,11 +139,36 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
     }
   }
 
+  void _showSnackBar(String message, {bool isError = false}) {
+    if (Platform.isIOS) {
+      // For iOS, use a dialog instead of SnackBar
+      showCupertinoDialog(
+        context: context,
+        builder: (context) => CupertinoAlertDialog(
+          title: Text(isError ? 'Error' : 'Success'),
+          content: Text(message),
+          actions: [
+            CupertinoDialogAction(
+              child: const Text('OK'),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+          ],
+        ),
+      );
+    } else {
+      // For Android, use SnackBar with ScaffoldMessenger
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: isError ? Colors.red : Colors.green,
+        ),
+      );
+    }
+  }
+
   void _requestBooking() async {
     if (product == null || startDate == null || endDate == null || totalPrice == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please select start and end dates")),
-      );
+      _showSnackBar("Please select start and end dates", isError: true);
       return;
     }
 
@@ -160,9 +187,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
         offerId: (_offer != null && _offer!.status == "Accepted") ? _offer!.id : null,
       );
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Booking requested successfully!")),
-      );
+      _showSnackBar("Booking requested successfully!");
 
       if (mounted) {
         Navigator.of(context).pushAndRemoveUntil(
@@ -173,8 +198,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
         );
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Booking failed: $e")));
+      _showSnackBar("Booking failed: $e", isError: true);
     }
   }
 
@@ -185,6 +209,10 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
 
   @override
   Widget build(BuildContext context) {
+    return Platform.isIOS ? _buildCupertinoPage() : _buildMaterialPage();
+  }
+
+  Widget _buildMaterialPage() {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
@@ -206,6 +234,34 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
         ],
       ),
       body: SafeArea(
+        child: isLoading
+            ? const ProductDetailsLoadingShimmer()
+            : error != null
+                ? Center(child: Text("Error: $error"))
+                : product == null
+                    ? const Center(child: Text("Product not found"))
+                    : _buildProductDetailsContent(),
+      ),
+    );
+  }
+
+  Widget _buildCupertinoPage() {
+    return CupertinoPageScaffold(
+      navigationBar: CupertinoNavigationBar(
+        middle: Text(product?.name ?? ""),
+        leading: CupertinoNavigationBarBackButton(
+          onPressed: () => Navigator.pop(context),
+          color: CupertinoColors.label,
+        ),
+        trailing: CupertinoButton(
+          padding: EdgeInsets.zero,
+          onPressed: () {
+            // TODO: implement share
+          },
+          child: const Icon(CupertinoIcons.share, size: 24),
+        ),
+      ),
+      child: SafeArea(
         child: isLoading
             ? const ProductDetailsLoadingShimmer()
             : error != null
