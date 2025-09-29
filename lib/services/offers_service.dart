@@ -20,7 +20,7 @@ class OfferService {
   /// Creates a new offer for an item.
   Future<OfferResponseDTO> createOffer(int itemId, double offeredPrice) async {
     final headers = await _getAuthHeaders();
-    final url = Uri.parse('$_baseUrl/Offer/create-offer');
+    final url = Uri.parse('$_baseUrl/Offer');
     final body = jsonEncode({
       'itemId': itemId,
       'offeredPrice': offeredPrice,

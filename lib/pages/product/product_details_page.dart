@@ -127,7 +127,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
     if (startDate != null && endDate != null && product != null) {
       final days = endDate!.difference(startDate!).inDays + 1;
 
-      if (_offer != null) {
+      if (_offer != null && _offer!.status == "Accepted") {
         totalPrice = _offer!.offeredPrice * days;
       } else {
         // ignore: unnecessary_type_check
@@ -156,8 +156,9 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
 
     // ✅ If offer exists → offeredPrice × days
     // ✅ Else → already calculated totalPrice
-    final calculatedTotalPrice =
-        _offer != null ? _offer!.offeredPrice * days : totalPrice!;
+    final calculatedTotalPrice = (_offer != null && _offer!.status == "Accepted") 
+        ? _offer!.offeredPrice * days
+        : totalPrice!;
 
     try {
       await _bookingService.createBooking(
@@ -165,17 +166,21 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
         startDate: startDate!,
         endDate: endDate!,
         totalPrice: calculatedTotalPrice,
-        offerId: _offer?.id, // null if no offer
+        offerId: (_offer != null && _offer!.status == "Accepted") ? _offer!.id : null, // null if no offer
       );
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Booking requested successfully!")),
       );
 
-      if (mounted)  Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (context) => const MainScreen(initialIndex: 3)),
-        (route) => false,
-      );
+      if (mounted) {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(
+            builder: (context) => const MainScreen(initialIndex: 3),
+          ),
+          (route) => false,
+        );
+      }
     } catch (e) {
       ScaffoldMessenger.of(
         context,
@@ -188,6 +193,109 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
     if (value is DateTime) return value;
     if (value is String) return DateTime.tryParse(value);
     return null;
+  }
+
+  Widget _buildBookingButton() {
+    if (_offer != null) {
+      switch (_offer!.status) {
+        case "Accepted":
+          return SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: (product!.availability == true &&
+                      endDate != null &&
+                      currentUserId != product!.ownerId.toString())
+                  ? _requestBooking
+                  : null,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: Text("Book at Offered Price ₹${_offer!.offeredPrice}/day"),
+            ),
+          );
+        case "Pending":
+          return SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: null,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.orange,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: const Text("Offer Pending - Waiting for Owner Response"),
+            ),
+          );
+        case "Rejected":
+          return SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: (product!.availability == true &&
+                      endDate != null &&
+                      currentUserId != product!.ownerId.toString())
+                  ? _requestBooking
+                  : null,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.indigo,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: const Text("Request Rental at Original Price"),
+            ),
+          );
+        default:
+          return SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: (product!.availability == true &&
+                      endDate != null &&
+                      currentUserId != product!.ownerId.toString())
+                  ? _requestBooking
+                  : null,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.indigo,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: const Text("Request Rental"),
+            ),
+          );
+      }
+    } else {
+      return SizedBox(
+        width: double.infinity,
+        child: ElevatedButton(
+          onPressed: (product!.availability == true &&
+                  endDate != null &&
+                  currentUserId != product!.ownerId.toString())
+              ? _requestBooking
+              : null,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.indigo,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+          child: const Text("Request Rental"),
+        ),
+      );
+    }
   }
 
   @override
@@ -477,7 +585,8 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                                         child: CircularProgressIndicator(),
                                       ),
                                     ),
-                                    errorWidget: (context, url, error) => const Center(
+                                    errorWidget: (context, url, error) =>
+                                        const Center(
                                       child: Icon(Icons.broken_image, size: 56),
                                     ),
                                   ),
@@ -553,7 +662,6 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                                       fontSize: 18,
                                       fontWeight: FontWeight.bold,
                                       color: theme.appBarTheme.foregroundColor,
-                                      // fontFamily:
                                     ),
                                   ),
                                   Padding(padding: const EdgeInsets.all(16)),
@@ -580,25 +688,24 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                                 ),
                                 title: Text(product!.ownerName),
                                 subtitle: Text("Posted on $createdAtLabel"),
-                                trailing:
-                                    (currentUserId != null &&
-                                            product!.ownerId.toString() != currentUserId)
-                                        ? OutlinedButton.icon(
-                                            onPressed: () {
-                                              Navigator.of(context).push(
-                                                MaterialPageRoute(
-                                                  builder: (context) => CreateOfferPage(
-                                                    productName: product!.name,
-                                                    originalPrice: product!.price,
-                                                    productId: product!.id,
-                                                  ),
-                                                ),
-                                              );
-                                            },
-                                            icon: const Icon(Icons.currency_rupee),
-                                            label: const Text("Make an offer"),
-                                          )
-                                        : null,
+                                trailing: (currentUserId != null &&
+                                        product!.ownerId.toString() != currentUserId)
+                                    ? OutlinedButton.icon(
+                                        onPressed: () {
+                                          Navigator.of(context).push(
+                                            MaterialPageRoute(
+                                              builder: (context) => CreateOfferPage(
+                                                productName: product!.name,
+                                                originalPrice: product!.price,
+                                                productId: product!.id,
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                        icon: const Icon(Icons.currency_rupee),
+                                        label: const Text("Make an offer"),
+                                      )
+                                    : null,
                                 onTap: () {
                                   // TODO: navigate to owner products page if needed
                                 },
@@ -663,31 +770,8 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                                   ),
                                 ),
 
-                              // Request button
-                              SizedBox(
-                                width: double.infinity,
-                                child: ElevatedButton(
-                                  onPressed:
-                                      (product!.availability == true &&
-                                              endDate != null &&
-                                              currentUserId != product!.ownerId.toString())
-                                          ? _requestBooking
-                                          : null,
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.indigo,
-                                    foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(vertical: 16),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                  ),
-                                  child: Text(
-                                    _offer != null
-                                        ? "Book at Offered Price ₹${_offer!.offeredPrice}/day"
-                                        : "Request Rental",
-                                  ),
-                                ),
-                              ),
+                              // ✅ USING THE NEW BOOKING BUTTON METHOD
+                              _buildBookingButton(),
 
                               const SizedBox(height: 24),
 
@@ -696,7 +780,9 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                                 padding: const EdgeInsets.all(16),
                                 decoration: BoxDecoration(
                                   color: theme.scaffoldBackgroundColor,
-                                  borderRadius: const BorderRadius.all(Radius.circular(12)),
+                                  borderRadius: const BorderRadius.all(
+                                    Radius.circular(12),
+                                  ),
                                   boxShadow: [
                                     BoxShadow(
                                       color: Colors.black12,
@@ -734,7 +820,9 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                               if (similarProducts.isNotEmpty) ...[
                                 Text(
                                   "Similar Products",
-                                  style: Theme.of(context).textTheme.titleMedium
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .titleMedium
                                       ?.copyWith(
                                         fontSize: 18,
                                         fontWeight: FontWeight.bold,
@@ -755,8 +843,8 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                                           Navigator.push(
                                             context,
                                             MaterialPageRoute(
-                                              builder: (_) =>
-                                                  ProductDetailsPage(productId: sim.id),
+                                              builder: (_) => ProductDetailsPage(
+                                                  productId: sim.id),
                                             ),
                                           );
                                         },
@@ -764,23 +852,25 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                                           width: 160,
                                           padding: const EdgeInsets.all(8),
                                           decoration: BoxDecoration(
-                                            color: Theme.of(
-                                              context,
-                                            ).cardColor, // ✅ adapts to dark mode
+                                            color: Theme.of(context)
+                                                .cardColor, // ✅ adapts to dark mode
                                             borderRadius: BorderRadius.circular(12),
                                             boxShadow: [
                                               BoxShadow(
-                                                color: Colors.black.withOpacity(0.08),
+                                                color:
+                                                    Colors.black.withOpacity(0.08),
                                                 blurRadius: 6,
                                                 offset: const Offset(0, 3),
                                               ),
                                             ],
                                           ),
                                           child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
                                             children: [
                                               ClipRRect(
-                                                borderRadius: BorderRadius.circular(8),
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
                                                 child: AspectRatio(
                                                   aspectRatio: 16 / 9,
                                                   child: CachedNetworkImage(
@@ -789,22 +879,23 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                                                     fit: BoxFit.cover,
                                                     placeholder: (context, url) =>
                                                         Container(
-                                                          color: Theme.of(
-                                                            context,
-                                                          ).colorScheme.surfaceVariant,
-                                                          child: const Center(
-                                                            child:
-                                                                CircularProgressIndicator(),
-                                                          ),
-                                                        ),
-                                                    errorWidget: (context, url, error) =>
-                                                        Icon(
-                                                          Icons.error,
-                                                          size: 40,
-                                                          color: Theme.of(
-                                                            context,
-                                                          ).iconTheme.color,
-                                                        ),
+                                                      color: Theme.of(context)
+                                                          .colorScheme
+                                                          .surfaceVariant,
+                                                      child: const Center(
+                                                        child:
+                                                            CircularProgressIndicator(),
+                                                      ),
+                                                    ),
+                                                    errorWidget:
+                                                        (context, url, error) =>
+                                                            Icon(
+                                                      Icons.error,
+                                                      size: 40,
+                                                      color: Theme.of(context)
+                                                          .iconTheme
+                                                          .color,
+                                                    ),
                                                   ),
                                                 ),
                                               ),
@@ -836,45 +927,46 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                                               Row(
                                                 children: [
                                                   Icon(
-                                                    Icons
-                                                        .location_on_outlined, // 📍 location icon
+                                                    Icons.location_on_outlined,
                                                     size: 14,
-                                                    color: Theme.of(
-                                                      context,
-                                                    ).iconTheme.color,
+                                                    color: Theme.of(context)
+                                                        .iconTheme
+                                                        .color,
                                                   ),
-                                                  const SizedBox(width: 4), // spacing
+                                                  const SizedBox(width: 4),
                                                   Text(
                                                     sim.locationName,
-                                                    style: Theme.of(
-                                                      context,
-                                                    ).textTheme.bodySmall,
+                                                    style: Theme.of(context)
+                                                        .textTheme
+                                                        .bodySmall,
                                                   ),
                                                 ],
                                               ),
                                               Row(
                                                 children: [
                                                   Container(
-                                                    padding: const EdgeInsets.symmetric(
+                                                    padding:
+                                                        const EdgeInsets.symmetric(
                                                       horizontal: 10,
                                                       vertical: 6,
                                                     ),
                                                     decoration: BoxDecoration(
-                                                      color: (sim.availability == true)
-                                                          ? Colors.green[100]
-                                                          : Colors.red[100],
-                                                      borderRadius: BorderRadius.circular(
-                                                        16,
-                                                      ),
+                                                      color:
+                                                          (sim.availability == true)
+                                                              ? Colors.green[100]
+                                                              : Colors.red[100],
+                                                      borderRadius:
+                                                          BorderRadius.circular(16),
                                                     ),
                                                     child: Text(
                                                       (sim.availability == true)
                                                           ? 'Available for Rent'
                                                           : 'Currently Unavailable',
                                                       style: TextStyle(
-                                                        color: (sim.availability == true)
-                                                            ? Colors.green[800]
-                                                            : Colors.red[800],
+                                                        color:
+                                                            (sim.availability == true)
+                                                                ? Colors.green[800]
+                                                                : Colors.red[800],
                                                         fontWeight: FontWeight.w600,
                                                         fontSize: 12,
                                                       ),
