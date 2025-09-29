@@ -1,16 +1,21 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:myfirstflutterapp/models/Offer_DTO/OfferResponse_DTO.dart';
+import 'package:myfirstflutterapp/models/product_model.dart';
 import 'package:myfirstflutterapp/pages/createofferpage.dart';
 import 'package:myfirstflutterapp/pages/main_screen.dart';
+import 'package:myfirstflutterapp/services/product_service.dart';
+import 'package:myfirstflutterapp/services/booking_service.dart';
 import 'package:myfirstflutterapp/services/auth_service.dart';
 import 'package:myfirstflutterapp/services/offers_service.dart';
-import '../../environment/env.dart';
-import '../../models/product_model.dart';
-import '../../services/product_service.dart';
-import '../../services/booking_service.dart';
-import 'package:shimmer/shimmer.dart';
+import 'package:myfirstflutterapp/widgets/product_details/product_details_loading_shimmer.dart';
+import 'package:myfirstflutterapp/widgets/product_details/product_image_widget.dart';
+import 'package:myfirstflutterapp/widgets/product_details/product_basic_info_widget.dart';
+import 'package:myfirstflutterapp/widgets/product_details/owner_info_widget.dart';
+import 'package:myfirstflutterapp/widgets/product_details/date_selection_widget.dart';
+import 'package:myfirstflutterapp/widgets/product_details/total_price_widget.dart';
+import 'package:myfirstflutterapp/widgets/product_details/booking_button_widget.dart';
+import 'package:myfirstflutterapp/widgets/product_details/product_description_widget.dart';
+import 'package:myfirstflutterapp/widgets/product_details/similar_products_widget.dart';
 
 class ProductDetailsPage extends StatefulWidget {
   final int productId;
@@ -45,7 +50,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
   }
 
   Future<void> _loadCurrentUser() async {
-    final id = await AuthService().getUserId(); // async decode from token
+    final id = await AuthService().getUserId();
     setState(() {
       currentUserId = id;
     });
@@ -65,10 +70,8 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
   Future<void> _fetchProduct() async {
     try {
       setState(() => isLoading = true);
-      final fetchedProduct = await _productService.getProductById(
-        widget.productId,
-      );
-      final fetchedSimilar = await _product_service_fallback(widget.productId);
+      final fetchedProduct = await _productService.getProductById(widget.productId);
+      final fetchedSimilar = await _productService.getSimilarProducts(widget.productId);
 
       setState(() {
         product = fetchedProduct;
@@ -81,12 +84,6 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
         isLoading = false;
       });
     }
-  }
-
-  // Note: if your ProductService method is named getSimilarProducts, use that.
-  // I kept this helper to mirror your earlier call; replace as needed.
-  Future<List<Product>> _product_service_fallback(int id) async {
-    return await _productService.getSimilarProducts(id);
   }
 
   void _selectDate(BuildContext context) async {
@@ -130,7 +127,6 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
       if (_offer != null && _offer!.status == "Accepted") {
         totalPrice = _offer!.offeredPrice * days;
       } else {
-        // ignore: unnecessary_type_check
         final pricePerDay = (product!.price is num)
             ? (product!.price as num).toDouble()
             : 0.0;
@@ -142,10 +138,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
   }
 
   void _requestBooking() async {
-    if (product == null ||
-        startDate == null ||
-        endDate == null ||
-        totalPrice == null) {
+    if (product == null || startDate == null || endDate == null || totalPrice == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Please select start and end dates")),
       );
@@ -154,8 +147,6 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
 
     final days = endDate!.difference(startDate!).inDays + 1;
 
-    // ✅ If offer exists → offeredPrice × days
-    // ✅ Else → already calculated totalPrice
     final calculatedTotalPrice = (_offer != null && _offer!.status == "Accepted") 
         ? _offer!.offeredPrice * days
         : totalPrice!;
@@ -166,7 +157,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
         startDate: startDate!,
         endDate: endDate!,
         totalPrice: calculatedTotalPrice,
-        offerId: (_offer != null && _offer!.status == "Accepted") ? _offer!.id : null, // null if no offer
+        offerId: (_offer != null && _offer!.status == "Accepted") ? _offer!.id : null,
       );
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -182,810 +173,102 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
         );
       }
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("Booking failed: $e")));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Booking failed: $e")));
     }
   }
 
-  DateTime? _asDateTime(dynamic value) {
-    if (value == null) return null;
-    if (value is DateTime) return value;
-    if (value is String) return DateTime.tryParse(value);
-    return null;
-  }
-
-  Widget _buildBookingButton() {
-    if (_offer != null) {
-      switch (_offer!.status) {
-        case "Accepted":
-          return SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: (product!.availability == true &&
-                      endDate != null &&
-                      currentUserId != product!.ownerId.toString())
-                  ? _requestBooking
-                  : null,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: Text("Book at Offered Price ₹${_offer!.offeredPrice}/day"),
-            ),
-          );
-        case "Pending":
-          return SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: null,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.orange,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: const Text("Offer Pending - Waiting for Owner Response"),
-            ),
-          );
-        case "Rejected":
-          return SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: (product!.availability == true &&
-                      endDate != null &&
-                      currentUserId != product!.ownerId.toString())
-                  ? _requestBooking
-                  : null,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.indigo,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: const Text("Request Rental at Original Price"),
-            ),
-          );
-        default:
-          return SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: (product!.availability == true &&
-                      endDate != null &&
-                      currentUserId != product!.ownerId.toString())
-                  ? _requestBooking
-                  : null,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.indigo,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: const Text("Request Rental"),
-            ),
-          );
-      }
-    } else {
-      return SizedBox(
-        width: double.infinity,
-        child: ElevatedButton(
-          onPressed: (product!.availability == true &&
-                  endDate != null &&
-                  currentUserId != product!.ownerId.toString())
-              ? _requestBooking
-              : null,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.indigo,
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-          child: const Text("Request Rental"),
-        ),
-      );
-    }
+  void _refreshData() {
+    _fetchProduct();
+    _fetchOffer();
   }
 
   @override
   Widget build(BuildContext context) {
-    final currency = NumberFormat.currency(locale: 'en_IN', symbol: '₹');
-    final dateFmt = DateFormat.yMMMd();
-    final theme = Theme.of(context);
-
-    final createdAtDt = _asDateTime(product?.createdAt);
-    final createdAtLabel = createdAtDt != null
-        ? dateFmt.format(createdAtDt)
-        : (product?.createdAt.toString() ?? '');
-
     return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        title: Text(
-          product?.name ?? "",
-          style: TextStyle(color: theme.appBarTheme.foregroundColor),
-        ),
-        backgroundColor: theme.appBarTheme.backgroundColor,
-        foregroundColor: theme.appBarTheme.foregroundColor,
+        title: Text(product?.name ?? ""),
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
+        foregroundColor: Theme.of(context).appBarTheme.foregroundColor,
         elevation: 1,
         leading: IconButton(
-          icon: Icon(
-            Icons.arrow_back,
-            color: theme.appBarTheme.foregroundColor,
-          ),
+          icon: Icon(Icons.arrow_back, color: Theme.of(context).appBarTheme.foregroundColor),
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
           IconButton(
-            icon: Icon(Icons.share, color: theme.appBarTheme.foregroundColor),
+            icon: Icon(Icons.share, color: Theme.of(context).appBarTheme.foregroundColor),
             onPressed: () {
               // TODO: implement share
             },
           ),
         ],
       ),
-
-      // ✅ SafeArea added here (only change)
       body: SafeArea(
         child: isLoading
-            ? Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: SingleChildScrollView(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Hero image skeleton
-                      Shimmer.fromColors(
-                        baseColor: Colors.grey[300]!,
-                        highlightColor: Colors.grey[100]!,
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(16),
-                          child: Container(
-                            height: 200,
-                            width: double.infinity,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Title + Price skeleton
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Shimmer.fromColors(
-                              baseColor: Colors.grey[300]!,
-                              highlightColor: Colors.grey[100]!,
-                              child: Container(height: 20, color: Colors.white),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Shimmer.fromColors(
-                            baseColor: Colors.grey[300]!,
-                            highlightColor: Colors.grey[100]!,
-                            child: Container(
-                              height: 20,
-                              width: 90,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-
-                      // Availability chip skeleton
-                      Shimmer.fromColors(
-                        baseColor: Colors.grey[300]!,
-                        highlightColor: Colors.grey[100]!,
-                        child: Container(
-                          height: 24,
-                          width: 160,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-
-                      // Owner block skeleton
-                      Row(
-                        children: [
-                          Shimmer.fromColors(
-                            baseColor: Colors.grey[300]!,
-                            highlightColor: Colors.grey[100]!,
-                            child: const CircleAvatar(
-                              radius: 24,
-                              backgroundColor: Colors.white,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Shimmer.fromColors(
-                                  baseColor: Colors.grey[300]!,
-                                  highlightColor: Colors.grey[100]!,
-                                  child: Container(
-                                    height: 14,
-                                    width: double.infinity,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                                const SizedBox(height: 6),
-                                Shimmer.fromColors(
-                                  baseColor: Colors.grey[300]!,
-                                  highlightColor: Colors.grey[100]!,
-                                  child: Container(
-                                    height: 12,
-                                    width: 120,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Shimmer.fromColors(
-                            baseColor: Colors.grey[300]!,
-                            highlightColor: Colors.grey[100]!,
-                            child: Container(
-                              height: 36,
-                              width: 90,
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      const Divider(height: 24),
-
-                      // Date selection skeleton
-                      Shimmer.fromColors(
-                        baseColor: Colors.grey[300]!,
-                        highlightColor: Colors.grey[100]!,
-                        child: Container(
-                          height: 20,
-                          width: 140,
-                          color: Colors.white,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Shimmer.fromColors(
-                        baseColor: Colors.grey[300]!,
-                        highlightColor: Colors.grey[100]!,
-                        child: Align(
-                          alignment: Alignment.centerRight,
-                          child: Container(
-                            height: 40,
-                            width: 120,
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-
-                      // Total price box skeleton
-                      Shimmer.fromColors(
-                        baseColor: Colors.grey[300]!,
-                        highlightColor: Colors.grey[100]!,
-                        child: Container(
-                          height: 80,
-                          width: double.infinity,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                      ),
-
-                      const SizedBox(height: 12),
-
-                      // Request button skeleton
-                      Shimmer.fromColors(
-                        baseColor: Colors.grey[300]!,
-                        highlightColor: Colors.grey[100]!,
-                        child: Container(
-                          height: 52,
-                          width: double.infinity,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                      ),
-
-                      const SizedBox(height: 24),
-
-                      // Description box skeleton
-                      Shimmer.fromColors(
-                        baseColor: Colors.grey[300]!,
-                        highlightColor: Colors.grey[100]!,
-                        child: Container(
-                          height: 140,
-                          width: double.infinity,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                      ),
-
-                      const SizedBox(height: 24),
-
-                      // Similar products skeleton row
-                      Shimmer.fromColors(
-                        baseColor: Colors.grey[300]!,
-                        highlightColor: Colors.grey[100]!,
-                        child: SizedBox(
-                          height: 220,
-                          child: ListView.separated(
-                            scrollDirection: Axis.horizontal,
-                            itemCount: 4,
-                            separatorBuilder: (_, __) =>
-                                const SizedBox(width: 12),
-                            itemBuilder: (context, index) {
-                              return Container(
-                                width: 160,
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              )
-            // --------------------- END SHIMMER BRANCH ---------------------
+            ? const ProductDetailsLoadingShimmer()
             : error != null
                 ? Center(child: Text("Error: $error"))
                 : product == null
                     ? const Center(child: Text("Product not found"))
-                    : SingleChildScrollView(
-                        child: Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // Hero image (cached + constrained)
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(16),
-                                child: AspectRatio(
-                                  aspectRatio: 16 / 9,
-                                  child: CachedNetworkImage(
-                                    imageUrl:
-                                        "${AppConfig.imageBaseUrl}${product!.image}",
-                                    fit: BoxFit.cover,
-                                    placeholder: (context, url) => Container(
-                                      color: Colors.grey[300],
-                                      child: const Center(
-                                        child: CircularProgressIndicator(),
-                                      ),
-                                    ),
-                                    errorWidget: (context, url, error) =>
-                                        const Center(
-                                      child: Icon(Icons.broken_image, size: 56),
-                                    ),
-                                  ),
-                                ),
-                              ),
+                    : _buildProductDetailsContent(),
+      ),
+    );
+  }
 
-                              const SizedBox(height: 16),
-
-                              // Price + Title
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      product!.name,
-                                      style: const TextStyle(
-                                        fontSize: 22,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Text(
-                                    "${currency.format(product!.price)}/day",
-                                    style: TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.w700,
-                                      color: Colors.green[600],
-                                    ),
-                                  ),
-                                ],
-                              ),
-
-                              const SizedBox(height: 8),
-
-                              // Availability chip
-                              Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 10,
-                                      vertical: 6,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: (product!.availability == true)
-                                          ? Colors.green[100]
-                                          : Colors.red[100],
-                                      borderRadius: BorderRadius.circular(16),
-                                    ),
-                                    child: Text(
-                                      (product!.availability == true)
-                                          ? 'Available for Rent'
-                                          : 'Currently Unavailable',
-                                      style: TextStyle(
-                                        color: (product!.availability == true)
-                                            ? Colors.green[800]
-                                            : Colors.red[800],
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              Row(
-                                children: [
-                                  Icon(Icons.location_on_outlined),
-                                  Text(
-                                    product!.locationName,
-                                    style: TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                      color: theme.appBarTheme.foregroundColor,
-                                    ),
-                                  ),
-                                  Padding(padding: const EdgeInsets.all(16)),
-                                ],
-                              ),
-
-                              const SizedBox(height: 12),
-
-                              // Owner block
-                              ListTile(
-                                contentPadding: EdgeInsets.zero,
-                                leading: CircleAvatar(
-                                  radius: 24,
-                                  backgroundImage:
-                                      (product!.ownerProfileImage != null &&
-                                              product!.ownerProfileImage!.isNotEmpty)
-                                          ? CachedNetworkImageProvider(
-                                              "${AppConfig.imageBaseUrl}${product!.ownerProfileImage!}",
-                                            )
-                                          : const AssetImage(
-                                                  "assets/icons/constant/empty-user-profilepic.webp",
-                                                )
-                                              as ImageProvider,
-                                ),
-                                title: Text(product!.ownerName),
-                                subtitle: Text("Posted on $createdAtLabel"),
-                                trailing: (currentUserId != null &&
-                                        product!.ownerId.toString() != currentUserId)
-                                    ? OutlinedButton.icon(
-                                        onPressed: () {
-                                          Navigator.of(context).push(
-                                            MaterialPageRoute(
-                                              builder: (context) => CreateOfferPage(
-                                                productName: product!.name,
-                                                originalPrice: product!.price,
-                                                productId: product!.id,
-                                              ),
-                                            ),
-                                          );
-                                        },
-                                        icon: const Icon(Icons.currency_rupee),
-                                        label: const Text("Make an offer"),
-                                      )
-                                    : null,
-                                onTap: () {
-                                  // TODO: navigate to owner products page if needed
-                                },
-                              ),
-
-                              const Divider(height: 24),
-
-                              // Date selection
-                              ListTile(
-                                contentPadding: EdgeInsets.zero,
-                                title: const Text("Rental Dates"),
-                                subtitle: Text(
-                                  (startDate != null && endDate != null)
-                                      ? "${dateFmt.format(startDate!)} → ${dateFmt.format(endDate!)}"
-                                      : "Select rental start & end date",
-                                ),
-                                trailing: ElevatedButton(
-                                  onPressed: () => _selectDate(context),
-                                  child: const Text("Pick Dates"),
-                                ),
-                              ),
-
-                              if (startDate != null || endDate != null)
-                                Align(
-                                  alignment: Alignment.centerRight,
-                                  child: TextButton(
-                                    onPressed: _clearDates,
-                                    child: const Text("Clear selection"),
-                                  ),
-                                ),
-
-                              if (totalPrice != null)
-                                Container(
-                                  margin: const EdgeInsets.symmetric(vertical: 12),
-                                  padding: const EdgeInsets.all(16),
-                                  decoration: BoxDecoration(
-                                    color: Colors.blue[50],
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(color: Colors.blue[100]!),
-                                  ),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      const Text(
-                                        "Total Estimated Price",
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w600,
-                                          color: Colors.blue,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 6),
-                                      Text(
-                                        currency.format(totalPrice),
-                                        style: const TextStyle(
-                                          fontSize: 22,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.blue,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-
-                              // ✅ USING THE NEW BOOKING BUTTON METHOD
-                              _buildBookingButton(),
-
-                              const SizedBox(height: 24),
-
-                              // Description
-                              Container(
-                                padding: const EdgeInsets.all(16),
-                                decoration: BoxDecoration(
-                                  color: theme.scaffoldBackgroundColor,
-                                  borderRadius: const BorderRadius.all(
-                                    Radius.circular(12),
-                                  ),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black12,
-                                      blurRadius: 6,
-                                      offset: const Offset(0, 3),
-                                    ),
-                                  ],
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      "Description",
-                                      style: TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.bold,
-                                        color: theme.appBarTheme.foregroundColor,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      product!.description,
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        color: theme.appBarTheme.foregroundColor,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-
-                              const SizedBox(height: 24),
-
-                              // Similar products
-                              if (similarProducts.isNotEmpty) ...[
-                                Text(
-                                  "Similar Products",
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .titleMedium
-                                      ?.copyWith(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                ),
-                                const SizedBox(height: 12),
-                                SizedBox(
-                                  height: 220,
-                                  child: ListView.separated(
-                                    scrollDirection: Axis.horizontal,
-                                    itemCount: similarProducts.length,
-                                    separatorBuilder: (_, __) =>
-                                        const SizedBox(width: 12),
-                                    itemBuilder: (context, index) {
-                                      final sim = similarProducts[index];
-                                      return GestureDetector(
-                                        onTap: () {
-                                          Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (_) => ProductDetailsPage(
-                                                  productId: sim.id),
-                                            ),
-                                          );
-                                        },
-                                        child: Container(
-                                          width: 160,
-                                          padding: const EdgeInsets.all(8),
-                                          decoration: BoxDecoration(
-                                            color: Theme.of(context)
-                                                .cardColor, // ✅ adapts to dark mode
-                                            borderRadius: BorderRadius.circular(12),
-                                            boxShadow: [
-                                              BoxShadow(
-                                                color:
-                                                    Colors.black.withOpacity(0.08),
-                                                blurRadius: 6,
-                                                offset: const Offset(0, 3),
-                                              ),
-                                            ],
-                                          ),
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              ClipRRect(
-                                                borderRadius:
-                                                    BorderRadius.circular(8),
-                                                child: AspectRatio(
-                                                  aspectRatio: 16 / 9,
-                                                  child: CachedNetworkImage(
-                                                    imageUrl:
-                                                        '${AppConfig.imageBaseUrl}${sim.image}',
-                                                    fit: BoxFit.cover,
-                                                    placeholder: (context, url) =>
-                                                        Container(
-                                                      color: Theme.of(context)
-                                                          .colorScheme
-                                                          .surfaceVariant,
-                                                      child: const Center(
-                                                        child:
-                                                            CircularProgressIndicator(),
-                                                      ),
-                                                    ),
-                                                    errorWidget:
-                                                        (context, url, error) =>
-                                                            Icon(
-                                                      Icons.error,
-                                                      size: 40,
-                                                      color: Theme.of(context)
-                                                          .iconTheme
-                                                          .color,
-                                                    ),
-                                                  ),
-                                                ),
-                                              ),
-                                              const SizedBox(height: 8),
-                                              Text(
-                                                sim.name,
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
-                                                style: Theme.of(context)
-                                                    .textTheme
-                                                    .bodyMedium
-                                                    ?.copyWith(
-                                                      fontWeight: FontWeight.w600,
-                                                    ),
-                                              ),
-                                              Text(
-                                                "${currency.format(sim.price)}/day",
-                                                style: Theme.of(context)
-                                                    .textTheme
-                                                    .bodyMedium
-                                                    ?.copyWith(
-                                                      fontSize: 14,
-                                                      fontWeight: FontWeight.bold,
-                                                      color: Colors.green[600],
-                                                    ),
-                                              ),
-
-                                              const SizedBox(height: 8),
-                                              Row(
-                                                children: [
-                                                  Icon(
-                                                    Icons.location_on_outlined,
-                                                    size: 14,
-                                                    color: Theme.of(context)
-                                                        .iconTheme
-                                                        .color,
-                                                  ),
-                                                  const SizedBox(width: 4),
-                                                  Text(
-                                                    sim.locationName,
-                                                    style: Theme.of(context)
-                                                        .textTheme
-                                                        .bodySmall,
-                                                  ),
-                                                ],
-                                              ),
-                                              Row(
-                                                children: [
-                                                  Container(
-                                                    padding:
-                                                        const EdgeInsets.symmetric(
-                                                      horizontal: 10,
-                                                      vertical: 6,
-                                                    ),
-                                                    decoration: BoxDecoration(
-                                                      color:
-                                                          (sim.availability == true)
-                                                              ? Colors.green[100]
-                                                              : Colors.red[100],
-                                                      borderRadius:
-                                                          BorderRadius.circular(16),
-                                                    ),
-                                                    child: Text(
-                                                      (sim.availability == true)
-                                                          ? 'Available for Rent'
-                                                          : 'Currently Unavailable',
-                                                      style: TextStyle(
-                                                        color:
-                                                            (sim.availability == true)
-                                                                ? Colors.green[800]
-                                                                : Colors.red[800],
-                                                        fontWeight: FontWeight.w600,
-                                                        fontSize: 12,
-                                                      ),
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      );
-                                    },
-                                  ),
-                                ),
-                              ],
-                            ],
-                          ),
-                        ),
-                      ),
+  Widget _buildProductDetailsContent() {
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ProductImageWidget(imageUrl: product!.image),
+            const SizedBox(height: 16),
+            ProductBasicInfoWidget(product: product!),
+            const SizedBox(height: 12),
+            OwnerInfoWidget(
+              product: product!,
+              currentUserId: currentUserId,
+              onMakeOffer: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => CreateOfferPage(
+                      productName: product!.name,
+                      originalPrice: product!.price,
+                      productId: product!.id,
+                    ),
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 24),
+            DateSelectionWidget(
+              startDate: startDate,
+              endDate: endDate,
+              onSelectDates: () => _selectDate(context),
+              onClearDates: _clearDates,
+            ),
+            if (totalPrice != null) ...[
+              const SizedBox(height: 12),
+              TotalPriceWidget(totalPrice: totalPrice!),
+            ],
+            const SizedBox(height: 16),
+            BookingButtonWidget(
+              product: product!,
+              currentUserId: currentUserId,
+              endDate: endDate,
+              offer: _offer,
+              onRequestBooking: _requestBooking,
+            ),
+            const SizedBox(height: 24),
+            ProductDescriptionWidget(description: product!.description),
+            const SizedBox(height: 24),
+            if (similarProducts.isNotEmpty)
+              SimilarProductsWidget(similarProducts: similarProducts),
+          ],
+        ),
       ),
     );
   }
