@@ -120,7 +120,7 @@ class PaymentService {
 
    Future<int> getUnreadPaymentCount() async {
     final headers = await _getAuthHeaders();
-    final url = Uri.parse('_apiBaseUrl/unread-count');
+    final url = Uri.parse('$_apiBaseUrl/unread-count');
     final response = await http.get(url, headers: headers);
     if (response.statusCode == 200) {
       return json.decode(response.body)['count'] ?? 0;
@@ -130,7 +130,7 @@ class PaymentService {
 
   Future<void> markPaymentsAsSeen() async {
     final headers = await _getAuthHeaders();
-    final url = Uri.parse('_apiBaseUrl/mark-as-seen');
+    final url = Uri.parse('$_apiBaseUrl/mark-as-seen');
     await http.post(url, headers: headers);
   }
 

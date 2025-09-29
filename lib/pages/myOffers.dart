@@ -3,19 +3,19 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:myfirstflutterapp/models/Offer_DTO/OfferResponse_DTO.dart';
 import 'package:myfirstflutterapp/services/offers_service.dart';
-import 'package:myfirstflutterapp/widgets/Offer_card.dart';
+import 'package:myfirstflutterapp/widgets/offer_card.dart';
 
-class OffersPage extends StatefulWidget {
-  const OffersPage({super.key});
+class MyOffersPage extends StatefulWidget {
+  const MyOffersPage({super.key});
 
   @override
-  State<OffersPage> createState() => _OffersPageState();
+  State<MyOffersPage> createState() => _MyOffersPageState();
 }
 
-class _OffersPageState extends State<OffersPage> {
+class _MyOffersPageState extends State<MyOffersPage> {
   final OfferService _offerService = OfferService();
   Future<Map<String, List<OfferResponseDTO>>>? _offersFuture;
-  int _selectedSegment = 0; // For Cupertino
+  int _selectedSegment = 0;
 
   @override
   void initState() {
@@ -49,8 +49,6 @@ class _OffersPageState extends State<OffersPage> {
     return Platform.isIOS ? _buildCupertinoPage() : _buildMaterialPage();
   }
 
-  // --- Platform-Specific Scaffolding ---
-
   Widget _buildMaterialPage() {
     return DefaultTabController(
       length: 2,
@@ -64,42 +62,24 @@ class _OffersPageState extends State<OffersPage> {
             ],
           ),
         ),
-        body: SafeArea( // ✅ Added SafeArea for Material
-          child: _buildBody(),
-        ),
+        body: _buildBody(),
       ),
     );
   }
 
   Widget _buildCupertinoPage() {
     return CupertinoPageScaffold(
-      navigationBar: const CupertinoNavigationBar(
-        middle: Text('My Offers'),
-      ),
-      child: SafeArea( // ✅ Already had SafeArea here
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: CupertinoSegmentedControl<int>(
-                children: const {
-                  0: Padding(padding: EdgeInsets.all(8.0), child: Text('Made by Me')),
-                  1: Padding(padding: EdgeInsets.all(8.0), child: Text('Received')),
-                },
-                onValueChanged: (int newValue) {
-                  setState(() => _selectedSegment = newValue);
-                },
-                groupValue: _selectedSegment,
-              ),
-            ),
-            Expanded(child: _buildBody(isCupertino: true)),
-          ],
-        ),
-      ),
-    );
+        child: NestedScrollView(
+      headerSliverBuilder: (context, innerBoxIsScrolled) {
+        return [
+          const CupertinoSliverNavigationBar(
+            largeTitle: Text('My Offers'),
+          ),
+        ];
+      },
+      body: _buildBody(isCupertino: true),
+    ));
   }
-
-  // --- Shared Body Logic ---
 
   Widget _buildBody({bool isCupertino = false}) {
     return FutureBuilder<Map<String, List<OfferResponseDTO>>>(
@@ -115,11 +95,30 @@ class _OffersPageState extends State<OffersPage> {
 
         final myOffers = snapshot.data?['myOffers'] ?? [];
         final receivedOffers = snapshot.data?['receivedOffers'] ?? [];
-        
+
         if (isCupertino) {
-          return _buildOfferList(
-            _selectedSegment == 0 ? myOffers : receivedOffers,
-            isMyOffers: _selectedSegment == 0,
+          return Column(
+            children: [
+               Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: CupertinoSegmentedControl<int>(
+                  children: const {
+                    0: Padding(padding: EdgeInsets.all(8.0), child: Text('Made by Me')),
+                    1: Padding(padding: EdgeInsets.all(8.0), child: Text('Received')),
+                  },
+                  onValueChanged: (int newValue) {
+                    setState(() => _selectedSegment = newValue);
+                  },
+                  groupValue: _selectedSegment,
+                ),
+              ),
+              Expanded(
+                child: _buildOfferList(
+                  _selectedSegment == 0 ? myOffers : receivedOffers,
+                  isMyOffers: _selectedSegment == 0,
+                ),
+              ),
+            ],
           );
         } else {
           return TabBarView(
@@ -137,10 +136,7 @@ class _OffersPageState extends State<OffersPage> {
     if (offers.isEmpty) {
       return Center(
         child: Text(
-          isMyOffers
-              ? 'You have not made any offers.'
-              : 'You have not received any offers.',
-        ),
+            isMyOffers ? 'You have not made any offers.' : 'You have not received any offers.'),
       );
     }
 

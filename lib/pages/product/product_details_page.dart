@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:myfirstflutterapp/models/Offer_DTO/OfferResponse_DTO.dart';
 import 'package:myfirstflutterapp/pages/createofferpage.dart';
+import 'package:myfirstflutterapp/pages/main_screen.dart';
 import 'package:myfirstflutterapp/services/auth_service.dart';
 import 'package:myfirstflutterapp/services/offers_service.dart';
 import '../../environment/env.dart';
@@ -171,7 +172,10 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
         const SnackBar(content: Text("Booking requested successfully!")),
       );
 
-      if (mounted) Navigator.pushNamed(context, "/my-bookings");
+      if (mounted)  Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (context) => const MainScreen(initialIndex: 3)),
+        (route) => false,
+      );
     } catch (e) {
       ScaffoldMessenger.of(
         context,

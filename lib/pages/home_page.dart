@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:myfirstflutterapp/pages/myOffers.dart';
 import 'package:provider/provider.dart';
 import 'dart:io';
 
@@ -21,7 +22,7 @@ import 'package:myfirstflutterapp/pages/auth/profile_page.dart';
 import 'package:myfirstflutterapp/pages/wishlist_page.dart';
 import 'package:myfirstflutterapp/pages/payments/wallet_page.dart';
 import 'package:myfirstflutterapp/pages/payments/payment_history_page.dart';
-import 'package:myfirstflutterapp/pages/offer_page.dart';
+import 'package:myfirstflutterapp/pages/offers_page.dart';
 import 'package:myfirstflutterapp/pages/rental_history_page.dart';
 
 
@@ -237,7 +238,7 @@ class _HomePageState extends State<HomePage> {
         break;
       case MenuItem.item3: // Offers
         appState.clearUnreadOffers();
-        Navigator.of(context).push(MaterialPageRoute(builder: (context) => const OffersPage()));
+        Navigator.of(context).push(MaterialPageRoute(builder: (context) => const MyOffersPage()));
         break;
       case MenuItem.item4: // Wallet
         appState.clearUnreadPayments();

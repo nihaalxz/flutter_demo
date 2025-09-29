@@ -25,8 +25,6 @@ class BookingResponseDTO {
   final double latitude;
   final double longitude;
 
-
-
   BookingResponseDTO({
     required this.id,
     required this.status,
@@ -55,33 +53,33 @@ class BookingResponseDTO {
     required this.longitude,
   });
 
-  factory BookingResponseDTO.fromJson(Map<String, dynamic> json) {
+   factory BookingResponseDTO.fromJson(Map<String, dynamic> json) {
     return BookingResponseDTO(
-      id: json['id'],
-      status: json['status'],
-      itemName: json['itemName'],
-      itemImage: json['itemImage'], // ✅ This now correctly handles null
-      ownerName: json['ownerName'],
-      renterName: json['renterName'],
-      startDate: DateTime.parse(json['startDate']),
-      endDate: DateTime.parse(json['endDate']),
-      totalPrice: (json['totalPrice'] as num).toDouble(),
-      isPaid: json['isPaid'],
-      ownerProfileImage: json['ownerProfileImage'], // ✅ This now correctly handles null
-      renterProfileImage: json['renterProfileImage'], // ✅ This now correctly handles null
-      createdAt: DateTime.parse(json['createdAt']),
-      ownerId: json['ownerId'],
-      renterId: json['renterId'],
-      ownerEmail: json['ownerEmail'],
-      renterEmail: json['renterEmail'],
-      ownerPhoneNumber: json['ownerPhoneNumber'], // ✅ This now correctly handles null
+      id: json['id'] ?? 0,
+      itemName: json['itemName'] ?? 'Unknown Item',
+      itemImage: json['itemImage'],
+      ownerName: json['ownerName'] ?? 'Unknown Owner',
+      renterName: json['renterName'] ?? 'Unknown Renter',
+      ownerEmail: json['ownerEmail'] ?? '',
+      renterEmail: json['renterEmail'] ?? '',
+      ownerPhoneNumber: json['ownerPhoneNumber'],
       renterPhoneNumber: json['renterPhoneNumber'],
+      ownerProfileImage: json['ownerProfileImage'],
+      renterProfileImage: json['renterProfileImage'],
+      ownerId: json['ownerId'] ?? '',
+      renterId: json['renterId'] ?? '',
+      startDate: json['startDate'] != null ? DateTime.parse(json['startDate']) : DateTime.now(),
+      endDate: json['endDate'] != null ? DateTime.parse(json['endDate']) : DateTime.now(),
+      totalPrice: (json['totalPrice'] as num?)?.toDouble() ?? 0.0,
+      status: json['status'] ?? 'Pending',
+      isPaid: json['isPaid'] ?? false,
+      createdAt: json['createdAt'] != null ? DateTime.parse(json['createdAt']) : DateTime.now(),
       startCode: json['startCode'],
       returnCode: json['returnCode'],
       hasBeenReviewed: json['hasBeenReviewed'] ?? false,
-      locationName: json['locationName'],
-      latitude: (json['latitude'] as num).toDouble(),
-      longitude: (json['longitude'] as num).toDouble(),
+      locationName: json['locationName'] ?? 'No location provided',
+      latitude: (json['latitude'] as num?)?.toDouble() ?? 0.0,
+      longitude: (json['longitude'] as num?)?.toDouble() ?? 0.0,
     );
   }
 }
