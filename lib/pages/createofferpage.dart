@@ -32,13 +32,9 @@ class _CreateOfferPageState extends State<CreateOfferPage> {
   }
 
   Future<void> _sendOffer() async {
-    // ✅ --- THIS IS THE KEY FIX ---
-    // Use a null-aware check to safely validate the form.
-    // The `?? false` part handles the case where currentState itself is null.
     if (_formKey.currentState?.validate() != true) {
       return;
     }
-    // ---------------------------------
 
     setState(() => _isLoading = true);
 
@@ -75,22 +71,43 @@ class _CreateOfferPageState extends State<CreateOfferPage> {
     required String content,
     VoidCallback? onDismiss,
   }) {
-    showAdaptiveDialog(
-      context: context,
-      builder: (context) => AlertDialog.adaptive(
-        title: Text(title),
-        content: Text(content),
-        actions: [
-          TextButton(
-            child: const Text('OK'),
-            onPressed: () {
-              Navigator.of(context).pop();
-              onDismiss?.call();
-            },
-          ),
-        ],
-      ),
-    );
+    if (Platform.isIOS) {
+      // Use Cupertino-style dialog for iOS
+      showCupertinoDialog(
+        context: context,
+        builder: (context) => CupertinoAlertDialog(
+          title: Text(title),
+          content: Text(content),
+          actions: [
+            CupertinoDialogAction(
+              child: const Text('OK'),
+              onPressed: () {
+                Navigator.of(context).pop();
+                onDismiss?.call();
+              },
+            ),
+          ],
+        ),
+      );
+    } else {
+      // Use Material-style dialog for Android
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(title),
+          content: Text(content),
+          actions: [
+            TextButton(
+              child: const Text('OK'),
+              onPressed: () {
+                Navigator.of(context).pop();
+                onDismiss?.call();
+              },
+            ),
+          ],
+        ),
+      );
+    }
   }
 
   String? _validateOffer(String? value) {
@@ -167,7 +184,7 @@ class _CreateOfferPageState extends State<CreateOfferPage> {
             style: theme.textTheme.bodyMedium?.copyWith(color: Colors.grey.shade600),
           ),
           const SizedBox(height: 20),
-          
+
           // Adaptive Text Field
           TextFormField(
             controller: _controller,
@@ -186,20 +203,19 @@ class _CreateOfferPageState extends State<CreateOfferPage> {
           else
             // Adaptive Button
             Platform.isIOS
-              ? CupertinoButton.filled(
-                  onPressed: _sendOffer,
-                  child: const Text("Submit Offer"),
-                )
-              : ElevatedButton(
-                  onPressed: _sendOffer,
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
+                ? CupertinoButton.filled(
+                    onPressed: _sendOffer,
+                    child: const Text("Submit Offer"),
+                  )
+                : ElevatedButton(
+                    onPressed: _sendOffer,
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                    ),
+                    child: const Text("Submit Offer"),
                   ),
-                  child: const Text("Submit Offer"),
-                ),
         ],
       ),
     );
   }
 }
-
