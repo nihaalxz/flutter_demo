@@ -22,7 +22,6 @@ import 'package:myfirstflutterapp/pages/auth/profile_page.dart';
 import 'package:myfirstflutterapp/pages/wishlist_page.dart';
 import 'package:myfirstflutterapp/pages/payments/wallet_page.dart';
 import 'package:myfirstflutterapp/pages/payments/payment_history_page.dart';
-import 'package:myfirstflutterapp/pages/offers_page.dart';
 import 'package:myfirstflutterapp/pages/rental_history_page.dart';
 
 
