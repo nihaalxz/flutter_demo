@@ -23,14 +23,25 @@ class DateSelectionWidget extends StatelessWidget {
       children: [
         ListTile(
           contentPadding: EdgeInsets.zero,
-          title: const Text("Rental Dates"),
+          title: const Text(
+            "Rental Dates",
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
           subtitle: Text(
             (startDate != null && endDate != null)
                 ? "${dateFmt.format(startDate!)} → ${dateFmt.format(endDate!)}"
                 : "Select rental start & end date",
+            style: const TextStyle(fontSize: 14),
           ),
           trailing: ElevatedButton(
             onPressed: onSelectDates,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blue,
+              foregroundColor: Colors.white,
+            ),
             child: const Text("Pick Dates"),
           ),
         ),
@@ -39,7 +50,10 @@ class DateSelectionWidget extends StatelessWidget {
             alignment: Alignment.centerRight,
             child: TextButton(
               onPressed: onClearDates,
-              child: const Text("Clear selection"),
+              child: const Text(
+                "Clear selection",
+                style: TextStyle(color: Colors.red),
+              ),
             ),
           ),
       ],

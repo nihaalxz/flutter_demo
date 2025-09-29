@@ -1,5 +1,6 @@
 class BookingResponseDTO {
   final int id;
+  final int itemid;
   final String status;
   final String itemName;
   final String? itemImage; // 👈 FIX: Item image can be null
@@ -27,6 +28,7 @@ class BookingResponseDTO {
 
   BookingResponseDTO({
     required this.id,
+    required this.itemid,
     required this.status,
     required this.itemName,
     this.itemImage, // 👈 No 'required' needed
@@ -47,15 +49,16 @@ class BookingResponseDTO {
     this.renterPhoneNumber, // 👈 No 'required' needed
     this.startCode,
     this.returnCode,
-   required this.hasBeenReviewed,
+    required this.hasBeenReviewed,
     required this.locationName,
     required this.latitude,
     required this.longitude,
   });
 
-   factory BookingResponseDTO.fromJson(Map<String, dynamic> json) {
+  factory BookingResponseDTO.fromJson(Map<String, dynamic> json) {
     return BookingResponseDTO(
       id: json['id'] ?? 0,
+      itemid: json['itemId'] ?? 0,
       itemName: json['itemName'] ?? 'Unknown Item',
       itemImage: json['itemImage'],
       ownerName: json['ownerName'] ?? 'Unknown Owner',
@@ -68,12 +71,18 @@ class BookingResponseDTO {
       renterProfileImage: json['renterProfileImage'],
       ownerId: json['ownerId'] ?? '',
       renterId: json['renterId'] ?? '',
-      startDate: json['startDate'] != null ? DateTime.parse(json['startDate']) : DateTime.now(),
-      endDate: json['endDate'] != null ? DateTime.parse(json['endDate']) : DateTime.now(),
+      startDate: json['startDate'] != null
+          ? DateTime.parse(json['startDate'])
+          : DateTime.now(),
+      endDate: json['endDate'] != null
+          ? DateTime.parse(json['endDate'])
+          : DateTime.now(),
       totalPrice: (json['totalPrice'] as num?)?.toDouble() ?? 0.0,
       status: json['status'] ?? 'Pending',
       isPaid: json['isPaid'] ?? false,
-      createdAt: json['createdAt'] != null ? DateTime.parse(json['createdAt']) : DateTime.now(),
+      createdAt: json['createdAt'] != null
+          ? DateTime.parse(json['createdAt'])
+          : DateTime.now(),
       startCode: json['startCode'],
       returnCode: json['returnCode'],
       hasBeenReviewed: json['hasBeenReviewed'] ?? false,

@@ -1,5 +1,3 @@
-import 'dart:io';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:myfirstflutterapp/models/Offer_DTO/OfferResponse_DTO.dart';
 import 'package:myfirstflutterapp/models/product_model.dart';
@@ -41,6 +39,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
   double? totalPrice;
   String? currentUserId;
   OfferResponseDTO? _offer;
+  bool _isAlreadyBooked = false;
 
   @override
   void initState() {
@@ -49,6 +48,8 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
     _fetchProduct();
     _loadCurrentUser();
     _fetchOffer();
+    _checkIfAlreadyBooked();
+    _checkAvailabilityBeforeSelection();
   }
 
   Future<void> _loadCurrentUser() async {
@@ -56,6 +57,38 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
     setState(() {
       currentUserId = id;
     });
+  }
+
+  Future<void> _checkIfAlreadyBooked() async {
+    try {
+      final isBooked = await _bookingService.isProductBooked(widget.productId);
+      setState(() {
+        _isAlreadyBooked = isBooked;
+      });
+    } catch (e) {
+      print("Error checking booking status: $e");
+    }
+  }
+
+  Future<void> _checkAvailabilityBeforeSelection() async {
+    try {
+      final availability = await _bookingService.checkAvailability(
+        itemId: widget.productId,
+        startDate: DateTime.now(),
+        endDate: DateTime.now().add(const Duration(days: 1)),
+      );
+      
+      if (availability['isAvailable'] == false) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('This item has existing bookings. Please check available dates.'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+    } catch (e) {
+      print('Error checking availability: $e');
+    }
   }
 
   Future<void> _fetchOffer() async {
@@ -91,18 +124,6 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
   void _selectDate(BuildContext context) async {
     final now = DateTime.now();
 
-    if (Platform.isIOS) {
-      // Use Cupertino date picker for iOS
-      await _showCupertinoDatePicker(context);
-    } else {
-      // Use Material date picker for Android
-      await _showMaterialDatePicker(context);
-    }
-  }
-
-  Future<void> _showMaterialDatePicker(BuildContext context) async {
-    final now = DateTime.now();
-
     final pickedStart = await showDatePicker(
       context: context,
       initialDate: startDate ?? now,
@@ -124,111 +145,6 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
       endDate = pickedEnd;
       _calculateTotal();
     });
-  }
-
-  Future<void> _showCupertinoDatePicker(BuildContext context) async {
-    final now = DateTime.now();
-
-    // Show start date picker
-    showCupertinoModalPopup<void>(
-      context: context,
-      builder: (BuildContext context) => Container(
-        height: 300,
-        padding: const EdgeInsets.only(top: 6.0),
-        margin: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom,
-        ),
-        color: CupertinoColors.systemBackground.resolveFrom(context),
-        child: SafeArea(
-          top: false,
-          child: Column(
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  CupertinoButton(
-                    child: const Text('Cancel'),
-                    onPressed: () => Navigator.of(context).pop(),
-                  ),
-                  CupertinoButton(
-                    child: const Text('Done'),
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                      _showCupertinoEndDatePicker(context);
-                    },
-                  ),
-                ],
-              ),
-              Expanded(
-                child: CupertinoDatePicker(
-                  mode: CupertinoDatePickerMode.date,
-                  initialDateTime: startDate ?? now,
-                  minimumDate: now,
-                  maximumDate: DateTime(now.year + 2),
-                  onDateTimeChanged: (DateTime newDate) {
-                    setState(() {
-                      startDate = newDate;
-                    });
-                  },
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _showCupertinoEndDatePicker(BuildContext context) {
-    final start = startDate ?? DateTime.now();
-
-    showCupertinoModalPopup<void>(
-      context: context,
-      builder: (BuildContext context) => Container(
-        height: 300,
-        padding: const EdgeInsets.only(top: 6.0),
-        margin: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom,
-        ),
-        color: CupertinoColors.systemBackground.resolveFrom(context),
-        child: SafeArea(
-          top: false,
-          child: Column(
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  CupertinoButton(
-                    child: const Text('Cancel'),
-                    onPressed: () => Navigator.of(context).pop(),
-                  ),
-                  CupertinoButton(
-                    child: const Text('Done'),
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                      _calculateTotal();
-                    },
-                  ),
-                ],
-              ),
-              Expanded(
-                child: CupertinoDatePicker(
-                  mode: CupertinoDatePickerMode.date,
-                  initialDateTime: endDate ?? start.add(const Duration(days: 1)),
-                  minimumDate: start,
-                  maximumDate: DateTime(start.year + 2),
-                  onDateTimeChanged: (DateTime newDate) {
-                    setState(() {
-                      endDate = newDate;
-                    });
-                  },
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
   }
 
   void _clearDates() {
@@ -257,30 +173,12 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
   }
 
   void _showSnackBar(String message, {bool isError = false}) {
-    if (Platform.isIOS) {
-      // For iOS, use a dialog instead of SnackBar
-      showCupertinoDialog(
-        context: context,
-        builder: (context) => CupertinoAlertDialog(
-          title: Text(isError ? 'Error' : 'Success'),
-          content: Text(message),
-          actions: [
-            CupertinoDialogAction(
-              child: const Text('OK'),
-              onPressed: () => Navigator.of(context).pop(),
-            ),
-          ],
-        ),
-      );
-    } else {
-      // For Android, use SnackBar with ScaffoldMessenger
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(message),
-          backgroundColor: isError ? Colors.red : Colors.green,
-        ),
-      );
-    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isError ? Colors.red : Colors.green,
+      ),
+    );
   }
 
   void _requestBooking() async {
@@ -305,6 +203,10 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
       );
 
       _showSnackBar("Booking requested successfully!");
+      
+      setState(() {
+        _isAlreadyBooked = true;
+      });
 
       if (mounted) {
         Navigator.of(context).pushAndRemoveUntil(
@@ -334,10 +236,14 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
         startDate: startDate!,
         endDate: endDate!,
         totalPrice: calculatedTotalPrice,
-        offerId: null, // Explicitly not using any offer
+        offerId: null,
       );
 
       _showSnackBar("Booking requested successfully at original price!");
+      
+      setState(() {
+        _isAlreadyBooked = true;
+      });
 
       if (mounted) {
         Navigator.of(context).pushAndRemoveUntil(
@@ -355,14 +261,11 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
   void _refreshData() {
     _fetchProduct();
     _fetchOffer();
+    _checkIfAlreadyBooked();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Platform.isIOS ? _buildCupertinoPage() : _buildMaterialPage();
-  }
-
-  Widget _buildMaterialPage() {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
@@ -395,34 +298,6 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
     );
   }
 
-  Widget _buildCupertinoPage() {
-    return CupertinoPageScaffold(
-      navigationBar: CupertinoNavigationBar(
-        middle: Text(product?.name ?? ""),
-        leading: CupertinoNavigationBarBackButton(
-          onPressed: () => Navigator.pop(context),
-          color: CupertinoColors.label,
-        ),
-        trailing: CupertinoButton(
-          padding: EdgeInsets.zero,
-          onPressed: () {
-            // TODO: implement share
-          },
-          child: const Icon(CupertinoIcons.share, size: 24),
-        ),
-      ),
-      child: SafeArea(
-        child: isLoading
-            ? const ProductDetailsLoadingShimmer()
-            : error != null
-                ? Center(child: Text("Error: $error"))
-                : product == null
-                    ? const Center(child: Text("Product not found"))
-                    : _buildProductDetailsContent(),
-      ),
-    );
-  }
-
   Widget _buildProductDetailsContent() {
     return SingleChildScrollView(
       child: Padding(
@@ -437,7 +312,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
             OwnerInfoWidget(
               product: product!,
               currentUserId: currentUserId,
-              onMakeOffer: () {
+              onMakeOffer: _isAlreadyBooked ? () {} : () {
                 Navigator.of(context).push(
                   MaterialPageRoute(
                     builder: (context) => CreateOfferPage(
@@ -450,22 +325,27 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
               },
             ),
             const SizedBox(height: 24),
-            DateSelectionWidget(
-              startDate: startDate,
-              endDate: endDate,
-              onSelectDates: () => _selectDate(context),
-              onClearDates: _clearDates,
-            ),
-            if (totalPrice != null) ...[
-              const SizedBox(height: 12),
-              TotalPriceWidget(totalPrice: totalPrice!),
+            
+            if (!_isAlreadyBooked) ...[
+              DateSelectionWidget(
+                startDate: startDate,
+                endDate: endDate,
+                onSelectDates: () => _selectDate(context),
+                onClearDates: _clearDates,
+              ),
+              if (totalPrice != null) ...[
+                const SizedBox(height: 12),
+                TotalPriceWidget(totalPrice: totalPrice!),
+              ],
+              const SizedBox(height: 16),
             ],
-            const SizedBox(height: 16),
+            
             BookingButtonWidget(
               product: product!,
               currentUserId: currentUserId,
               endDate: endDate,
               offer: _offer,
+              isAlreadyBooked: _isAlreadyBooked,
               onRequestBooking: _requestBooking,
               onBookAtOriginalPrice: _requestBookingAtOriginalPrice,
             ),
