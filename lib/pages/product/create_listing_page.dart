@@ -1,19 +1,20 @@
 import 'dart:io';
-
 import 'package:flutter/material.dart';
-import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
 
-// --- Assumed Imports ---
+// Services
 import '../../services/product_service.dart';
 import '../../services/category_service.dart';
 import '../../models/category_model.dart';
 import '../../models/product_model.dart';
 import 'my_items_page.dart';
 import '../map_picker_page.dart';
+
+// Widget Components
+import 'package:myfirstflutterapp/widgets/product-listing/category_dropdown_section.dart';
+import 'package:myfirstflutterapp/widgets/product-listing/form_fields_section.dart';
+import 'package:myfirstflutterapp/widgets/product-listing/image_picker_section.dart';
+import 'package:myfirstflutterapp/widgets/product-listing/submit_button_section.dart';
 
 class CreateListingPage extends StatefulWidget {
   const CreateListingPage({super.key});
@@ -22,7 +23,7 @@ class CreateListingPage extends StatefulWidget {
   State<CreateListingPage> createState() => _CreateListingPageState();
 }
 
-class _CreateListingPageState extends State<CreateListingPage> {
+class _CreateListingPageState extends State<CreateListingPage> with SingleTickerProviderStateMixin {
   // Services
   final ProductService _productService = ProductService();
   final CategoryService _categoryService = CategoryService();
@@ -40,15 +41,28 @@ class _CreateListingPageState extends State<CreateListingPage> {
   // UI state
   bool _isLoading = false;
   late Future<List<CategoryModel>> _categoriesFuture;
+  late AnimationController _animationController;
+  late Animation<double> _fadeAnimation;
 
   @override
   void initState() {
     super.initState();
     _categoriesFuture = _categoryService.getCategories();
+    
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
+    );
+    
+    _animationController.forward();
   }
 
   @override
   void dispose() {
+    _animationController.dispose();
     _nameController.dispose();
     _descriptionController.dispose();
     _priceController.dispose();
@@ -56,103 +70,63 @@ class _CreateListingPageState extends State<CreateListingPage> {
     super.dispose();
   }
 
-  /// Shows a modal bottom sheet to choose between camera and gallery.
-  Future<void> _pickImage() async {
-    final source = await showModalBottomSheet<ImageSource>(
-      context: context,
-      builder: (BuildContext context) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              ListTile(
-                leading: const Icon(Icons.photo_camera),
-                title: const Text('Take a Photo'),
-                onTap: () => Navigator.of(context).pop(ImageSource.camera),
-              ),
-              ListTile(
-                leading: const Icon(Icons.photo_library),
-                title: const Text('Choose from Gallery'),
-                onTap: () => Navigator.of(context).pop(ImageSource.gallery),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-
-    if (source == null) return;
-
-    final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: source);
-
-    if (pickedFile != null) {
-      setState(() {
-        _selectedImage = File(pickedFile.path);
-      });
-    }
+  // Callbacks for child widgets
+  void _onImagePicked(File image) {
+    setState(() {
+      _selectedImage = image;
+    });
   }
 
-  /// Navigates to the map picker page.
-  Future<void> _openMapPicker() async {
-    final result = await Navigator.of(context).push<Map<String, dynamic>>(
-      MaterialPageRoute(builder: (context) => const MapPickerPage()),
-    );
-
-    if (result != null) {
-      setState(() {
-        _locationController.text = result['address'] as String;
-        _selectedCoordinates = result['coordinates'] as LatLng;
-      });
-    }
-  }
-  
-  /// Compresses the selected image file to reduce its size before upload.
-  Future<File?> _compressImage(File file) async {
-    final tempDir = await getTemporaryDirectory();
-    final targetPath = p.join(tempDir.path, '${DateTime.now().millisecondsSinceEpoch}.jpg');
-
-    final compressedXFile = await FlutterImageCompress.compressAndGetFile(
-      file.absolute.path,
-      targetPath,
-      quality: 85, // A quality of 80-85 is a great balance.
-      minWidth: 1024, // Optional: resize larger images
-      minHeight: 1024,
-    );
-
-    if (compressedXFile == null) return null;
-    return File(compressedXFile.path);
+  void _onLocationSelected(String address, LatLng coordinates) {
+    setState(() {
+      _locationController.text = address;
+      _selectedCoordinates = coordinates;
+    });
   }
 
-  /// Validates the form and submits the new listing with a compressed image.
+  void _onCategorySelected(CategoryModel? category) {
+    setState(() {
+      _selectedCategory = category;
+    });
+  }
+
+  void _setLoading(bool loading) {
+    setState(() {
+      _isLoading = loading;
+    });
+  }
+
+  /// Validates the form and submits the new listing
   Future<void> _submitListing() async {
     if (!_formKey.currentState!.validate()) {
       return;
     }
     if (_selectedImage == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select an image.'), backgroundColor: Colors.orange),
+        SnackBar(
+          content: const Text('Please select an image.'),
+          backgroundColor: Colors.orange,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
       );
       return;
     }
     if (_selectedCoordinates == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a location from the map.'), backgroundColor: Colors.orange),
+        SnackBar(
+          content: const Text('Please select a location from the map.'),
+          backgroundColor: Colors.orange,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
       );
       return;
     }
 
-    setState(() {
-      _isLoading = true;
-    });
+    _setLoading(true);
 
     try {
-      // Compress the image before creating the product object
-      final compressedImageFile = await _compressImage(_selectedImage!);
-      if (compressedImageFile == null) {
-        throw Exception("Failed to process the image.");
-      }
-      
       final newProduct = Product(
         id: 0,
         name: _nameController.text,
@@ -174,11 +148,16 @@ class _CreateListingPageState extends State<CreateListingPage> {
 
       await _productService.createProduct(
         product: newProduct,
-        image: compressedImageFile, // Use the compressed file for the upload
+        image: _selectedImage!,
       );
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Listing created successfully!'), backgroundColor: Colors.green),
+        SnackBar(
+          content: const Text('🎉 Listing created successfully!'),
+          backgroundColor: Colors.green,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
       );
 
       Navigator.of(context).pushReplacement(
@@ -187,13 +166,16 @@ class _CreateListingPageState extends State<CreateListingPage> {
 
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to create listing: ${e.toString()}'), backgroundColor: Colors.red),
+        SnackBar(
+          content: Text('❌ Failed to create listing: ${e.toString()}'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
       );
     } finally {
       if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
+        _setLoading(false);
       }
     }
   }
@@ -201,156 +183,81 @@ class _CreateListingPageState extends State<CreateListingPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Theme.of(context).colorScheme.background,
       appBar: AppBar(
         title: const Text('Create New Listing'),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        foregroundColor: Theme.of(context).colorScheme.onBackground,
       ),
-      body: SafeArea( // ✅ Added SafeArea here
-        child: Form(
-          key: _formKey,
-          child: ListView(
-            padding: const EdgeInsets.all(16.0),
-            children: [
-              _buildImagePicker(),
-              const SizedBox(height: 24),
-              _buildTextField(_nameController, 'Item Name', 'e.g., Canon EOS R5 Camera'),
-              const SizedBox(height: 16),
-              _buildTextField(_descriptionController, 'Description', 'e.g., Condition, accessories included, etc.', maxLines: 4),
-              const SizedBox(height: 16),
-              _buildTextField(_priceController, 'Price per Day (₹)', 'e.g., 1500', keyboardType: TextInputType.number),
-              const SizedBox(height: 16),
-              _buildLocationPicker(),
-              const SizedBox(height: 16),
-              _buildCategoryDropdown(),
-              const SizedBox(height: 32),
-              _isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : ElevatedButton(
-                      onPressed: _submitListing,
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+      body: SafeArea(
+        child: FadeTransition(
+          opacity: _fadeAnimation,
+          child: CustomScrollView(
+            slivers: [
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Share Your Item',
+                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: Theme.of(context).colorScheme.onBackground,
+                        ),
                       ),
-                      child: const Text('Post My Item'),
-                    ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Fill in the details to list your item for rent',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              SliverToBoxAdapter(
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 24),
+                      ImagePickerSection(
+                        selectedImage: _selectedImage,
+                        onImagePicked: _onImagePicked,
+                      ),
+                      const SizedBox(height: 32),
+                      FormFieldsSection(
+                        nameController: _nameController,
+                        descriptionController: _descriptionController,
+                        priceController: _priceController,
+                        locationController: _locationController,
+                        selectedCoordinates: _selectedCoordinates,
+                        onLocationSelected: _onLocationSelected,
+                      ),
+                      const SizedBox(height: 20),
+                      CategoryDropdownSection(
+                        categoriesFuture: _categoriesFuture,
+                        selectedCategory: _selectedCategory,
+                        onCategorySelected: _onCategorySelected,
+                      ),
+                      const SizedBox(height: 40),
+                      SubmitButtonSection(
+                        isLoading: _isLoading,
+                        onSubmit: _submitListing,
+                      ),
+                      const SizedBox(height: 32),
+                    ],
+                  ),
+                ),
+              ),
             ],
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildImagePicker() {
-    return Center(
-      child: InkWell(
-        onTap: _pickImage,
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          height: 150,
-          width: double.infinity,
-          decoration: BoxDecoration(
-            color: Colors.grey[200],
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.grey.shade400),
-          ),
-          child: _selectedImage != null
-              ? ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: Image.file(_selectedImage!, fit: BoxFit.cover),
-                )
-              : Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.add_a_photo_outlined, color: Colors.grey[600], size: 40),
-                    const SizedBox(height: 8),
-                    Text('Tap to add a photo', style: TextStyle(color: Colors.grey[700])),
-                  ],
-                ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTextField(TextEditingController controller, String label, String hint, {int maxLines = 1, TextInputType? keyboardType}) {
-    return TextFormField(
-      controller: controller,
-      maxLines: maxLines,
-      keyboardType: keyboardType,
-      decoration: InputDecoration(
-        labelText: label,
-        hintText: hint,
-        border: const OutlineInputBorder(),
-      ),
-      validator: (value) {
-        if (value == null || value.isEmpty) {
-          return 'Please enter a $label';
-        }
-        return null;
-      },
-    );
-  }
-
-  Widget _buildLocationPicker() {
-    return InkWell(
-      onTap: _openMapPicker,
-      child: InputDecorator(
-        decoration: const InputDecoration(
-          labelText: 'Location',
-          border: OutlineInputBorder(),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: <Widget>[
-            Expanded(
-              child: Text(
-                _locationController.text.isEmpty
-                    ? 'Select location from map'
-                    : _locationController.text,
-                style: TextStyle(
-                  color: _locationController.text.isEmpty ? Colors.grey[600] : null,
-                ),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            const Icon(Icons.map_outlined, color: Colors.grey),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCategoryDropdown() {
-    return FutureBuilder<List<CategoryModel>>(
-      future: _categoriesFuture,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        if (snapshot.hasError || !snapshot.hasData) {
-          return const Text('Could not load categories.');
-        }
-        final categories = snapshot.data!;
-        return DropdownButtonFormField<CategoryModel>(
-          value: _selectedCategory,
-          hint: const Text('Select a Category'),
-          isExpanded: true,
-          onChanged: (CategoryModel? newValue) {
-            setState(() {
-              _selectedCategory = newValue;
-            });
-          },
-          items: categories.map((CategoryModel category) {
-            return DropdownMenuItem<CategoryModel>(
-              value: category,
-              child: Text(category.name),
-            );
-          }).toList(),
-          decoration: const InputDecoration(
-            labelText: 'Category',
-            border: OutlineInputBorder(),
-          ),
-          validator: (value) => value == null ? 'Please select a category' : null,
-        );
-      },
     );
   }
 }
