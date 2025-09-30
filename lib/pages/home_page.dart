@@ -23,6 +23,7 @@ import 'package:myfirstflutterapp/pages/wishlist_page.dart';
 import 'package:myfirstflutterapp/pages/payments/wallet_page.dart';
 import 'package:myfirstflutterapp/pages/payments/payment_history_page.dart';
 import 'package:myfirstflutterapp/pages/rental_history_page.dart';
+import 'package:myfirstflutterapp/state/main_tab_notifier.dart';
 
 
 import '../widgets/home_app_bar.dart';

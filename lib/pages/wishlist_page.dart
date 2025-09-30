@@ -3,7 +3,9 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:myfirstflutterapp/environment/env.dart';
+import 'package:myfirstflutterapp/state/main_tab_notifier.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:provider/provider.dart';
 
 // --- Assumed Imports ---
 import '../models/wishlist_item_model.dart';

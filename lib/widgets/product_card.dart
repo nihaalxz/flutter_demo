@@ -1,6 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+
+// Cubit
+import '../cubit/navigation_cubit.dart';
+
+// Routes
+import '../routes/app_routes.dart';
 
 // --- Assumed Imports ---
 import '../models/product_model.dart';
@@ -10,7 +17,6 @@ import '../pages/product/product_details_page.dart';
 
 class ProductCard extends StatefulWidget {
   final Product product;
-  // A callback to notify the parent when the wishlist state changes
   final Function(int productId, bool isWishlisted) onWishlistChanged;
 
   const ProductCard({
@@ -27,7 +33,6 @@ class _ProductCardState extends State<ProductCard> with SingleTickerProviderStat
   bool _isLoading = false;
   final WishlistService _wishlistService = WishlistService();
 
-  // The local state now directly reflects the product model's property
   bool get _isWishlisted => widget.product.isWishlisted;
 
   late AnimationController _animationController;
@@ -51,32 +56,21 @@ class _ProductCardState extends State<ProductCard> with SingleTickerProviderStat
     super.dispose();
   }
 
-  /// Toggles the wishlist status using an optimistic UI update.
   Future<void> _toggleWishlist() async {
-    // 1. Store the original status in case we need to revert.
     final originalStatus = _isWishlisted;
-
-    // 2. Update the UI immediately, assuming the request will succeed.
     widget.onWishlistChanged(widget.product.id, !originalStatus);
 
-    // Trigger animation
     _animationController.forward().then((_) => _animationController.reverse());
 
     try {
-      // 3. Perform the network request silently in the background.
       if (originalStatus) {
-        // If it WAS wishlisted, the new optimistic state is 'false', so remove it.
         await _wishlistService.removeFromWishlist(widget.product.id);
       } else {
-        // If it was NOT wishlisted, the new optimistic state is 'true', so add it.
         await _wishlistService.addToWishlist(widget.product.id);
       }
     } catch (e) {
-      // 4. If the network call fails, show an error and revert the UI.
       _showSnackBar(e.toString().replaceAll("Exception: ", ""), isError: true);
-      
       if (mounted) {
-        // Revert the UI by notifying the parent of the original status.
         widget.onWishlistChanged(widget.product.id, originalStatus);
       }
     }
@@ -96,18 +90,18 @@ class _ProductCardState extends State<ProductCard> with SingleTickerProviderStat
   }
 
   void _navigateToDetails() {
-    Navigator.push(
+    AppRoutes.push(
       context,
-      MaterialPageRoute(
-        builder: (context) => ProductDetailsPage(productId: widget.product.id),
-      ),
+      AppRoutes.productDetails, // Make sure this route is defined in AppRoutes
+      arguments: {
+        'productId': widget.product.id,
+      },
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final String formattedDate =
-        DateFormat.yMMMd().format(widget.product.createdAt);
+    final String formattedDate = DateFormat.yMMMd().format(widget.product.createdAt);
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -135,7 +129,7 @@ class _ProductCardState extends State<ProductCard> with SingleTickerProviderStat
         borderRadius: BorderRadius.circular(20),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
-          onTap: _navigateToDetails, // Now navigates to details page
+          onTap: _navigateToDetails,
           borderRadius: BorderRadius.circular(20),
           child: Padding(
             padding: const EdgeInsets.all(16.0),
@@ -160,9 +154,7 @@ class _ProductCardState extends State<ProductCard> with SingleTickerProviderStat
                               color: Colors.grey[200],
                               borderRadius: BorderRadius.circular(15),
                             ),
-                            child: const Center(
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            ),
+                            child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
                           ),
                           errorWidget: (context, url, error) => Container(
                             width: 120,
@@ -199,20 +191,13 @@ class _ProductCardState extends State<ProductCard> with SingleTickerProviderStat
                               ? const SizedBox(
                                   width: 20,
                                   height: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: Colors.white,
-                                  ),
+                                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                                 )
                               : ScaleTransition(
                                   scale: _scaleAnimation,
                                   child: Icon(
-                                    _isWishlisted
-                                        ? Icons.favorite
-                                        : Icons.favorite_border,
-                                    color: _isWishlisted
-                                        ? Colors.redAccent
-                                        : Colors.white,
+                                    _isWishlisted ? Icons.favorite : Icons.favorite_border,
+                                    color: _isWishlisted ? Colors.redAccent : Colors.white,
                                     size: 20,
                                   ),
                                 ),
@@ -225,7 +210,6 @@ class _ProductCardState extends State<ProductCard> with SingleTickerProviderStat
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
                         widget.product.name,
@@ -238,16 +222,18 @@ class _ProductCardState extends State<ProductCard> with SingleTickerProviderStat
                         overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 8),
-                      // ✅ --- UPDATED OWNER INFO ROW ---
                       Row(
                         children: [
                           CircleAvatar(
                             radius: 18,
                             backgroundColor: Colors.grey.shade200,
-                            backgroundImage: (widget.product.ownerProfileImage != null && widget.product.ownerProfileImage!.isNotEmpty)
-                                ? CachedNetworkImageProvider("${AppConfig.imageBaseUrl}${widget.product.ownerProfileImage}")
+                            backgroundImage: (widget.product.ownerProfileImage != null &&
+                                    widget.product.ownerProfileImage!.isNotEmpty)
+                                ? CachedNetworkImageProvider(
+                                    "${AppConfig.imageBaseUrl}${widget.product.ownerProfileImage}")
                                 : null,
-                            child: (widget.product.ownerProfileImage == null || widget.product.ownerProfileImage!.isEmpty)
+                            child: (widget.product.ownerProfileImage == null ||
+                                    widget.product.ownerProfileImage!.isEmpty)
                                 ? Icon(Icons.person, size: 18, color: Colors.grey.shade600)
                                 : null,
                           ),
@@ -281,15 +267,10 @@ class _ProductCardState extends State<ProductCard> with SingleTickerProviderStat
                           ),
                         ],
                       ),
-                      // ---------------------------------
                       const SizedBox(height: 8),
                       Row(
                         children: [
-                          Icon(
-                            Icons.location_on,
-                            size: 16,
-                            color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.7),
-                          ),
+                          Icon(Icons.location_on, size: 16, color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.7)),
                           const SizedBox(width: 4),
                           Expanded(
                             child: Text(
@@ -314,11 +295,7 @@ class _ProductCardState extends State<ProductCard> with SingleTickerProviderStat
                       const SizedBox(height: 8),
                       Text(
                         '₹${widget.product.price.toStringAsFixed(2)}/day',
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.green,
-                        ),
+                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.green),
                       ),
                     ],
                   ),

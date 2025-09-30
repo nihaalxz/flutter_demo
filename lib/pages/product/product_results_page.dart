@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:shimmer/shimmer.dart';
-
 // --- Assumed Imports ---
 import 'package:myfirstflutterapp/services/search_service.dart';
 import 'package:myfirstflutterapp/models/product_model.dart';
 import 'package:myfirstflutterapp/widgets/product_card.dart';
 import 'product_details_page.dart';
+import 'package:provider/provider.dart';
 
 /// A page to display the results of a product search.
 class ProductResultsPage extends StatefulWidget {

@@ -1,7 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+
+// Cubit
+import '../../cubit/navigation_cubit.dart';
+
+// Routes
+import '../../routes/app_routes.dart';
+
 import 'package:myfirstflutterapp/models/Offer_DTO/OfferResponse_DTO.dart';
 import 'package:myfirstflutterapp/models/product_model.dart';
-import 'package:myfirstflutterapp/pages/main_screen.dart';
 
 class BookingButtonWidget extends StatelessWidget {
   final Product product;
@@ -30,7 +37,6 @@ class BookingButtonWidget extends StatelessWidget {
         currentUserId != product.ownerId.toString() &&
         !isAlreadyBooked;
 
-    // Show "Already Booked" state first
     if (isAlreadyBooked) {
       return _buildAlreadyBookedButton(context);
     }
@@ -38,7 +44,7 @@ class BookingButtonWidget extends StatelessWidget {
     if (offer != null) {
       switch (offer!.status) {
         case "Accepted":
-          return _buildAcceptedOfferButton(isButtonEnabled); // ✅ Only one button now
+          return _buildAcceptedOfferButton(isButtonEnabled);
         case "Pending":
           return _buildPendingOfferButtons(isButtonEnabled, context);
         case "Rejected":
@@ -52,58 +58,58 @@ class BookingButtonWidget extends StatelessWidget {
   }
 
   Widget _buildAlreadyBookedButton(BuildContext context) {
-    return Column(
-      children: [
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.green[50],
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.green[200]!),
+    return BlocListener<NavigationCubit, NavigationState>(
+      listener: (context, state) {
+        // You can add side effects here if needed
+      },
+      child: Column(
+        children: [
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.green[50],
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.green[200]!),
+            ),
+            child: Column(
+              children: [
+                Icon(Icons.check_circle, color: Colors.green[700], size: 48),
+                const SizedBox(height: 12),
+                const Text(
+                  "Already Booked",
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.green,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  "You have successfully booked this item.",
+                  style: TextStyle(
+                    color: Colors.grey[700],
+                    fontSize: 14,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 12),
+                OutlinedButton(
+                  onPressed: () {
+                    // ✅ BLoC-BASED APPROACH: Use the enhanced navigation method
+                    AppRoutes.navigateToBookingsFromDetails(context);
+                  },
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.green,
+                    side: const BorderSide(color: Colors.green),
+                  ),
+                  child: const Text("View My Bookings"),
+                ),
+              ],
+            ),
           ),
-          child: Column(
-            children: [
-              Icon(Icons.check_circle, color: Colors.green[700], size: 48),
-              const SizedBox(height: 12),
-              const Text(
-                "Already Booked",
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.green,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                "You have successfully booked this item.",
-                style: TextStyle(
-                  color: Colors.grey[700],
-                  fontSize: 14,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 12),
-              OutlinedButton(
-                onPressed: () {
-                  // Navigate to bookings page
-                  Navigator.of(context).pushAndRemoveUntil(
-                    MaterialPageRoute(
-                      builder: (context) => const MainScreen(initialIndex: 3),
-                    ),
-                    (route) => false,
-                  );
-                },
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.green,
-                  side: const BorderSide(color: Colors.green),
-                ),
-                child: const Text("View My Bookings"),
-              ),
-            ],
-          ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -123,15 +129,14 @@ class BookingButtonWidget extends StatelessWidget {
         child: Text("Book at Offered Price ₹${offer!.offeredPrice}/day"),
       ),
     );
-    // ✅ REMOVED: The original price option is no longer shown for accepted offers
   }
 
   Widget _buildPendingOfferButtons(bool isEnabled, BuildContext context) {
     final savings = product.price - offer!.offeredPrice;
-    
+
     return Column(
       children: [
-        // Header
+        // Pending header
         Container(
           width: double.infinity,
           padding: const EdgeInsets.all(16),
@@ -169,7 +174,7 @@ class BookingButtonWidget extends StatelessWidget {
         ),
         const SizedBox(height: 16),
 
-        // Option 1: Wait for response (informational)
+        // Option 1: Wait
         Container(
           width: double.infinity,
           padding: const EdgeInsets.all(16),
@@ -194,7 +199,7 @@ class BookingButtonWidget extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                "The owner will respond to your offer soon. If accepted, you'll save ₹${savings.toStringAsFixed(2)} per day.",
+                "The owner will respond soon. If accepted, you'll save ₹${savings.toStringAsFixed(2)}/day.",
                 style: TextStyle(
                   color: Colors.grey[600],
                   fontSize: 14,
@@ -205,7 +210,7 @@ class BookingButtonWidget extends StatelessWidget {
         ),
         const SizedBox(height: 12),
 
-        // Option 2: Book immediately
+        // Option 2: Book now
         Container(
           width: double.infinity,
           padding: const EdgeInsets.all(16),
@@ -246,7 +251,7 @@ class BookingButtonWidget extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                "Don't wait for the offer response. Book immediately at the regular price.",
+                "Don't wait for the offer response. Book immediately at regular price.",
                 style: TextStyle(
                   color: Colors.grey[600],
                   fontSize: 12,
@@ -310,7 +315,4 @@ class BookingButtonWidget extends StatelessWidget {
       ),
     );
   }
-
-  // ✅ REMOVED: _buildOriginalPriceOption method is no longer needed
-  // since we don't show the original price option for accepted offers anymore
 }
