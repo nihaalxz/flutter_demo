@@ -1,3 +1,5 @@
+import 'dart:io' show Platform;
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:myfirstflutterapp/models/Offer_DTO/OfferResponse_DTO.dart';
 import 'package:myfirstflutterapp/models/product_model.dart';
@@ -66,7 +68,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
         _isAlreadyBooked = isBooked;
       });
     } catch (e) {
-      print("Error checking booking status: $e");
+      debugPrint("Error checking booking status: $e");
     }
   }
 
@@ -77,17 +79,16 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
         startDate: DateTime.now(),
         endDate: DateTime.now().add(const Duration(days: 1)),
       );
-      
+
       if (availability['isAvailable'] == false) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('This item has existing bookings. Please check available dates.'),
-            backgroundColor: Colors.orange,
-          ),
+        _showSnackBar(
+          'This item has existing bookings. Please check available dates.',
+          isError: true,
+          isWarning: true,
         );
       }
     } catch (e) {
-      print('Error checking availability: $e');
+      debugPrint('Error checking availability: $e');
     }
   }
 
@@ -98,15 +99,17 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
         _offer = offer;
       });
     } catch (e) {
-      print("Error fetching offer: $e");
+      debugPrint("Error fetching offer: $e");
     }
   }
 
   Future<void> _fetchProduct() async {
     try {
       setState(() => isLoading = true);
-      final fetchedProduct = await _productService.getProductById(widget.productId);
-      final fetchedSimilar = await _productService.getSimilarProducts(widget.productId);
+      final fetchedProduct =
+          await _productService.getProductById(widget.productId);
+      final fetchedSimilar =
+          await _productService.getSimilarProducts(widget.productId);
 
       setState(() {
         product = fetchedProduct;
@@ -162,6 +165,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
       if (_offer != null && _offer!.status == "Accepted") {
         totalPrice = _offer!.offeredPrice * days;
       } else {
+        // ignore: unnecessary_type_check
         final pricePerDay = (product!.price is num)
             ? (product!.price as num).toDouble()
             : 0.0;
@@ -172,63 +176,52 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
     }
   }
 
-  void _showSnackBar(String message, {bool isError = false}) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: isError ? Colors.red : Colors.green,
-      ),
-    );
-  }
-
-  void _requestBooking() async {
-    if (product == null || startDate == null || endDate == null || totalPrice == null) {
-      _showSnackBar("Please select start and end dates", isError: true);
-      return;
-    }
-
-    final days = endDate!.difference(startDate!).inDays + 1;
-
-    final calculatedTotalPrice = (_offer != null && _offer!.status == "Accepted") 
-        ? _offer!.offeredPrice * days
-        : totalPrice!;
-
-    try {
-      await _bookingService.createBooking(
-        itemId: product!.id,
-        startDate: startDate!,
-        endDate: endDate!,
-        totalPrice: calculatedTotalPrice,
-        offerId: (_offer != null && _offer!.status == "Accepted") ? _offer!.id : null,
+  void _showSnackBar(String message,
+      {bool isError = false, bool isWarning = false}) {
+    if (Platform.isIOS) {
+      showCupertinoDialog(
+        context: context,
+        builder: (_) => CupertinoAlertDialog(
+          title: Text(isError
+              ? 'Error'
+              : isWarning
+                  ? 'Notice'
+                  : 'Success'),
+          content: Text(message),
+          actions: [
+            CupertinoDialogAction(
+              child: const Text('OK'),
+              onPressed: () => Navigator.pop(context),
+            ),
+          ],
+        ),
       );
-
-      _showSnackBar("Booking requested successfully!");
-      
-      setState(() {
-        _isAlreadyBooked = true;
-      });
-
-      if (mounted) {
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(
-            builder: (context) => const MainScreen(initialIndex: 3),
-          ),
-          (route) => false,
-        );
-      }
-    } catch (e) {
-      _showSnackBar("Booking failed: $e", isError: true);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: isError
+              ? Colors.red
+              : isWarning
+                  ? Colors.orange
+                  : Colors.green,
+        ),
+      );
     }
   }
 
-  void _requestBookingAtOriginalPrice() async {
+  Future<void> _requestBooking({bool atOriginalPrice = false}) async {
     if (product == null || startDate == null || endDate == null) {
       _showSnackBar("Please select start and end dates", isError: true);
       return;
     }
 
     final days = endDate!.difference(startDate!).inDays + 1;
-    final calculatedTotalPrice = product!.price * days;
+    final calculatedTotalPrice = (!atOriginalPrice &&
+            _offer != null &&
+            _offer!.status == "Accepted")
+        ? _offer!.offeredPrice * days
+        : (product!.price * days);
 
     try {
       await _bookingService.createBooking(
@@ -236,11 +229,19 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
         startDate: startDate!,
         endDate: endDate!,
         totalPrice: calculatedTotalPrice,
-        offerId: null,
+        offerId: (!atOriginalPrice &&
+                _offer != null &&
+                _offer!.status == "Accepted")
+            ? _offer!.id
+            : null,
       );
 
-      _showSnackBar("Booking requested successfully at original price!");
-      
+      _showSnackBar(
+        atOriginalPrice
+            ? "Booking requested at original price!"
+            : "Booking requested successfully!",
+      );
+
       setState(() {
         _isAlreadyBooked = true;
       });
@@ -258,14 +259,36 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
     }
   }
 
-  void _refreshData() {
-    _fetchProduct();
-    _fetchOffer();
-    _checkIfAlreadyBooked();
-  }
-
   @override
   Widget build(BuildContext context) {
+    if (Platform.isIOS) {
+      return CupertinoPageScaffold(
+        navigationBar: CupertinoNavigationBar(
+          middle: Text(product?.name ?? "Details"),
+          leading: CupertinoNavigationBarBackButton(
+            onPressed: () => Navigator.pop(context),
+          ),
+          trailing: CupertinoButton(
+            padding: EdgeInsets.zero,
+            child: const Icon(CupertinoIcons.share),
+            onPressed: () {
+              // TODO: implement share
+            },
+          ),
+        ),
+        child: SafeArea(
+          child: isLoading
+              ? const Center(child: CupertinoActivityIndicator())
+              : error != null
+                  ? Center(child: Text("Error: $error"))
+                  : product == null
+                      ? const Center(child: Text("Product not found"))
+                      : _buildProductDetailsContent(),
+        ),
+      );
+    }
+
+    // Default → Android/Web Material look
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
@@ -274,12 +297,14 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
         foregroundColor: Theme.of(context).appBarTheme.foregroundColor,
         elevation: 1,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: Theme.of(context).appBarTheme.foregroundColor),
+          icon: Icon(Icons.arrow_back,
+              color: Theme.of(context).appBarTheme.foregroundColor),
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
           IconButton(
-            icon: Icon(Icons.share, color: Theme.of(context).appBarTheme.foregroundColor),
+            icon: Icon(Icons.share,
+                color: Theme.of(context).appBarTheme.foregroundColor),
             onPressed: () {
               // TODO: implement share
             },
@@ -312,20 +337,21 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
             OwnerInfoWidget(
               product: product!,
               currentUserId: currentUserId,
-              onMakeOffer: _isAlreadyBooked ? () {} : () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) => CreateOfferPage(
-                      productName: product!.name,
-                      originalPrice: product!.price,
-                      productId: product!.id,
-                    ),
-                  ),
-                );
-              },
+              onMakeOffer: _isAlreadyBooked
+                  ? () {}
+                  : () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => CreateOfferPage(
+                            productName: product!.name,
+                            originalPrice: product!.price,
+                            productId: product!.id,
+                          ),
+                        ),
+                      );
+                    },
             ),
             const SizedBox(height: 24),
-            
             if (!_isAlreadyBooked) ...[
               DateSelectionWidget(
                 startDate: startDate,
@@ -339,15 +365,15 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
               ],
               const SizedBox(height: 16),
             ],
-            
             BookingButtonWidget(
               product: product!,
               currentUserId: currentUserId,
               endDate: endDate,
               offer: _offer,
               isAlreadyBooked: _isAlreadyBooked,
-              onRequestBooking: _requestBooking,
-              onBookAtOriginalPrice: _requestBookingAtOriginalPrice,
+              onRequestBooking: () => _requestBooking(),
+              onBookAtOriginalPrice: () =>
+                  _requestBooking(atOriginalPrice: true),
             ),
             const SizedBox(height: 24),
             ProductDescriptionWidget(description: product!.description),
