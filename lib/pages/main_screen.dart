@@ -17,12 +17,11 @@ import 'package:myfirstflutterapp/services/notification_service.dart';
 import 'package:myfirstflutterapp/state/AppStateManager.dart';
 
 class MainScreen extends StatefulWidget {
-  // ✅ 1. ADD an optional initialIndex parameter
   final int initialIndex;
 
   const MainScreen({
     super.key,
-    this.initialIndex = 0, // Default to the home page (index 0)
+    this.initialIndex = 0,
   });
 
   @override
@@ -30,8 +29,11 @@ class MainScreen extends StatefulWidget {
 }
 
 class _MainScreenState extends State<MainScreen> {
-  late int _selectedIndex; // No longer final, will be set in initState
+  late int _selectedIndex;
   StreamSubscription<UnreadUpdate>? _updateSubscription;
+  
+  // ✅ Add a controller for CupertinoTabScaffold
+  late CupertinoTabController _cupertinoTabController;
 
   // Your list of pages
   static const List<Widget> _pages = <Widget>[
@@ -46,8 +48,9 @@ class _MainScreenState extends State<MainScreen> {
   void initState() {
     super.initState();
     
-    // ✅ 2. Use the initialIndex from the widget to set the starting tab
     _selectedIndex = widget.initialIndex;
+    // ✅ Initialize the controller with the initial index
+    _cupertinoTabController = CupertinoTabController(initialIndex: widget.initialIndex);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final appState = Provider.of<AppStateManager>(context, listen: false);
@@ -69,6 +72,7 @@ class _MainScreenState extends State<MainScreen> {
   @override
   void dispose() {
     _updateSubscription?.cancel();
+    _cupertinoTabController.dispose(); // ✅ Dispose the controller
     NotificationService.instance.disconnectFromNotificationHub();
     super.dispose();
   }
@@ -82,6 +86,10 @@ class _MainScreenState extends State<MainScreen> {
     
     setState(() {
       _selectedIndex = index;
+      // ✅ Update the iOS controller as well
+      if (Platform.isIOS) {
+        _cupertinoTabController.index = index;
+      }
     });
   }
 
@@ -133,6 +141,7 @@ class _MainScreenState extends State<MainScreen> {
 
   Widget _buildCupertinoScaffold(AppStateManager appState) {
     return CupertinoTabScaffold(
+      controller: _cupertinoTabController, // ✅ Use the controller
       tabBar: CupertinoTabBar(
         items: <BottomNavigationBarItem>[
            const BottomNavigationBarItem(icon: Icon(CupertinoIcons.home), label: 'Home'),
@@ -142,12 +151,12 @@ class _MainScreenState extends State<MainScreen> {
             icon: _buildIconWithBadge(
               icon: CupertinoIcons.calendar,
               showBadge: appState.hasUnreadBookings,
+              isCupertino: true, // ✅ Pass flag for iOS styling
             ),
             label: 'Bookings',
           ),
            const BottomNavigationBarItem(icon: Icon(CupertinoIcons.person), label: 'Profile'),
         ],
-        currentIndex: _selectedIndex,
         onTap: _onItemTapped,
       ),
       tabBuilder: (context, index) {
@@ -158,7 +167,11 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 
-  Widget _buildIconWithBadge({required IconData icon, required bool showBadge}) {
+  Widget _buildIconWithBadge({
+    required IconData icon, 
+    required bool showBadge,
+    bool isCupertino = false,
+  }) {
     return Stack(
       clipBehavior: Clip.none,
       children: <Widget>[
@@ -169,8 +182,8 @@ class _MainScreenState extends State<MainScreen> {
             top: -2,
             child: Container(
               padding: const EdgeInsets.all(2),
-              decoration: const BoxDecoration(
-                color: Colors.red,
+              decoration: BoxDecoration(
+                color: isCupertino ? CupertinoColors.systemRed : Colors.red,
                 shape: BoxShape.circle,
               ),
               constraints: const BoxConstraints(minWidth: 8, minHeight: 8),
@@ -180,4 +193,3 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 }
-

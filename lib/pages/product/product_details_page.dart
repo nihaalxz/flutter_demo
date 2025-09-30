@@ -51,28 +51,38 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
     _loadCurrentUser();
     _fetchOffer();
     _checkIfAlreadyBooked();
-    _checkAvailabilityBeforeSelection();
+
+    // Delay the availability check to ensure context is available
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkAvailabilityBeforeSelection();
+    });
   }
 
   Future<void> _loadCurrentUser() async {
     final id = await AuthService().getUserId();
-    setState(() {
-      currentUserId = id;
-    });
+    if (mounted) {
+      setState(() {
+        currentUserId = id;
+      });
+    }
   }
 
   Future<void> _checkIfAlreadyBooked() async {
     try {
       final isBooked = await _bookingService.isProductBooked(widget.productId);
-      setState(() {
-        _isAlreadyBooked = isBooked;
-      });
+      if (mounted) {
+        setState(() {
+          _isAlreadyBooked = isBooked;
+        });
+      }
     } catch (e) {
       debugPrint("Error checking booking status: $e");
     }
   }
 
   Future<void> _checkAvailabilityBeforeSelection() async {
+    if (!mounted) return;
+
     try {
       final availability = await _bookingService.checkAvailability(
         itemId: widget.productId,
@@ -80,7 +90,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
         endDate: DateTime.now().add(const Duration(days: 1)),
       );
 
-      if (availability['isAvailable'] == false) {
+      if (availability['isAvailable'] == false && mounted) {
         _showSnackBar(
           'This item has existing bookings. Please check available dates.',
           isError: true,
@@ -95,9 +105,11 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
   Future<void> _fetchOffer() async {
     try {
       final offer = await OfferService().getOfferByProduct(widget.productId);
-      setState(() {
-        _offer = offer;
-      });
+      if (mounted) {
+        setState(() {
+          _offer = offer;
+        });
+      }
     } catch (e) {
       debugPrint("Error fetching offer: $e");
     }
@@ -105,22 +117,31 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
 
   Future<void> _fetchProduct() async {
     try {
-      setState(() => isLoading = true);
-      final fetchedProduct =
-          await _productService.getProductById(widget.productId);
-      final fetchedSimilar =
-          await _productService.getSimilarProducts(widget.productId);
+      if (mounted) {
+        setState(() => isLoading = true);
+      }
 
-      setState(() {
-        product = fetchedProduct;
-        similarProducts = fetchedSimilar.take(4).toList();
-        isLoading = false;
-      });
+      final fetchedProduct = await _productService.getProductById(
+        widget.productId,
+      );
+      final fetchedSimilar = await _productService.getSimilarProducts(
+        widget.productId,
+      );
+
+      if (mounted) {
+        setState(() {
+          product = fetchedProduct;
+          similarProducts = fetchedSimilar.take(4).toList();
+          isLoading = false;
+        });
+      }
     } catch (e) {
-      setState(() {
-        error = e.toString();
-        isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          error = e.toString();
+          isLoading = false;
+        });
+      }
     }
   }
 
@@ -143,19 +164,23 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
       lastDate: DateTime(now.year + 2),
     );
 
-    setState(() {
-      startDate = pickedStart;
-      endDate = pickedEnd;
-      _calculateTotal();
-    });
+    if (mounted) {
+      setState(() {
+        startDate = pickedStart;
+        endDate = pickedEnd;
+        _calculateTotal();
+      });
+    }
   }
 
   void _clearDates() {
-    setState(() {
-      startDate = null;
-      endDate = null;
-      totalPrice = null;
-    });
+    if (mounted) {
+      setState(() {
+        startDate = null;
+        endDate = null;
+        totalPrice = null;
+      });
+    }
   }
 
   void _calculateTotal() {
@@ -176,22 +201,31 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
     }
   }
 
-  void _showSnackBar(String message,
-      {bool isError = false, bool isWarning = false}) {
+  void _showSnackBar(
+    String message, {
+    bool isError = false,
+    bool isWarning = false,
+  }) {
+    if (!mounted) return;
+
     if (Platform.isIOS) {
       showCupertinoDialog(
         context: context,
-        builder: (_) => CupertinoAlertDialog(
-          title: Text(isError
-              ? 'Error'
-              : isWarning
-                  ? 'Notice'
-                  : 'Success'),
+        builder: (dialogContext) => CupertinoAlertDialog(
+          title: Text(
+            isError
+                ? 'Error'
+                : isWarning
+                ? 'Notice'
+                : 'Success',
+          ),
           content: Text(message),
           actions: [
             CupertinoDialogAction(
               child: const Text('OK'),
-              onPressed: () => Navigator.pop(context),
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+              },
             ),
           ],
         ),
@@ -203,8 +237,8 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
           backgroundColor: isError
               ? Colors.red
               : isWarning
-                  ? Colors.orange
-                  : Colors.green,
+              ? Colors.orange
+              : Colors.green,
         ),
       );
     }
@@ -217,9 +251,8 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
     }
 
     final days = endDate!.difference(startDate!).inDays + 1;
-    final calculatedTotalPrice = (!atOriginalPrice &&
-            _offer != null &&
-            _offer!.status == "Accepted")
+    final calculatedTotalPrice =
+        (!atOriginalPrice && _offer != null && _offer!.status == "Accepted")
         ? _offer!.offeredPrice * days
         : (product!.price * days);
 
@@ -229,9 +262,8 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
         startDate: startDate!,
         endDate: endDate!,
         totalPrice: calculatedTotalPrice,
-        offerId: (!atOriginalPrice &&
-                _offer != null &&
-                _offer!.status == "Accepted")
+        offerId:
+            (!atOriginalPrice && _offer != null && _offer!.status == "Accepted")
             ? _offer!.id
             : null,
       );
@@ -242,9 +274,11 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
             : "Booking requested successfully!",
       );
 
-      setState(() {
-        _isAlreadyBooked = true;
-      });
+      if (mounted) {
+        setState(() {
+          _isAlreadyBooked = true;
+        });
+      }
 
       if (mounted) {
         Navigator.of(context).pushAndRemoveUntil(
@@ -280,10 +314,10 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
           child: isLoading
               ? const Center(child: CupertinoActivityIndicator())
               : error != null
-                  ? Center(child: Text("Error: $error"))
-                  : product == null
-                      ? const Center(child: Text("Product not found"))
-                      : _buildProductDetailsContent(),
+              ? Center(child: Text("Error: $error"))
+              : product == null
+              ? const Center(child: Text("Product not found"))
+              : _buildProductDetailsContent(),
         ),
       );
     }
@@ -297,14 +331,18 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
         foregroundColor: Theme.of(context).appBarTheme.foregroundColor,
         elevation: 1,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back,
-              color: Theme.of(context).appBarTheme.foregroundColor),
+          icon: Icon(
+            Icons.arrow_back,
+            color: Theme.of(context).appBarTheme.foregroundColor,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
           IconButton(
-            icon: Icon(Icons.share,
-                color: Theme.of(context).appBarTheme.foregroundColor),
+            icon: Icon(
+              Icons.share,
+              color: Theme.of(context).appBarTheme.foregroundColor,
+            ),
             onPressed: () {
               // TODO: implement share
             },
@@ -315,10 +353,10 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
         child: isLoading
             ? const ProductDetailsLoadingShimmer()
             : error != null
-                ? Center(child: Text("Error: $error"))
-                : product == null
-                    ? const Center(child: Text("Product not found"))
-                    : _buildProductDetailsContent(),
+            ? Center(child: Text("Error: $error"))
+            : product == null
+            ? const Center(child: Text("Product not found"))
+            : _buildProductDetailsContent(),
       ),
     );
   }
@@ -338,7 +376,12 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
               product: product!,
               currentUserId: currentUserId,
               onMakeOffer: _isAlreadyBooked
-                  ? () {}
+                  ? () {
+                      _showSnackBar(
+                        'Cannot make offer on an already booked item',
+                        isWarning: true,
+                      );
+                    }
                   : () {
                       Navigator.of(context).push(
                         MaterialPageRoute(
@@ -384,5 +427,10 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
         ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
   }
 }
