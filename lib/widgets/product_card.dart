@@ -1,11 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-
-// Cubit
-import '../cubit/navigation_cubit.dart';
-
 // Routes
 import '../routes/app_routes.dart';
 
@@ -13,7 +8,6 @@ import '../routes/app_routes.dart';
 import '../models/product_model.dart';
 import '../services/wishlist_service.dart';
 import '../environment/env.dart';
-import '../pages/product/product_details_page.dart';
 
 class ProductCard extends StatefulWidget {
   final Product product;
@@ -56,6 +50,27 @@ class _ProductCardState extends State<ProductCard> with SingleTickerProviderStat
     super.dispose();
   }
 
+  String _getRelativeDate(DateTime date) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final yesterday = DateTime(now.year, now.month, now.day - 1);
+    final dateOnly = DateTime(date.year, date.month, date.day);
+
+    if (dateOnly == today) {
+      return 'Today';
+    } else if (dateOnly == yesterday) {
+      return 'Yesterday';
+    } else {
+      final difference = today.difference(dateOnly).inDays;
+      if (difference <= 7) {
+        return '$difference ${difference == 1 ? 'day' : 'days'} ago';
+      } else {
+        // For dates older than a week, show the actual date in a shorter format
+        return DateFormat('MMM dd, yyyy').format(date);
+      }
+    }
+  }
+
   Future<void> _toggleWishlist() async {
     final originalStatus = _isWishlisted;
     widget.onWishlistChanged(widget.product.id, !originalStatus);
@@ -92,7 +107,7 @@ class _ProductCardState extends State<ProductCard> with SingleTickerProviderStat
   void _navigateToDetails() {
     AppRoutes.push(
       context,
-      AppRoutes.productDetails, // Make sure this route is defined in AppRoutes
+      AppRoutes.productDetails,
       arguments: {
         'productId': widget.product.id,
       },
@@ -101,7 +116,7 @@ class _ProductCardState extends State<ProductCard> with SingleTickerProviderStat
 
   @override
   Widget build(BuildContext context) {
-    final String formattedDate = DateFormat.yMMMd().format(widget.product.createdAt);
+    final String relativeDate = _getRelativeDate(widget.product.createdAt);
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -268,6 +283,7 @@ class _ProductCardState extends State<ProductCard> with SingleTickerProviderStat
                         ],
                       ),
                       const SizedBox(height: 8),
+                      // Location row
                       Row(
                         children: [
                           Icon(Icons.location_on, size: 16, color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.7)),
@@ -283,14 +299,17 @@ class _ProductCardState extends State<ProductCard> with SingleTickerProviderStat
                               maxLines: 1,
                             ),
                           ),
-                          Text(
-                            formattedDate,
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.7),
-                            ),
-                          ),
                         ],
+                      ),
+                      const SizedBox(height: 4),
+                      // Relative date on a new line
+                      Text(
+                        relativeDate,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.7),
+                          fontStyle: FontStyle.italic,
+                        ),
                       ),
                       const SizedBox(height: 8),
                       Text(

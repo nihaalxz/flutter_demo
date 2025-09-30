@@ -168,7 +168,7 @@ class ImagePickerSection extends StatelessWidget {
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
                     color: Theme.of(context).colorScheme.outline.withOpacity(0.6), // Thicker border
-                    width: 2.0, // Increased border width
+                    width: 1.0, // Increased border width
                   ),
                 ),
                 child: selectedImage != null

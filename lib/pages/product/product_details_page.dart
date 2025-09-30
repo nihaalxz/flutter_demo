@@ -50,6 +50,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
   String? currentUserId;
   OfferResponseDTO? _offer;
   bool _isAlreadyBooked = false;
+  bool _hasNavigatedToBookings = false; // ✅ ADD THIS FLAG
 
   @override
   void initState() {
@@ -63,6 +64,22 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkAvailabilityBeforeSelection();
     });
+  }
+
+  // ✅ ADD THIS METHOD TO HANDLE BACK NAVIGATION
+  Future<bool> _onWillPop() async {
+    // If we've already navigated to bookings, don't navigate again
+    if (_hasNavigatedToBookings) {
+      return true; // Allow normal back navigation
+    }
+    
+    // For iOS swipe back, just pop normally
+    if (Platform.isIOS) {
+      return true;
+    }
+    
+    // For Android back button, use normal pop
+    return true;
   }
 
   Future<void> _loadCurrentUser() async {
@@ -237,8 +254,13 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
         _isAlreadyBooked = true;
       });
 
-      // ✅ UPDATED: Use BLoC Cubit to switch to Bookings tab
-      AppRoutes.switchToBookingsTab(context);
+      // ✅ UPDATED: Set flag and use navigation
+      if (mounted) {
+        setState(() {
+          _hasNavigatedToBookings = true;
+        });
+        AppRoutes.switchToBookingsTab(context);
+      }
     } catch (e) {
       _showSnackBar("Booking failed: $e", isError: true);
     }
@@ -246,59 +268,67 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
 
   @override
   Widget build(BuildContext context) {
+    // For iOS
     if (Platform.isIOS) {
-      return CupertinoPageScaffold(
-        navigationBar: CupertinoNavigationBar(
-          middle: Text(product?.name ?? "Details"),
-          leading: CupertinoNavigationBarBackButton(
-            onPressed: () => AppRoutes.pop(context),
+      return WillPopScope(
+        onWillPop: _onWillPop,
+        child: CupertinoPageScaffold(
+          navigationBar: CupertinoNavigationBar(
+            middle: Text(product?.name ?? "Details"),
+            leading: CupertinoNavigationBarBackButton(
+              onPressed: () => AppRoutes.pop(context),
+            ),
+            trailing: CupertinoButton(
+              padding: EdgeInsets.zero,
+              child: const Icon(CupertinoIcons.share),
+              onPressed: () {
+                // TODO: implement share
+              },
+            ),
           ),
-          trailing: CupertinoButton(
-            padding: EdgeInsets.zero,
-            child: const Icon(CupertinoIcons.share),
-            onPressed: () {
-              // TODO: implement share
-            },
+          child: SafeArea(
+            child: isLoading
+                ? const Center(child: CupertinoActivityIndicator())
+                : error != null
+                    ? Center(child: Text("Error: $error"))
+                    : product == null
+                        ? const Center(child: Text("Product not found"))
+                        : _buildProductDetailsContent(),
           ),
         ),
-        child: SafeArea(
+      );
+    }
+
+    // For Android
+    return WillPopScope(
+      onWillPop: _onWillPop,
+      child: Scaffold(
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        appBar: AppBar(
+          title: Text(product?.name ?? ""),
+          elevation: 1,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () => AppRoutes.pop(context),
+          ),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.share),
+              onPressed: () {
+                // TODO: implement share
+              },
+            ),
+          ],
+        ),
+        body: SafeArea(
           child: isLoading
-              ? const Center(child: CupertinoActivityIndicator())
+              ? const ProductDetailsLoadingShimmer()
               : error != null
                   ? Center(child: Text("Error: $error"))
                   : product == null
                       ? const Center(child: Text("Product not found"))
                       : _buildProductDetailsContent(),
         ),
-      );
-    }
-
-    return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: AppBar(
-        title: Text(product?.name ?? ""),
-        elevation: 1,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => AppRoutes.pop(context),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.share),
-            onPressed: () {
-              // TODO: implement share
-            },
-          ),
-        ],
-      ),
-      body: SafeArea(
-        child: isLoading
-            ? const ProductDetailsLoadingShimmer()
-            : error != null
-                ? Center(child: Text("Error: $error"))
-                : product == null
-                    ? const Center(child: Text("Product not found"))
-                    : _buildProductDetailsContent(),
       ),
     );
   }
@@ -325,7 +355,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                   : () {
                       AppRoutes.push(
                         context,
-                        AppRoutes.createOffer, // Make sure this route is defined
+                        AppRoutes.createOffer,
                         arguments: {
                           'productName': product!.name,
                           'originalPrice': product!.price,
