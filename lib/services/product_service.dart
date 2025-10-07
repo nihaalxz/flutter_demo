@@ -30,15 +30,17 @@ class ProductService {
   /// Fetches a list of all products, with caching.
   Future<List<Product>> fetchProducts({bool forceRefresh = false}) async {
     final cacheBox = Hive.box('p2p_cache');
-    
+
     final cachedData = cacheBox.get('cached_products');
     final cachedTimestamp = cacheBox.get('products_cache_timestamp') ?? 0;
     final currentTime = DateTime.now().millisecondsSinceEpoch;
 
     // Cache is valid for 10 minutes (600000 milliseconds)
-    if (!forceRefresh && cachedData != null && (currentTime - cachedTimestamp < 600000)) {
+    if (!forceRefresh &&
+        cachedData != null &&
+        (currentTime - cachedTimestamp < 600000)) {
       print("Loading products from Hive cache...");
-      
+
       // ✅ FIX: Safely convert the cached map to the correct type before parsing.
       return (cachedData as List).map((item) {
         final map = Map<String, dynamic>.from(item as Map);
@@ -53,13 +55,16 @@ class ProductService {
 
     if (response.statusCode == 200) {
       final List<dynamic> body = jsonDecode(response.body);
-      final products = body.map((dynamic item) => Product.fromJson(item)).toList();
-      
+      final products = body
+          .map((dynamic item) => Product.fromJson(item))
+          .toList();
+
       // Save raw JSON data to Hive cache for easier deserialization later
-      final List<Map<String, dynamic>> productsJson = body.cast<Map<String, dynamic>>();
+      final List<Map<String, dynamic>> productsJson = body
+          .cast<Map<String, dynamic>>();
       await cacheBox.put('cached_products', productsJson);
       await cacheBox.put('products_cache_timestamp', currentTime);
-      
+
       return products;
     } else {
       throw Exception('Failed to load products.');
@@ -78,14 +83,17 @@ class ProductService {
       // Try to parse a more specific error message from the backend
       try {
         final errorBody = json.decode(response.body);
-        final errorMessage = errorBody['message'] ?? 'Failed to load product details.';
+        final errorMessage =
+            errorBody['message'] ?? 'Failed to load product details.';
         throw Exception(errorMessage);
       } catch (_) {
         // Fallback if the response body isn't valid JSON
         if (response.statusCode == 404) {
           throw Exception('Product not found.');
         }
-        throw Exception('Failed to load product details. Status code: ${response.statusCode}');
+        throw Exception(
+          'Failed to load product details. Status code: ${response.statusCode}',
+        );
       }
     }
   }
@@ -103,11 +111,14 @@ class ProductService {
       // Try to parse a more specific error message from the backend
       try {
         final errorBody = json.decode(response.body);
-        final errorMessage = errorBody['message'] ?? 'Failed to load similar products.';
+        final errorMessage =
+            errorBody['message'] ?? 'Failed to load similar products.';
         throw Exception(errorMessage);
       } catch (_) {
         // Fallback if the response body isn't valid JSON
-        throw Exception('Failed to load similar products. Status code: ${response.statusCode}');
+        throw Exception(
+          'Failed to load similar products. Status code: ${response.statusCode}',
+        );
       }
     }
   }
@@ -134,14 +145,17 @@ class ProductService {
     request.fields['latitude'] = product.latitude.toString();
     request.fields['longitude'] = product.longitude.toString();
     request.fields['locationName'] = product.locationName;
-    request.fields['availability'] = 'true'; 
+    request.fields['availability'] = 'true';
 
     // Add the image file
     request.files.add(
       await http.MultipartFile.fromPath(
         'Image', // This key must match what your ASP.NET Core backend expects
         image.path,
-        contentType: MediaType('image', 'jpeg'), // Adjust content type if needed
+        contentType: MediaType(
+          'image',
+          'jpeg',
+        ), // Adjust content type if needed
       ),
     );
 
@@ -151,14 +165,21 @@ class ProductService {
     if (response.statusCode == 201 || response.statusCode == 200) {
       return Product.fromJson(json.decode(response.body));
     } else {
-      throw Exception('Failed to create product. Server responded with ${response.statusCode}: ${response.body}');
+      throw Exception(
+        'Failed to create product. Server responded with ${response.statusCode}: ${response.body}',
+      );
     }
   }
 
-    Future<Product> toggleAvailability(int itemId) async {
+  Future<Product> toggleAvailability(int itemId) async {
     final headers = await _getAuthHeaders();
-    final url = Uri.parse('$_baseUrl/item/$itemId/toggle-availability'); // Assuming this endpoint
-    final response = await http.patch(url, headers: headers); // Using PATCH is common for partial updates
+    final url = Uri.parse(
+      '$_baseUrl/item/$itemId/toggle-availability',
+    ); // Assuming this endpoint
+    final response = await http.patch(
+      url,
+      headers: headers,
+    ); // Using PATCH is common for partial updates
 
     if (response.statusCode == 200) {
       return Product.fromJson(json.decode(response.body));
@@ -167,9 +188,11 @@ class ProductService {
     }
   }
 
-   Future<List<Product>> getMyItems() async {
+  Future<List<Product>> getMyItems() async {
     final headers = await _getAuthHeaders();
-    final url = Uri.parse('$_baseUrl/item/my-items'); // Assuming this is your new endpoint
+    final url = Uri.parse(
+      '$_baseUrl/item/my-items',
+    ); // Assuming this is your new endpoint
     final response = await http.get(url, headers: headers);
 
     if (response.statusCode == 200) {
@@ -181,16 +204,20 @@ class ProductService {
   }
 
   /// Updates an existing product.
-Future<Product> updateItem(int id, ProductUpdateDto dto, {File? imageFile}) async {
-  final headers = await _getAuthHeaders();
-  final url = Uri.parse('$_baseUrl/item/$id');
+  Future<Product> updateItem(
+    int id,
+    ProductUpdateDto dto, {
+    File? imageFile,
+  }) async {
+    final headers = await _getAuthHeaders();
+    final url = Uri.parse('$_baseUrl/item/$id');
 
-  // Use Multipart for form-data
-  final request = http.MultipartRequest("PUT", url);
-  request.headers.addAll(headers);
+    // Use Multipart for form-data
+    final request = http.MultipartRequest("PUT", url);
+    request.headers.addAll(headers);
 
-  // Add text fields
-  request.fields['name'] = dto.name;
+    // Add text fields
+    request.fields['name'] = dto.name;
     request.fields['description'] = dto.description;
     request.fields['price'] = dto.price.toString();
     request.fields['categoryId'] = dto.categoryId.toString();
@@ -198,23 +225,23 @@ Future<Product> updateItem(int id, ProductUpdateDto dto, {File? imageFile}) asyn
     request.fields['availability'] = dto.availability.toString();
     request.fields['latitude'] = dto.latitude.toString();
     request.fields['longitude'] = dto.longitude.toString();
-    
 
+    // Add image file if selected
+    if (imageFile != null) {
+      request.files.add(
+        await http.MultipartFile.fromPath("image", imageFile.path),
+      );
+    }
 
-  // Add image file if selected
-  if (imageFile != null) {
-    request.files.add(await http.MultipartFile.fromPath("image", imageFile.path));
+    final streamedResponse = await request.send();
+    final response = await http.Response.fromStream(streamedResponse);
+
+    if (response.statusCode == 200) {
+      return Product.fromJson(jsonDecode(response.body));
+    } else {
+      throw Exception('Failed to update product: ${response.body}');
+    }
   }
-
-  final streamedResponse = await request.send();
-  final response = await http.Response.fromStream(streamedResponse);
-
-  if (response.statusCode == 200) {
-    return Product.fromJson(jsonDecode(response.body));
-  } else {
-    throw Exception('Failed to update product: ${response.body}');
-  }
-}
 
   /// Deletes a product by its ID.
   Future<void> deleteItem(int id) async {
@@ -226,7 +253,7 @@ Future<Product> updateItem(int id, ProductUpdateDto dto, {File? imageFile}) asyn
     }
   }
 
-    Future<void> trackView(int itemId) async {
+  Future<void> trackView(int itemId) async {
     final url = Uri.parse("$_baseUrl/Item/$itemId/track-view");
 
     try {
@@ -247,4 +274,63 @@ Future<Product> updateItem(int id, ProductUpdateDto dto, {File? imageFile}) asyn
       }
     }
   }
+
+  Future<CursorPage<Product>> fetchProductsCursor({
+    DateTime? cursor,
+    int pageSize = 9,
+    String? location, // Add location parameter
+  }) async {
+    final headers = await _getAuthHeaders();
+    final queryParams = {
+      if (cursor != null) 'cursor': cursor.toIso8601String(),
+      'pageSize': pageSize.toString(),
+      if (location != null && location.isNotEmpty) 'location': location,
+    };
+
+    final uri = Uri.parse(
+      '${AppConfig.ApibaseUrl}/item/fetchallitems',
+    ).replace(queryParameters: queryParams);
+
+    final response = await http.get(uri, headers: headers);
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      final items = (data['items'] as List)
+          .map((e) => Product.fromJson(e))
+          .toList();
+
+      final nextCursor = data['nextCursor'] != null
+          ? DateTime.parse(data['nextCursor'])
+          : null;
+
+      return CursorPage(items: items, nextCursor: nextCursor);
+    } else {
+      throw Exception('Failed to load products for infinite scroll.');
+    }
+  }
+
+  // Add method to fetch popular locations
+  Future<List<Map<String, dynamic>>> getPopularLocations({
+    int count = 10,
+  }) async {
+    final headers = await _getAuthHeaders();
+    final url = Uri.parse(
+      '${AppConfig.ApibaseUrl}/item/popular-locations?count=$count',
+    );
+    final response = await http.get(url, headers: headers);
+
+    if (response.statusCode == 200) {
+      final List<dynamic> data = jsonDecode(response.body);
+      return data.cast<Map<String, dynamic>>();
+    } else {
+      throw Exception('Failed to load popular locations.');
+    }
+  }
+}
+
+class CursorPage<T> {
+  final List<T> items;
+  final DateTime? nextCursor;
+
+  CursorPage({required this.items, required this.nextCursor});
 }

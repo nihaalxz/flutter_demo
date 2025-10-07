@@ -42,6 +42,7 @@ dependencies:
   razorpay_flutter: ^1.4.0
   url_launcher: ^6.3.2
   flutter_bloc: ^9.1.1
+infinite_scroll_pagination: ^4.0.0
 permission_handler: ^11.0.1
 
 dev_dependencies:

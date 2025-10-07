@@ -1,50 +1,88 @@
 import 'package:flutter/material.dart';
 import 'package:shimmer/shimmer.dart';
-import 'home_search_bar.dart'; // Using the search bar widget for consistent layout
+import 'home_search_bar.dart';
 
 class ShimmerEffects extends StatelessWidget {
-  const ShimmerEffects({super.key});
+  final String message;
+  const ShimmerEffects({super.key, this.message = "Loading..."});
 
   @override
   Widget build(BuildContext context) {
-    return CustomScrollView(
-      physics: const NeverScrollableScrollPhysics(), // Disable scrolling during load
-      slivers: [
-        SliverList(
-          delegate: SliverChildListDelegate([
-            // Use the actual search bar widget inside the shimmer for perfect layout matching
-            Shimmer.fromColors(
-              baseColor: Colors.grey.shade300,
-              highlightColor: Colors.grey.shade100,
-              child: const HomeSearchBar(),
-            ),
-            const SizedBox(height: 20),
-            _buildShimmerCategories(),
-            const SizedBox(height: 20),
-            Padding(
-              padding: const EdgeInsets.only(left: 20),
-              child: Shimmer.fromColors(
-                baseColor: Colors.grey.shade300,
-                highlightColor: Colors.grey.shade100,
-                child: Container(
-                  height: 24,
-                  width: 150,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(8),
+    return Stack(
+      children: [
+        // Background shimmer layout
+        AbsorbPointer(
+          child: CustomScrollView(
+            physics: const NeverScrollableScrollPhysics(),
+            slivers: [
+              SliverList(
+                delegate: SliverChildListDelegate([
+                  Shimmer.fromColors(
+                    baseColor: Colors.grey.shade300,
+                    highlightColor: Colors.grey.shade100,
+                    child: const HomeSearchBar(),
                   ),
+                  const SizedBox(height: 20),
+                  _buildShimmerCategories(),
+                  const SizedBox(height: 20),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 20),
+                    child: Shimmer.fromColors(
+                      baseColor: Colors.grey.shade300,
+                      highlightColor: Colors.grey.shade100,
+                      child: Container(
+                        height: 24,
+                        width: 150,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                ]),
+              ),
+              _buildShimmerProducts(),
+            ],
+          ),
+        ),
+        // Centered loading message overlay
+        Positioned.fill(
+          child: Container(
+            color: Colors.black.withOpacity(0.4),
+            child: Center(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).cardColor,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 10,
+                      spreadRadius: 2,
+                    )
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const CircularProgressIndicator(),
+                    const SizedBox(height: 16),
+                    Text(message, style: const TextStyle(fontSize: 16)),
+                  ],
                 ),
               ),
             ),
-            const SizedBox(height: 10),
-          ]),
+          ),
         ),
-        _buildShimmerProducts(),
       ],
     );
   }
 
   Widget _buildShimmerCategories() {
+    // ... This method remains unchanged
     return SizedBox(
       height: 90,
       child: ListView.builder(
@@ -87,6 +125,7 @@ class ShimmerEffects extends StatelessWidget {
   }
 
   Widget _buildShimmerProducts() {
+    // ... This method remains unchanged
     return SliverList(
       delegate: SliverChildBuilderDelegate(
         (context, index) {
@@ -95,10 +134,10 @@ class ShimmerEffects extends StatelessWidget {
             highlightColor: Colors.grey.shade100,
             child: Container(
               margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-              height: 124, // Matches the ProductCard height
+              height: 156, // Adjusted to better match ProductCard
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(15),
+                borderRadius: BorderRadius.circular(20),
               ),
             ),
           );

@@ -1,36 +1,28 @@
 import 'package:flutter/material.dart';
-import 'package:myfirstflutterapp/pages/myOffers.dart';
-import 'package:provider/provider.dart';
-import 'dart:io';
-
-// --- Assumed Imports for all models, services, and widgets ---
+import 'package:myfirstflutterapp/models/category_model.dart';
+import 'package:myfirstflutterapp/models/product_model.dart';
 import 'package:myfirstflutterapp/models/user_model.dart';
-import 'package:myfirstflutterapp/state/AppStateManager.dart';
+import 'package:myfirstflutterapp/pages/auth/profile_page.dart';
+import 'package:myfirstflutterapp/pages/gen/settings_page.dart';
+import 'package:myfirstflutterapp/pages/myOffers.dart';
+import 'package:myfirstflutterapp/pages/notification_page.dart';
+import 'package:myfirstflutterapp/pages/payments/payment_history_page.dart';
+import 'package:myfirstflutterapp/pages/payments/wallet_page.dart';
+import 'package:myfirstflutterapp/pages/product/my_items_page.dart';
+import 'package:myfirstflutterapp/pages/rental_history_page.dart';
+import 'package:myfirstflutterapp/pages/wishlist_page.dart';
 import 'package:myfirstflutterapp/services/auth_service.dart';
 import 'package:myfirstflutterapp/services/category_service.dart';
 import 'package:myfirstflutterapp/services/product_service.dart';
-import 'package:myfirstflutterapp/services/wishlist_service.dart';
-import 'package:myfirstflutterapp/services/location_service.dart';
-import 'package:myfirstflutterapp/models/category_model.dart';
-import 'package:myfirstflutterapp/models/product_model.dart';
-import 'package:myfirstflutterapp/models/wishlist_item_model.dart';
-import 'package:myfirstflutterapp/pages/gen/settings_page.dart';
-import 'package:myfirstflutterapp/pages/product/my_items_page.dart';
-import 'package:myfirstflutterapp/pages/notification_page.dart';
-import 'package:myfirstflutterapp/pages/product/product_details_page.dart';
-import 'package:myfirstflutterapp/pages/auth/profile_page.dart';
-import 'package:myfirstflutterapp/pages/wishlist_page.dart';
-import 'package:myfirstflutterapp/pages/payments/wallet_page.dart';
-import 'package:myfirstflutterapp/pages/payments/payment_history_page.dart';
-import 'package:myfirstflutterapp/pages/rental_history_page.dart';
-
-import '../widgets/home_app_bar.dart';
-import '../widgets/home_search_bar.dart';
-import '../widgets/categories_section.dart';
-import '../widgets/product_section.dart';
-import '../widgets/location_section.dart';
-import '../widgets/error_empty_states.dart';
-import '../widgets/shimmer_effects.dart';
+import 'package:myfirstflutterapp/state/AppStateManager.dart';
+import 'package:myfirstflutterapp/widgets/categories_section.dart';
+import 'package:myfirstflutterapp/widgets/error_empty_states.dart';
+import 'package:myfirstflutterapp/widgets/home_app_bar.dart';
+import 'package:myfirstflutterapp/widgets/home_search_bar.dart';
+import 'package:myfirstflutterapp/widgets/location_dropdown.dart';
+import 'package:myfirstflutterapp/widgets/product_card.dart';
+import 'package:myfirstflutterapp/widgets/shimmer_effects.dart';
+import 'package:provider/provider.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -43,339 +35,361 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin 
   @override
   bool get wantKeepAlive => true;
 
+  // --- Services ---
   late final AuthService _authService;
-  late Future<Map<String, dynamic>> _dataFuture;
+  late final ProductService _productService;
+  late final CategoryService _categoryService;
+
+  // --- State ---
   AppUser? _currentUser;
-  bool _isFirstLoad = true;
-  List<Product> _products = [];
-  Map<int, Product> _productsMap = {};
-  bool _isLoadingLocation = true;
-  
-  // Cached computations for better performance
-  List<Product> _nearbyProducts = [];
-  List<Product> _otherProducts = [];
-  String? _cachedCity;
-  DateTime? _lastLocationFetch;
+  List<CategoryModel> _categories = [];
+  bool _isLoadingStaticData = true;
+  Object? _staticDataError;
+
+  // --- Manual Pagination State ---
+  final List<Product> _products = [];
+  final ScrollController _scrollController = ScrollController();
+  DateTime? _cursor;
+  bool _hasNextPage = true;
+  bool _isLoadingMore = false;
+
+  // --- Location State ---
+  String? _selectedLocation; // null = all locations, string = specific location
 
   @override
   void initState() {
     super.initState();
     _authService = AuthService();
+    _productService = ProductService();
+    _categoryService = CategoryService();
+
+    _scrollController.addListener(_onScroll);
+    _initializeData();
   }
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (_isFirstLoad) {
-      _initializeData();
-      _isFirstLoad = false;
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _initializeData() async {
+    setState(() {
+      _isLoadingStaticData = true;
+      _staticDataError = null;
+      _products.clear();
+      _cursor = null;
+      _hasNextPage = true;
+      // Don't reset _selectedLocation on refresh - keep user's choice
+    });
+
+    _loadUserProfile();
+
+    try {
+      await Future.wait([
+        _loadCategories(),
+        _fetchProductPage(),
+      ]);
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _staticDataError = e;
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoadingStaticData = false;
+        });
+      }
     }
   }
 
-  void _initializeData() {
-    setState(() {
-      _dataFuture = _loadAllData();
-    });
-    _loadUserProfile();
+  Future<void> _loadCategories() async {
+    try {
+      final categories = await _categoryService.getCategories(forceRefresh: true);
+      if (mounted) {
+        setState(() {
+          _categories = categories;
+        });
+      }
+    } catch (e) {
+      // If categories fail but products load, don't break the entire page
+      debugPrint('Failed to load categories: $e');
+    }
   }
 
   Future<void> _loadUserProfile() async {
     try {
       final user = await _authService.getUserProfile();
-      if (mounted) {
-        setState(() {
-          _currentUser = user;
-        });
-      }
+      if (mounted) setState(() => _currentUser = user);
     } catch (e) {
-      // Handle profile loading error silently
       debugPrint('Failed to load user profile: $e');
     }
   }
 
-  Future<String> _getCachedCity() async {
-    // Return cached city if it's fresh (less than 5 minutes old)
-    if (_cachedCity != null && 
-        _lastLocationFetch != null && 
-        DateTime.now().difference(_lastLocationFetch!) < const Duration(minutes: 5)) {
-      return _cachedCity!;
-    }
+  Future<void> _fetchProductPage() async {
+    if (_isLoadingMore || !_hasNextPage) return;
 
-    String city = "Loading...";
-    
+    setState(() {
+      _isLoadingMore = true;
+    });
+
     try {
-      final position = await LocationService.getCurrentPosition();
-      city = await LocationService.getCityFromCoordinates(position);
-    } on LocationServiceException catch (e) {
-      city = e.type == LocationErrorType.permissionDenied ||
-              e.type == LocationErrorType.permissionDeniedForever
-          ? "Location access denied"
-          : "Unable to determine location";
-    } catch (e) {
-      city = "Unable to determine location";
-    }
+      final page = await _productService.fetchProductsCursor(
+        cursor: _cursor,
+        pageSize: 9,
+        location: _selectedLocation, // This handles both null (all) and specific location
+      );
 
-    _cachedCity = city;
-    _lastLocationFetch = DateTime.now();
-    return city;
-  }
-
-  Future<Map<String, dynamic>> _loadAllData({bool forceRefresh = false}) async {
-    try {
-      if (mounted) setState(() => _isLoadingLocation = true);
-
-      final productService = ProductService();
-      final categoryService = CategoryService();
-      final wishlistService = WishlistService();
-
-      final city = await _getCachedCity();
-      final locationDenied = city == "Location access denied";
-
-      final results = await Future.wait([
-        productService.fetchProducts(forceRefresh: forceRefresh),
-        categoryService.getCategories(forceRefresh: forceRefresh),
-        wishlistService.getWishlist(),
-      ]);
-
-      final allProducts = results[0] as List<Product>;
-      final categories = results[1] as List<CategoryModel>;
-      final wishlistItems = results[2] as List<WishlistItemModel>;
-      
-      // Update products map for O(1) lookups
-      _productsMap = {for (var p in allProducts) p.id: p};
-      
-      // Update wishlist status efficiently
-      final wishlistedIds = wishlistItems.map((item) => item.itemId).toSet();
-      for (var product in allProducts) {
-        product.isWishlisted = wishlistedIds.contains(product.id);
+      if (mounted) {
+        setState(() {
+          _products.addAll(page.items);
+          _cursor = page.nextCursor;
+          _hasNextPage = _cursor != null;
+        });
       }
-      
-      _products = allProducts;
-      _updateProductLists(allProducts, city);
-
-      return {
-        'products': allProducts,
-        'categories': categories,
-        'city': city,
-        'locationDenied': locationDenied,
-      };
-    } on SocketException {
-      throw Exception('No Internet Connection. Please check your network and try again.');
-    } catch (e) {
-      rethrow;
+    } catch (error) {
+      if (_products.isEmpty) {
+        rethrow;
+      }
+      // Show error but don't break the entire page
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to load more items: $error')),
+        );
+      }
     } finally {
-      if (mounted) setState(() => _isLoadingLocation = false);
+      if (mounted) {
+        setState(() {
+          _isLoadingMore = false;
+        });
+      }
     }
   }
 
-  void _updateProductLists(List<Product> allProducts, String city) {
-    final cityLower = city.toLowerCase();
-    _nearbyProducts = allProducts.where((p) => 
-        p.locationName.toLowerCase().contains(cityLower)
-    ).toList();
-    final nearbySet = Set.from(_nearbyProducts);
-    _otherProducts = allProducts.where((p) => !nearbySet.contains(p)).toList();
+  void _onScroll() {
+    if (_scrollController.position.pixels >= 
+        _scrollController.position.maxScrollExtent - 200) {
+      _fetchProductPage();
+    }
+  }
+
+  void _onLocationChanged(String? newLocation) {
+    setState(() {
+      _selectedLocation = newLocation;
+      _products.clear();
+      _cursor = null;
+      _hasNextPage = true;
+    });
+    
+    // Fetch products with new location filter
+    _fetchProductPage();
   }
 
   void _onWishlistChanged(int productId, bool isWishlisted) {
-    setState(() {
-      final product = _productsMap[productId];
-      if (product != null) {
-        product.isWishlisted = isWishlisted;
-      }
-    });
+    final index = _products.indexWhere((p) => p.id == productId);
+    if (index != -1) {
+      setState(() {
+        _products[index].isWishlisted = isWishlisted;
+      });
+    }
   }
-
-  Future<void> _refreshData() async {
-    // Invalidate cache on refresh
-    _cachedCity = null;
-    _lastLocationFetch = null;
-    
-    setState(() {
-      _dataFuture = _loadAllData(forceRefresh: true);
-    });
-  }
-
-  void _navigateToProductDetails(int productId) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => ProductDetailsPage(productId: productId)
-      )
-    );
-  }
-
-  Widget _buildProductSections(Map<String, dynamic> data) {
-    final allProducts = data['products'] as List<Product>;
-    final categories = data['categories'] as List<CategoryModel>;
-    final city = data['city'] as String;
-    final locationDenied = data['locationDenied'] as bool;
-
-    // Update cached lists with fresh data
-    _updateProductLists(allProducts, city);
-
-    return CustomScrollView(
-      slivers: [
-        SliverList(
-          delegate: SliverChildListDelegate([
-            const HomeSearchBar(),
-            const SizedBox(height: 20),
-            CategoriesSection(categories: categories),
-            const SizedBox(height: 20),
-            LocationSection(
-              currentCity: city,
-              locationPermissionDenied: locationDenied,
-              isLoadingLocation: _isLoadingLocation,
-              onRetryLocation: _refreshData,
-            ),
-            const SizedBox(height: 10),
-          ]),
-        ),
-        if (_nearbyProducts.isNotEmpty) ...[
-          _buildSectionTitle('Near You'),
-          _buildProductsSection(_nearbyProducts),
-        ],
-        if (_otherProducts.isNotEmpty) ...[
-          _buildSectionTitle('Other Items'),
-          _buildProductsSection(_otherProducts),
-        ],
-        if (allProducts.isEmpty) const SliverToBoxAdapter(child: EmptyState()),
-      ],
-    );
-  }
-
-  Widget _buildSectionTitle(String title) {
-    return SliverToBoxAdapter(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-        child: Text(
-          title,
-          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildProductsSection(List<Product> products) {
-    return ProductsSection(
-      products: products,
-      onProductTap: (product) => _navigateToProductDetails(product.id),
-      onWishlistChanged: _onWishlistChanged,
-    );
-  }
-
-  Widget _buildBody() {
-    return FutureBuilder<Map<String, dynamic>>(
-      future: _dataFuture,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const ShimmerEffects();
-        }
-
-        if (snapshot.hasError) {
-          return ErrorState(
-            error: snapshot.error,
-            onRetry: _refreshData,
-          );
-        }
-
-        if (!snapshot.hasData) {
-          return  ErrorState(
-            error: 'No data available',
-            onRetry: _refreshData,
-          );
-        }
-
-        return RefreshIndicator.adaptive(
-          onRefresh: _refreshData,
-          child: _buildProductSections(snapshot.data!),
-        );
-      },
-    );
-  }
-
-// Alternative solution - Use PreferredSize wrapper
-PreferredSizeWidget _buildAppBar(AppStateManager appState) {
-  final bool showMenuBadge = appState.hasUnreadOffers || appState.hasUnreadPayments;
-
-  return PreferredSize(
-    preferredSize: const Size.fromHeight(kToolbarHeight),
-    child: HomeAppBar(
-      notificationCount: appState.hasUnreadNotifications ? 1 : 0,
-      showMenuBadge: showMenuBadge,
-      currentUser: _currentUser,
-      onProfileTap: () => Navigator.push(
-        context, 
-        MaterialPageRoute(builder: (context) => const ProfilePage())
-      ),
-      onNotificationTap: () {
-        appState.clearUnreadNotifications();
-        Navigator.of(context).push(
-          MaterialPageRoute(builder: (context) => const NotificationPage())
-        );
-      },
-      onMenuSelected: _handleMenuSelection,
-    ),
-  );
-}
 
   @override
   Widget build(BuildContext context) {
-    super.build(context); // Required for AutomaticKeepAliveClientMixin
-    
+    super.build(context);
     return Consumer<AppStateManager>(
       builder: (context, appState, child) {
         return Scaffold(
           appBar: _buildAppBar(appState),
           backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-          body: _buildBody(),
+          body: RefreshIndicator.adaptive(
+            onRefresh: _initializeData,
+            child: _buildBody(),
+          ),
         );
       },
     );
   }
-  
+
+  Widget _buildBody() {
+    if (_isLoadingStaticData && _products.isEmpty) {
+      return const ShimmerEffects(message: "Getting things ready...");
+    }
+
+    if (_staticDataError != null && _products.isEmpty) {
+      return ErrorState(
+        error: _staticDataError,
+        onRetry: _initializeData,
+      );
+    }
+
+    return CustomScrollView(
+      controller: _scrollController,
+      slivers: [
+        SliverList(
+          delegate: SliverChildListDelegate.fixed([
+            const HomeSearchBar(),
+            const SizedBox(height: 20),
+            CategoriesSection(categories: _categories),
+            const SizedBox(height: 20),
+            _buildLocationStatus(),
+            const SizedBox(height: 20),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Text(
+                _selectedLocation != null 
+                    ? "Items in $_selectedLocation"
+                    : "Explore Items from All Locations",
+                style: Theme.of(context)
+                    .textTheme
+                    .headlineSmall
+                    ?.copyWith(fontWeight: FontWeight.bold)),
+            ),
+            const SizedBox(height: 10),
+          ]),
+        ),
+        SliverList(
+          delegate: SliverChildBuilderDelegate(
+            (context, index) {
+              final product = _products[index];
+              return ProductCard(
+                product: product,
+                onWishlistChanged: _onWishlistChanged,
+              );
+            },
+            childCount: _products.length,
+          ),
+        ),
+        if (_isLoadingMore)
+          const SliverToBoxAdapter(
+            child: Center(
+              child: Padding(
+                padding: EdgeInsets.all(16.0),
+                child: CircularProgressIndicator(),
+              ),
+            ),
+          ),
+        if (_products.isEmpty && !_isLoadingMore)
+          const EmptyState(),
+      ],
+    );
+  }
+
+  Widget _buildLocationStatus() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.primary.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+        ),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            _selectedLocation != null ? Icons.location_on : Icons.public,
+            size: 16,
+            color: Theme.of(context).colorScheme.primary,
+          ),
+          const SizedBox(width: 8),
+          Text(
+            _selectedLocation != null 
+                ? "Showing items in $_selectedLocation"
+                : "Showing items from all locations",
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  PreferredSizeWidget _buildAppBar(AppStateManager appState) {
+    final bool showMenuBadge = appState.hasUnreadOffers || appState.hasUnreadPayments;
+    return PreferredSize(
+      preferredSize: const Size.fromHeight(kToolbarHeight + 50),
+      child: Column(
+        children: [
+          HomeAppBar(
+            notificationCount: appState.hasUnreadNotifications ? 1 : 0,
+            showMenuBadge: showMenuBadge,
+            currentUser: _currentUser,
+            onProfileTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const ProfilePage()),
+            ),
+            onNotificationTap: () {
+              appState.clearUnreadNotifications();
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (context) => const NotificationPage()),
+              );
+            },
+            onMenuSelected: _handleMenuSelection,
+          ),
+          // Location dropdown bar
+          Container(
+            height: 50,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            decoration: BoxDecoration(
+              color: Theme.of(context).cardColor,
+              border: Border(
+                bottom: BorderSide(
+                  color: Theme.of(context).dividerColor.withOpacity(0.1),
+                ),
+              ),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.location_on_outlined, size: 20, color: Colors.grey),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: LocationDropdown(
+                    selectedLocation: _selectedLocation,
+                    onLocationChanged: _onLocationChanged,
+                    productService: _productService,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _handleMenuSelection(MenuItem value) {
     final appState = Provider.of<AppStateManager>(context, listen: false);
-
     switch (value) {
-      case MenuItem.item2: // My Listed Items
-        Navigator.of(context).push(
-          MaterialPageRoute(builder: (context) => const MyItemsPage())
-        );
+      case MenuItem.item2:
+        Navigator.of(context).push(MaterialPageRoute(builder: (context) => const MyItemsPage()));
         break;
-      case MenuItem.item3: // Offers
+      case MenuItem.item3:
         appState.clearUnreadOffers();
-        Navigator.of(context).push(
-          MaterialPageRoute(builder: (context) => const MyOffersPage())
-        );
+        Navigator.of(context).push(MaterialPageRoute(builder: (context) => const MyOffersPage()));
         break;
-      case MenuItem.item4: // Wallet
+      case MenuItem.item4:
         appState.clearUnreadPayments();
-        Navigator.of(context).push(
-          MaterialPageRoute(builder: (context) => const WalletPage())
-        );
+        Navigator.of(context).push(MaterialPageRoute(builder: (context) => const WalletPage()));
         break;
-      case MenuItem.item5: // Payment History
+      case MenuItem.item5:
         appState.clearUnreadPayments();
-        Navigator.of(context).push(
-          MaterialPageRoute(builder: (context) => const PaymentHistoryPage())
-        );
+        Navigator.of(context).push(MaterialPageRoute(builder: (context) => const PaymentHistoryPage()));
         break;
-      case MenuItem.item6: // Rental History
-        Navigator.of(context).push(
-          MaterialPageRoute(builder: (context) => const RentalHistoryPage())
-        );
+      case MenuItem.item6:
+        Navigator.of(context).push(MaterialPageRoute(builder: (context) => const RentalHistoryPage()));
         break;
-      case MenuItem.item7: // Wishlist
-        Navigator.of(context).push(
-          MaterialPageRoute(builder: (context) => const WishlistPage())
-        );
+      case MenuItem.item7:
+        Navigator.of(context).push(MaterialPageRoute(builder: (context) => const WishlistPage()));
         break;
-      case MenuItem.item8: // Settings
-        Navigator.of(context).push(
-          MaterialPageRoute(builder: (context) => const SettingsPage())
-        );
+      case MenuItem.item8:
+        Navigator.of(context).push(MaterialPageRoute(builder: (context) => const SettingsPage()));
         break;
       default:
         break;
