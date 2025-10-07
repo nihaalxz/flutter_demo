@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:myfirstflutterapp/models/category_model.dart';
@@ -52,6 +53,7 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin 
   bool _isLoadingMore = false;
 
   String? _selectedLocation;
+  Timer? _locationChangeDebounce;
 
   @override
   void initState() {
@@ -61,28 +63,28 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin 
     _categoryService = CategoryService();
 
     _scrollController.addListener(_onScroll);
-
     _restoreStateAndInitialize();
-  }
-
-  Future<void> _restoreStateAndInitialize() async {
-    await _loadSavedLocation(); // ✅ Load saved location first
-    await _initializeData(); // then fetch products
-  }
-
-  Future<void> _loadSavedLocation() async {
-    final prefs = await SharedPreferences.getInstance();
-    final saved = prefs.getString('saved_location');
-    if (saved != null && saved != 'all_kerala') {
-      setState(() => _selectedLocation = saved);
-    }
   }
 
   @override
   void dispose() {
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
+    _locationChangeDebounce?.cancel();
     super.dispose();
+  }
+
+  Future<void> _restoreStateAndInitialize() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedLocation = prefs.getString('saved_location');
+    
+    if (mounted) {
+      setState(() {
+        _selectedLocation = savedLocation;
+      });
+    }
+    
+    await _initializeData();
   }
 
   Future<void> _initializeData() async {
@@ -146,37 +148,80 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin 
         });
       }
     } catch (error) {
-      if (_products.isEmpty) rethrow;
-      if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Failed to load more items: $error')));
+      debugPrint('Error fetching products: $error');
+      
+      if (_products.isEmpty) {
+        rethrow;
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  const Icon(Icons.error_outline, color: Colors.white, size: 20),
+                  const SizedBox(width: 8),
+                  const Expanded(child: Text('Could not load more items')),
+                ],
+              ),
+              action: SnackBarAction(
+                label: 'Retry',
+                textColor: Colors.white,
+                onPressed: _fetchProductPage,
+              ),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
       }
     } finally {
-      if (mounted) setState(() => _isLoadingMore = false);
+      if (mounted) {
+        setState(() => _isLoadingMore = false);
+      }
     }
   }
 
   void _onScroll() {
-    if (_scrollController.position.pixels >=
-        _scrollController.position.maxScrollExtent - 200) {
-      _fetchProductPage();
+    if (_scrollController.hasClients) {
+      final maxScroll = _scrollController.position.maxScrollExtent;
+      final currentScroll = _scrollController.position.pixels;
+      final delta = maxScroll - currentScroll;
+      
+      if (delta <= 200 && !_isLoadingMore && _hasNextPage) {
+        _fetchProductPage();
+      }
     }
   }
 
   void _onLocationChanged(String? newLocation) {
-    setState(() {
-      _selectedLocation = newLocation;
-      _products.clear();
-      _cursor = null;
-      _hasNextPage = true;
+    _locationChangeDebounce?.cancel();
+    
+    _locationChangeDebounce = Timer(const Duration(milliseconds: 300), () {
+      if (mounted) {
+        setState(() {
+          _selectedLocation = newLocation;
+          _products.clear();
+          _cursor = null;
+          _hasNextPage = true;
+        });
+        _fetchProductPage();
+      }
     });
-    _fetchProductPage();
   }
 
   void _onWishlistChanged(int productId, bool isWishlisted) {
     final index = _products.indexWhere((p) => p.id == productId);
     if (index != -1) {
       setState(() => _products[index].isWishlisted = isWishlisted);
+    }
+  }
+
+  String _getLocationDisplayText() {
+    if (_selectedLocation == null) {
+      return "Items from All Kerala";
+    } else if (_selectedLocation == 'current_location') {
+      return "Items Near You";
+    } else {
+      return "Items in $_selectedLocation";
     }
   }
 
@@ -217,41 +262,94 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin 
             const SizedBox(height: 20),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Text(
-                _selectedLocation != null
-                    ? "Items in $_selectedLocation"
-                    : "Items from All Kerala",
-                style: Theme.of(context)
-                    .textTheme
-                    .headlineSmall
-                    ?.copyWith(fontWeight: FontWeight.bold),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Text(
+                      _getLocationDisplayText(),
+                      style: Theme.of(context)
+                          .textTheme
+                          .headlineSmall
+                          ?.copyWith(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 10),
           ]),
         ),
-        SliverList(
-          delegate: SliverChildBuilderDelegate(
-            (context, index) {
-              final product = _products[index];
-              return ProductCard(
-                product: product,
-                onWishlistChanged: _onWishlistChanged,
-              );
-            },
-            childCount: _products.length,
+        
+        SliverPadding(
+          padding: const EdgeInsets.symmetric(horizontal: 2),
+          sliver: SliverList(
+            delegate: SliverChildBuilderDelegate(
+              (context, index) {
+                final product = _products[index];
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: ProductCard(
+                    product: product,
+                    onWishlistChanged: _onWishlistChanged,
+                  ),
+                );
+              },
+              childCount: _products.length,
+            ),
           ),
         ),
+        
         if (_isLoadingMore)
-          const SliverToBoxAdapter(
-            child: Center(
-              child: Padding(
-                padding: EdgeInsets.all(16.0),
-                child: CircularProgressIndicator(),
+          SliverToBoxAdapter(
+            child: Container(
+              padding: const EdgeInsets.all(16.0),
+              alignment: Alignment.center,
+              child: const CircularProgressIndicator(),
+            ),
+          ),
+        
+        if (_products.isEmpty && !_isLoadingMore)
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.all(40),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.inventory_2_outlined,
+                    size: 64,
+                    color: Colors.grey.shade400,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    _selectedLocation != null 
+                        ? 'No items found in $_selectedLocation'
+                        : 'No items available',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: Colors.grey.shade600,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  if (_selectedLocation != null) ...[
+                    const SizedBox(height: 8),
+                    TextButton.icon(
+                      onPressed: () {
+                        setState(() => _selectedLocation = null);
+                        _fetchProductPage();
+                      },
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Show all items'),
+                    ),
+                  ],
+                ],
               ),
             ),
           ),
-        if (_products.isEmpty && !_isLoadingMore) const EmptyState(),
+        
+        const SliverToBoxAdapter(
+          child: SizedBox(height: 20),
+        ),
       ],
     );
   }
@@ -281,7 +379,7 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin 
           ),
           Container(
             height: 50,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 16,vertical: 4),
             decoration: BoxDecoration(
               color: Theme.of(context).cardColor,
               border: Border(
@@ -292,7 +390,7 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin 
             ),
             child: Row(
               children: [
-                const Icon(Icons.location_on_outlined, size: 20, color: Colors.grey),
+                const Icon(Icons.location_on_outlined, size: 20, color: Color.fromARGB(255, 0, 0, 0)),
                 const SizedBox(width: 8),
                 Expanded(
                   child: LocationDropdown(
