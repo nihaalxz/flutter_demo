@@ -35,7 +35,7 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
     final theme = Theme.of(context);
     return AppBar(
       title: Text(
-        'Circlo',
+        'RentHouse',
         style: TextStyle(
           color: theme.textTheme.titleLarge?.color,
           fontSize: 22,

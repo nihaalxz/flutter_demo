@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:myfirstflutterapp/models/category_model.dart';
 import 'package:myfirstflutterapp/models/product_model.dart';
 import 'package:myfirstflutterapp/models/user_model.dart';
@@ -35,26 +36,22 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin 
   @override
   bool get wantKeepAlive => true;
 
-  // --- Services ---
   late final AuthService _authService;
   late final ProductService _productService;
   late final CategoryService _categoryService;
 
-  // --- State ---
   AppUser? _currentUser;
   List<CategoryModel> _categories = [];
   bool _isLoadingStaticData = true;
   Object? _staticDataError;
 
-  // --- Manual Pagination State ---
   final List<Product> _products = [];
   final ScrollController _scrollController = ScrollController();
   DateTime? _cursor;
   bool _hasNextPage = true;
   bool _isLoadingMore = false;
 
-  // --- Location State ---
-  String? _selectedLocation; // null = all locations, string = specific location
+  String? _selectedLocation;
 
   @override
   void initState() {
@@ -64,7 +61,21 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin 
     _categoryService = CategoryService();
 
     _scrollController.addListener(_onScroll);
-    _initializeData();
+
+    _restoreStateAndInitialize();
+  }
+
+  Future<void> _restoreStateAndInitialize() async {
+    await _loadSavedLocation(); // ✅ Load saved location first
+    await _initializeData(); // then fetch products
+  }
+
+  Future<void> _loadSavedLocation() async {
+    final prefs = await SharedPreferences.getInstance();
+    final saved = prefs.getString('saved_location');
+    if (saved != null && saved != 'all_kerala') {
+      setState(() => _selectedLocation = saved);
+    }
   }
 
   @override
@@ -81,7 +92,6 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin 
       _products.clear();
       _cursor = null;
       _hasNextPage = true;
-      // Don't reset _selectedLocation on refresh - keep user's choice
     });
 
     _loadUserProfile();
@@ -92,30 +102,17 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin 
         _fetchProductPage(),
       ]);
     } catch (e) {
-      if (mounted) {
-        setState(() {
-          _staticDataError = e;
-        });
-      }
+      if (mounted) setState(() => _staticDataError = e);
     } finally {
-      if (mounted) {
-        setState(() {
-          _isLoadingStaticData = false;
-        });
-      }
+      if (mounted) setState(() => _isLoadingStaticData = false);
     }
   }
 
   Future<void> _loadCategories() async {
     try {
       final categories = await _categoryService.getCategories(forceRefresh: true);
-      if (mounted) {
-        setState(() {
-          _categories = categories;
-        });
-      }
+      if (mounted) setState(() => _categories = categories);
     } catch (e) {
-      // If categories fail but products load, don't break the entire page
       debugPrint('Failed to load categories: $e');
     }
   }
@@ -132,15 +129,13 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin 
   Future<void> _fetchProductPage() async {
     if (_isLoadingMore || !_hasNextPage) return;
 
-    setState(() {
-      _isLoadingMore = true;
-    });
+    setState(() => _isLoadingMore = true);
 
     try {
       final page = await _productService.fetchProductsCursor(
         cursor: _cursor,
         pageSize: 9,
-        location: _selectedLocation, // This handles both null (all) and specific location
+        location: _selectedLocation,
       );
 
       if (mounted) {
@@ -151,26 +146,18 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin 
         });
       }
     } catch (error) {
-      if (_products.isEmpty) {
-        rethrow;
-      }
-      // Show error but don't break the entire page
+      if (_products.isEmpty) rethrow;
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to load more items: $error')),
-        );
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Failed to load more items: $error')));
       }
     } finally {
-      if (mounted) {
-        setState(() {
-          _isLoadingMore = false;
-        });
-      }
+      if (mounted) setState(() => _isLoadingMore = false);
     }
   }
 
   void _onScroll() {
-    if (_scrollController.position.pixels >= 
+    if (_scrollController.position.pixels >=
         _scrollController.position.maxScrollExtent - 200) {
       _fetchProductPage();
     }
@@ -183,17 +170,13 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin 
       _cursor = null;
       _hasNextPage = true;
     });
-    
-    // Fetch products with new location filter
     _fetchProductPage();
   }
 
   void _onWishlistChanged(int productId, bool isWishlisted) {
     final index = _products.indexWhere((p) => p.id == productId);
     if (index != -1) {
-      setState(() {
-        _products[index].isWishlisted = isWishlisted;
-      });
+      setState(() => _products[index].isWishlisted = isWishlisted);
     }
   }
 
@@ -220,10 +203,7 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin 
     }
 
     if (_staticDataError != null && _products.isEmpty) {
-      return ErrorState(
-        error: _staticDataError,
-        onRetry: _initializeData,
-      );
+      return ErrorState(error: _staticDataError, onRetry: _initializeData);
     }
 
     return CustomScrollView(
@@ -235,18 +215,17 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin 
             const SizedBox(height: 20),
             CategoriesSection(categories: _categories),
             const SizedBox(height: 20),
-            _buildLocationStatus(),
-            const SizedBox(height: 20),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Text(
-                _selectedLocation != null 
+                _selectedLocation != null
                     ? "Items in $_selectedLocation"
-                    : "Explore Items from All Locations",
+                    : "Items from All Kerala",
                 style: Theme.of(context)
                     .textTheme
                     .headlineSmall
-                    ?.copyWith(fontWeight: FontWeight.bold)),
+                    ?.copyWith(fontWeight: FontWeight.bold),
+              ),
             ),
             const SizedBox(height: 10),
           ]),
@@ -272,47 +251,14 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin 
               ),
             ),
           ),
-        if (_products.isEmpty && !_isLoadingMore)
-          const EmptyState(),
+        if (_products.isEmpty && !_isLoadingMore) const EmptyState(),
       ],
     );
   }
 
-  Widget _buildLocationStatus() {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.primary.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-        ),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            _selectedLocation != null ? Icons.location_on : Icons.public,
-            size: 16,
-            color: Theme.of(context).colorScheme.primary,
-          ),
-          const SizedBox(width: 8),
-          Text(
-            _selectedLocation != null 
-                ? "Showing items in $_selectedLocation"
-                : "Showing items from all locations",
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   PreferredSizeWidget _buildAppBar(AppStateManager appState) {
-    final bool showMenuBadge = appState.hasUnreadOffers || appState.hasUnreadPayments;
+    final bool showMenuBadge =
+        appState.hasUnreadOffers || appState.hasUnreadPayments;
     return PreferredSize(
       preferredSize: const Size.fromHeight(kToolbarHeight + 50),
       child: Column(
@@ -333,7 +279,6 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin 
             },
             onMenuSelected: _handleMenuSelection,
           ),
-          // Location dropdown bar
           Container(
             height: 50,
             padding: const EdgeInsets.symmetric(horizontal: 16),
