@@ -23,6 +23,7 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   if (kDebugMode) {
+
     print("🚀 Flutter main() reached");
   }
 
