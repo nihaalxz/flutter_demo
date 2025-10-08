@@ -221,7 +221,7 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin 
     } else if (_selectedLocation == 'current_location') {
       return "Items Near You";
     } else {
-      return "Items in $_selectedLocation";
+      return "Items near $_selectedLocation";
     }
   }
 

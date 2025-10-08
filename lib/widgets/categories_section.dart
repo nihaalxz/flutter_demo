@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:myfirstflutterapp/models/category_model.dart';
 import 'package:myfirstflutterapp/environment/env.dart';
+import 'package:myfirstflutterapp/pages/CategoryProductsPage.dart';
 
 class CategoriesSection extends StatelessWidget {
   final List<CategoryModel> categories;
@@ -45,35 +46,50 @@ class CategoryItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 80,
-      margin: const EdgeInsets.only(right: 10),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            height: 60,
-            width: 60,
-            decoration: BoxDecoration(
-              color: Colors.grey[200], // Placeholder background
-              shape: BoxShape.circle,
-              image: DecorationImage(
-                fit: BoxFit.contain,
-                image: CachedNetworkImageProvider(
-                  "${AppConfig.imageBaseUrl}${category.iconImage}",
+    // ✅ Wrap the item in an InkWell to make it tappable
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: () {
+        // ✅ Navigate to the new page, passing the category details
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => CategoryProductsPage(
+              categoryId: category.id,
+              categoryName: category.name,
+            ),
+          ),
+        );
+      },
+      child: Container(
+        width: 80,
+        margin: const EdgeInsets.only(right: 10),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              height: 60,
+              width: 60,
+              decoration: BoxDecoration(
+                color: Colors.grey[200],
+                shape: BoxShape.circle,
+                image: DecorationImage(
+                  fit: BoxFit.contain,
+                  image: CachedNetworkImageProvider(
+                    "${AppConfig.imageBaseUrl}${category.iconImage}",
+                  ),
                 ),
               ),
             ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            category.name,
-            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
-            textAlign: TextAlign.center,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
+            const SizedBox(height: 8),
+            Text(
+              category.name,
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:myfirstflutterapp/models/CursorPage.dart';
 import 'package:myfirstflutterapp/models/Product_DTO/Product_update_dto.dart';
 import 'package:http_parser/http_parser.dart';
 // --- Assumed Imports ---
@@ -309,6 +310,40 @@ class ProductService {
     }
   }
 
+  Future<CursorPage<Product>> fetchProductsByCategory(
+    int categoryId, {
+    DateTime? cursor,
+    int pageSize = 20,
+  }) async {
+    final headers = await _getAuthHeaders();
+    
+    final queryParameters = {
+      'pageSize': pageSize.toString(),
+      if (cursor != null) 'cursor': cursor.toIso8601String(),
+    };
+    
+    final url = Uri.parse('$_baseUrl/item/category/$categoryId')
+        .replace(queryParameters: queryParameters);
+        
+    final response = await http.get(url, headers: headers);
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      final items = (data['items'] as List)
+          .map((e) => Product.fromJson(e))
+          .toList();
+
+      final nextCursor = data['nextCursor'] != null
+          ? DateTime.parse(data['nextCursor'])
+          : null;
+
+      // Return an instance of your generic CursorPage class
+      return CursorPage(items: items, nextCursor: nextCursor);
+    } else {
+      throw Exception('Failed to load products for this category.');
+    }
+  }
+
   // Add method to fetch popular locations
   Future<List<Map<String, dynamic>>> getPopularLocations({
     int count = 10,
@@ -326,11 +361,4 @@ class ProductService {
       throw Exception('Failed to load popular locations.');
     }
   }
-}
-
-class CursorPage<T> {
-  final List<T> items;
-  final DateTime? nextCursor;
-
-  CursorPage({required this.items, required this.nextCursor});
 }
