@@ -136,7 +136,7 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin 
     try {
       final page = await _productService.fetchProductsCursor(
         cursor: _cursor,
-        pageSize: 9,
+        pageSize: 10, // Increased to get even number for grid
         location: _selectedLocation,
       );
 
@@ -271,7 +271,7 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin 
                       style: Theme.of(context)
                           .textTheme
                           .headlineSmall
-                          ?.copyWith(fontWeight: FontWeight.bold),
+                          ?.copyWith(fontWeight: FontWeight.bold,fontSize: 20),
                     ),
                   ),
                 ],
@@ -281,18 +281,23 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin 
           ]),
         ),
         
+        // CHANGED: Use SliverGrid instead of SliverList for 2-column layout
         SliverPadding(
-          padding: const EdgeInsets.symmetric(horizontal: 2),
-          sliver: SliverList(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          sliver: SliverGrid(
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2, // Two cards per row
+              crossAxisSpacing: 12, // Space between columns
+              mainAxisSpacing: 12, // Space between rows
+              childAspectRatio: 0.7, // Adjust this ratio to control card proportions
+            ),
             delegate: SliverChildBuilderDelegate(
               (context, index) {
                 final product = _products[index];
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: ProductCard(
-                    product: product,
-                    onWishlistChanged: _onWishlistChanged,
-                  ),
+                return ProductCard(
+                  product: product,
+                  onWishlistChanged: _onWishlistChanged,
+                  compact: true, // Add compact mode for grid layout
                 );
               },
               childCount: _products.length,

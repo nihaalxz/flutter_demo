@@ -34,7 +34,6 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
   void initState() {
     super.initState();
     _fetchInitialProducts();
-    // Add a listener to the scroll controller to detect when to load more items.
     _scrollController.addListener(_onScroll);
   }
 
@@ -71,7 +70,6 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
   }
 
   Future<void> _fetchMoreProducts() async {
-    // Prevent multiple fetches at the same time or if there are no more pages.
     if (_isLoadingMore || _nextCursor == null) return;
 
     setState(() => _isLoadingMore = true);
@@ -96,7 +94,6 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
   }
 
   void _onScroll() {
-    // If the user has scrolled to the bottom of the list, fetch more products.
     if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200) {
       _fetchMoreProducts();
     }
@@ -111,19 +108,26 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
 
   Widget _buildMaterialPage() {
     return Scaffold(
-      appBar: AppBar(title: Text(widget.categoryName)),
+      appBar: AppBar(
+        title: Text(widget.categoryName),
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
+        foregroundColor: Theme.of(context).appBarTheme.foregroundColor,
+      ),
       body: _buildBody(),
     );
   }
 
   Widget _buildCupertinoPage() {
     return CupertinoPageScaffold(
-      navigationBar: CupertinoNavigationBar(middle: Text(widget.categoryName)),
+      navigationBar: CupertinoNavigationBar(
+        middle: Text(widget.categoryName),
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
+      ),
       child: _buildBody(isCupertino: true),
     );
   }
 
-  // --- Shared Body Logic ---
+  // --- Updated Body Logic for Grid View ---
   
   Widget _buildBody({bool isCupertino = false}) {
     if (_isLoadingInitial) {
@@ -131,49 +135,114 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
     }
 
     if (_error != null) {
-      return Center(child: Text('Error: $_error'));
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.error_outline,
+                size: 64,
+                color: Theme.of(context).colorScheme.error,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Error loading products',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                _error!,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onBackground.withOpacity(0.7),
+                ),
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: _fetchInitialProducts,
+                child: const Text('Try Again'),
+              ),
+            ],
+          ),
+        ),
+      );
     }
 
     if (_products.isEmpty) {
-      return const Center(child: Text('No items found in this category.'));
-    }
-
-    final listView = ListView.builder(
-      controller: _scrollController,
-      padding: const EdgeInsets.all(8.0),
-      itemCount: _products.length + (_isLoadingMore ? 1 : 0),
-      itemBuilder: (context, index) {
-        // If it's the last item and we're loading more, show a spinner.
-        if (index == _products.length) {
-          return const Padding(
-            padding: EdgeInsets.all(16.0),
-            child: Center(child: CircularProgressIndicator.adaptive()),
-          );
-        }
-        
-        final product = _products[index];
-        return GestureDetector(
-          onTap: () {
-            Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (context) => ProductDetailsPage(productId: product.id),
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.inventory_2_outlined,
+              size: 64,
+              color: Theme.of(context).colorScheme.onBackground.withOpacity(0.5),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'No items found in ${widget.categoryName}',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Check back later for new items',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context).colorScheme.onBackground.withOpacity(0.7),
               ),
-            );
-          },
-          child: ProductCard(
-            product: product,
-            onWishlistChanged: (id, isWishlisted) {
-              setState(() => product.isWishlisted = isWishlisted);
-            },
-          ),
-        );
-      },
-    );
+            ),
+          ],
+        ),
+      );
+    }
 
     return RefreshIndicator.adaptive(
       onRefresh: _fetchInitialProducts,
-      child: listView,
+      child: CustomScrollView(
+        controller: _scrollController,
+        slivers: [
+          // Grid for products
+          SliverPadding(
+            padding: const EdgeInsets.all(12.0),
+            sliver: SliverGrid(
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2, // 2 columns
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
+                childAspectRatio: 0.70, // Match homepage aspect ratio
+              ),
+              delegate: SliverChildBuilderDelegate(
+                (context, index) {
+                  final product = _products[index];
+                  return ProductCard(
+                    product: product,
+                    compact: true, // Use compact mode for grid layout
+                    onWishlistChanged: (id, isWishlisted) {
+                      setState(() => product.isWishlisted = isWishlisted);
+                    },
+                  );
+                },
+                childCount: _products.length,
+              ),
+            ),
+          ),
+          
+          // Loading indicator at the bottom (only when loading more)
+          if (_isLoadingMore)
+            const SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.all(16.0),
+                child: Center(child: CircularProgressIndicator.adaptive()),
+              ),
+            ),
+          
+          // Add some bottom padding
+          const SliverToBoxAdapter(
+            child: SizedBox(height: 20),
+          ),
+        ],
+      ),
     );
   }
 }
-

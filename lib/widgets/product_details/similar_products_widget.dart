@@ -4,7 +4,6 @@ import 'package:intl/intl.dart';
 import 'package:myfirstflutterapp/models/product_model.dart';
 import 'package:myfirstflutterapp/environment/env.dart';
 import 'package:myfirstflutterapp/pages/product/product_details_page.dart';
-import 'package:myfirstflutterapp/state/main_tab_notifier.dart';
 import 'package:provider/provider.dart';
 
 class SimilarProductsWidget extends StatelessWidget {

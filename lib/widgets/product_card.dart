@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-// Routes
 import '../routes/app_routes.dart';
-
-// --- Assumed Imports ---
 import '../models/product_model.dart';
 import '../services/wishlist_service.dart';
 import '../environment/env.dart';
@@ -12,11 +9,13 @@ import '../environment/env.dart';
 class ProductCard extends StatefulWidget {
   final Product product;
   final Function(int productId, bool isWishlisted) onWishlistChanged;
+  final bool compact;
 
   const ProductCard({
     super.key,
     required this.product,
     required this.onWishlistChanged,
+    this.compact = false,
   });
 
   @override
@@ -24,22 +23,21 @@ class ProductCard extends StatefulWidget {
 }
 
 class _ProductCardState extends State<ProductCard> with SingleTickerProviderStateMixin {
-  bool _isLoading = false;
   final WishlistService _wishlistService = WishlistService();
 
   bool get _isWishlisted => widget.product.isWishlisted;
 
-  late AnimationController _animationController;
-  late Animation<double> _scaleAnimation;
+  late final AnimationController _animationController;
+  late final Animation<double> _scaleAnimation;
 
   @override
   void initState() {
     super.initState();
     _animationController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 300),
+      duration: const Duration(milliseconds: 250),
     );
-    _scaleAnimation = Tween<double>(begin: 1.0, end: 1.2).animate(
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 1.25).animate(
       CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
     );
   }
@@ -65,16 +63,18 @@ class _ProductCardState extends State<ProductCard> with SingleTickerProviderStat
       if (difference <= 7) {
         return '$difference ${difference == 1 ? 'day' : 'days'} ago';
       } else {
-        // For dates older than a week, show the actual date in a shorter format
-        return DateFormat('MMM dd, yyyy').format(date);
+        return DateFormat('MMM dd').format(date);
       }
     }
   }
 
   Future<void> _toggleWishlist() async {
     final originalStatus = _isWishlisted;
-    widget.onWishlistChanged(widget.product.id, !originalStatus);
 
+    // Optimistic UI update - immediately update the visual state
+    widget.onWishlistChanged(widget.product.id, !originalStatus);
+    
+    // Play animation
     _animationController.forward().then((_) => _animationController.reverse());
 
     try {
@@ -84,24 +84,24 @@ class _ProductCardState extends State<ProductCard> with SingleTickerProviderStat
         await _wishlistService.addToWishlist(widget.product.id);
       }
     } catch (e) {
-      _showSnackBar(e.toString().replaceAll("Exception: ", ""), isError: true);
+      // Revert optimistic update on error
       if (mounted) {
         widget.onWishlistChanged(widget.product.id, originalStatus);
+        _showSnackBar(e.toString().replaceAll("Exception: ", ""), isError: true);
       }
     }
   }
 
   void _showSnackBar(String message, {required bool isError}) {
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(message),
-          backgroundColor: isError ? Colors.red : Colors.green,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        ),
-      );
-    }
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isError ? Colors.red : Theme.of(context).colorScheme.primary,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
   }
 
   void _navigateToDetails() {
@@ -116,211 +116,235 @@ class _ProductCardState extends State<ProductCard> with SingleTickerProviderStat
 
   @override
   Widget build(BuildContext context) {
-    final String relativeDate = _getRelativeDate(widget.product.createdAt);
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+    
+    final relativeDate = _getRelativeDate(widget.product.createdAt);
+
+    // Use theme colors directly
+    final cardColor = theme.cardColor;
+    final titleColor = theme.colorScheme.onBackground;
+    final subtitleColor = theme.colorScheme.onBackground.withOpacity(0.85);
+    final mutedColor = theme.colorScheme.onBackground.withOpacity(0.6);
+    final shadowColor = isDark ? Colors.black.withOpacity(0.5) : Colors.grey.withOpacity(0.3);
+    final surfaceVariant = isDark ? Colors.grey[800] : Colors.grey[200];
+
+    // Compact mode adjustments
+    final imageHeight = widget.compact ? 110.0 : 170.0;
+    final titleSize = widget.compact ? 14.0 : 17.0;
+    final priceSize = widget.compact ? 14.0 : 17.0;
+    final padding = widget.compact ? 8.0 : 12.0;
 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      margin: widget.compact ? EdgeInsets.zero : const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            Theme.of(context).cardColor,
-            Theme.of(context).cardColor.withOpacity(0.8),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(20),
+        color: cardColor,
+        borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Theme.of(context).shadowColor.withOpacity(0.2),
-            spreadRadius: 2,
-            blurRadius: 15,
-            offset: const Offset(0, 5),
+            color: shadowColor,
+            blurRadius: 6,
+            offset: const Offset(0, 1),
           ),
         ],
       ),
       child: Material(
         color: Colors.transparent,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(12),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: _navigateToDetails,
-          borderRadius: BorderRadius.circular(20),
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Stack(
-                  children: [
-                    Hero(
-                      tag: 'product_image_${widget.product.id}',
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(15),
-                        child: CachedNetworkImage(
-                          imageUrl: "${AppConfig.imageBaseUrl}${widget.product.image}",
-                          width: 120,
-                          height: 120,
-                          fit: BoxFit.cover,
-                          placeholder: (context, url) => Container(
-                            width: 120,
-                            height: 120,
-                            decoration: BoxDecoration(
-                              color: Colors.grey[200],
-                              borderRadius: BorderRadius.circular(15),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // IMAGE WITH HEART (HERO)
+              Stack(
+                children: [
+                  Hero(
+                    tag: 'product_image_${widget.product.id}',
+                    child: ClipRRect(
+                      borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                      child: CachedNetworkImage(
+                        imageUrl: "${AppConfig.imageBaseUrl}${widget.product.image}",
+                        width: double.infinity,
+                        height: imageHeight,
+                        fit: BoxFit.cover,
+                        placeholder: (context, url) => Container(
+                          height: imageHeight,
+                          color: surfaceVariant,
+                          child: Center(
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: colorScheme.primary,
                             ),
-                            child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
                           ),
-                          errorWidget: (context, url, error) => Container(
-                            width: 120,
-                            height: 120,
-                            decoration: BoxDecoration(
-                              color: Colors.grey[200],
-                              borderRadius: BorderRadius.circular(15),
-                            ),
-                            child: Icon(Icons.broken_image, color: Colors.grey[400]),
+                        ),
+                        errorWidget: (context, url, error) => Container(
+                          height: imageHeight,
+                          color: surfaceVariant,
+                          child: Icon(
+                            Icons.broken_image, 
+                            size: 28,
+                            color: mutedColor,
                           ),
                         ),
                       ),
                     ),
-                    Positioned(
-                      top: 8,
-                      right: 8,
+                  ),
+
+                  // Heart button with optimistic UI
+                  Positioned(
+                    top: 6,
+                    right: 6,
+                    child: Material(
+                      color: Colors.transparent,
                       child: InkWell(
                         onTap: _toggleWishlist,
                         borderRadius: BorderRadius.circular(30),
                         child: Container(
-                          padding: const EdgeInsets.all(6),
+                          padding: const EdgeInsets.all(4),
                           decoration: BoxDecoration(
-                            color: Colors.black.withOpacity(0.5),
+                            color: Colors.black.withOpacity(0.45),
                             shape: BoxShape.circle,
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withOpacity(0.3),
+                                color: Colors.black.withOpacity(0.4),
                                 blurRadius: 4,
                                 offset: const Offset(0, 2),
                               ),
                             ],
                           ),
-                          child: _isLoading
-                              ? const SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                                )
-                              : ScaleTransition(
-                                  scale: _scaleAnimation,
-                                  child: Icon(
-                                    _isWishlisted ? Icons.favorite : Icons.favorite_border,
-                                    color: _isWishlisted ? Colors.redAccent : Colors.white,
-                                    size: 20,
-                                  ),
-                                ),
+                          child: ScaleTransition(
+                            scale: _scaleAnimation,
+                            child: Icon(
+                              _isWishlisted ? Icons.favorite : Icons.favorite_border,
+                              color: _isWishlisted ? Colors.redAccent : Colors.white,
+                              size: 16,
+                            ),
+                          ),
                         ),
                       ),
                     ),
-                  ],
-                ),
-                const SizedBox(width: 16),
-                Expanded(
+                  ),
+                ],
+              ),
+
+              // DETAILS
+              Expanded(
+                child: Padding(
+                  padding: EdgeInsets.all(padding),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
+                      // TITLE
                       Text(
                         widget.product.name,
                         style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(context).textTheme.titleLarge?.color,
+                          fontSize: titleSize,
+                          fontWeight: FontWeight.w600,
+                          color: titleColor,
+                          height: 1.2,
                         ),
-                        maxLines: 2,
+                        maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      const SizedBox(height: 8),
+                      SizedBox(height: widget.compact ? 4 : 6),
+
+                      // PRICE - Uses theme's primary color for better integration
+                      Text(
+                        '₹${widget.product.price.toStringAsFixed(0)}/day',
+                        style: TextStyle(
+                          fontSize: priceSize, 
+                          fontWeight: FontWeight.bold, 
+                          color: Colors.green, // Use theme primary color
+                        ),
+                      ),
+                      SizedBox(height: widget.compact ? 6 : 8),
+
+                      // OWNER INFO
                       Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           CircleAvatar(
-                            radius: 18,
-                            backgroundColor: Colors.grey.shade200,
+                            radius: widget.compact ? 12 : 16,
+                            backgroundColor: surfaceVariant,
                             backgroundImage: (widget.product.ownerProfileImage != null &&
                                     widget.product.ownerProfileImage!.isNotEmpty)
-                                ? CachedNetworkImageProvider(
-                                    "${AppConfig.imageBaseUrl}${widget.product.ownerProfileImage}")
+                                ? CachedNetworkImageProvider("${AppConfig.imageBaseUrl}${widget.product.ownerProfileImage}")
                                 : null,
-                            child: (widget.product.ownerProfileImage == null ||
-                                    widget.product.ownerProfileImage!.isEmpty)
-                                ? Icon(Icons.person, size: 18, color: Colors.grey.shade600)
+                            child: (widget.product.ownerProfileImage == null || widget.product.ownerProfileImage!.isEmpty)
+                                ? Icon(
+                                    Icons.person, 
+                                    size: widget.compact ? 12 : 16, 
+                                    color: mutedColor,
+                                  )
                                 : null,
                           ),
-                          const SizedBox(width: 8),
+                          SizedBox(width: widget.compact ? 8 : 10),
                           Expanded(
-                            child: Text(
-                              widget.product.ownerName,
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.8),
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                              maxLines: 1,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: widget.product.availability ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Text(
-                              widget.product.availability ? 'Available' : 'Not Available',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: widget.product.availability ? Colors.green : Colors.red,
-                                fontWeight: FontWeight.w600,
-                              ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                // Owner name
+                                Text(
+                                  widget.product.ownerName,
+                                  style: TextStyle(
+                                    fontSize: widget.compact ? 12 : 14,
+                                    color: subtitleColor,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                SizedBox(height: widget.compact ? 2 : 3),
+                                // Location
+                                Row(
+                                  children: [
+                                    Icon(
+                                      Icons.location_on, 
+                                      size: widget.compact ? 12 : 14,
+                                      color: mutedColor,
+                                    ),
+                                    SizedBox(width: widget.compact ? 4 : 5),
+                                    Expanded(
+                                      child: Text(
+                                        widget.product.locationName,
+                                        style: TextStyle(
+                                          fontSize: widget.compact ? 11 : 13,
+                                          color: mutedColor,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 8),
-                      // Location row
-                      Row(
-                        children: [
-                          Icon(Icons.location_on, size: 16, color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.7)),
-                          const SizedBox(width: 4),
-                          Expanded(
-                            child: Text(
-                              widget.product.locationName,
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.7),
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                              maxLines: 1,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      // Relative date on a new line
+
+                      SizedBox(height: widget.compact ? 4 : 6),
+
+                      // DATE
                       Text(
                         relativeDate,
                         style: TextStyle(
-                          fontSize: 13,
-                          color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.7),
+                          fontSize: widget.compact ? 11 : 13,
+                          color: mutedColor, 
                           fontStyle: FontStyle.italic,
                         ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        '₹${widget.product.price.toStringAsFixed(2)}/day',
-                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.green),
                       ),
                     ],
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),

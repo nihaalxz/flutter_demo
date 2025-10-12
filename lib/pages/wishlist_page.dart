@@ -3,9 +3,8 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:myfirstflutterapp/environment/env.dart';
-import 'package:myfirstflutterapp/state/main_tab_notifier.dart';
 import 'package:shimmer/shimmer.dart';
-import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
 
 // --- Assumed Imports ---
 import '../models/wishlist_item_model.dart';
@@ -35,31 +34,45 @@ class _WishlistPageState extends State<WishlistPage> {
     });
   }
 
-  Future<void> _removeItem(
-      int itemId, int index, List<WishlistItemModel> items) async {
+  Future<void> _removeItem(int itemId, List<WishlistItemModel> items) async {
+    // Find the item to remove
+    final itemIndex = items.indexWhere((item) => item.itemId == itemId);
+    if (itemIndex == -1) return;
+
+    final removedItem = items[itemIndex];
+
     // Optimistic UI: Remove the item from the list immediately.
-    final removedItem = items.removeAt(index);
-    setState(() {});
+    setState(() {
+      items.removeAt(itemIndex);
+    });
 
     try {
       await _wishlistService.removeFromWishlist(itemId);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text("Removed from wishlist."),
-          backgroundColor: Theme.of(context).colorScheme.secondary,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text("Removed from wishlist"),
+            backgroundColor: Theme.of(context).colorScheme.secondary,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+        );
+      }
     } catch (e) {
       // If the API call fails, add the item back to the list and show an error.
-      setState(() {
-        items.insert(index, removedItem);
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(e.toString().replaceAll("Exception: ", "")),
-          backgroundColor: Theme.of(context).colorScheme.error,
-        ),
-      );
+      if (mounted) {
+        setState(() {
+          items.insert(itemIndex, removedItem);
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString().replaceAll("Exception: ", "")),
+            backgroundColor: Theme.of(context).colorScheme.error,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+        );
+      }
     }
   }
 
@@ -74,6 +87,7 @@ class _WishlistPageState extends State<WishlistPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text("My Wishlist"),
+        elevation: 0,
       ),
       body: _buildBody(),
     );
@@ -104,10 +118,7 @@ class _WishlistPageState extends State<WishlistPage> {
       future: _wishlistFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return ListView.builder(
-            itemCount: 6,
-            itemBuilder: (_, __) => _buildShimmerCard(),
-          );
+          return _buildShimmerGrid();
         }
 
         if (snapshot.hasError) {
@@ -120,32 +131,22 @@ class _WishlistPageState extends State<WishlistPage> {
           return _buildEmptyState(isCupertino: isCupertino);
         }
 
-        return ListView.builder(
-          itemCount: wishlistItems.length,
-          itemBuilder: (context, index) {
-            final item = wishlistItems[index];
-            // On iOS, use a swipe-to-delete pattern
-            if (isCupertino) {
-              return Dismissible(
-                key: Key(item.itemId.toString()),
-                direction: DismissDirection.endToStart,
-                onDismissed: (direction) {
-                  _removeItem(item.itemId, index, wishlistItems);
-                },
-                background: Container(
-                  color: Colors.red,
-                  alignment: Alignment.centerRight,
-                  padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                  child: const Icon(CupertinoIcons.delete, color: Colors.white),
-                ),
-                child: _buildWishlistItemCard(item),
-              );
-            } else {
-              // On Android, use a card with a visible delete button
-              return _buildWishlistItemCard(item,
-                  index: index, items: wishlistItems);
-            }
-          },
+        return RefreshIndicator(
+          onRefresh: () async => _refreshWishlist(),
+          child: GridView.builder(
+            padding: const EdgeInsets.all(12),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              childAspectRatio: 0.68,
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
+            ),
+            itemCount: wishlistItems.length,
+            itemBuilder: (context, index) {
+              final item = wishlistItems[index];
+              return _buildWishlistCard(item, wishlistItems);
+            },
+          ),
         );
       },
     );
@@ -153,134 +154,317 @@ class _WishlistPageState extends State<WishlistPage> {
 
   // --- UI Components ---
 
-  Widget _buildWishlistItemCard(WishlistItemModel item,
-      {int? index, List<WishlistItemModel>? items}) {
-    final theme = Theme.of(context);
-    final isCupertino = Platform.isIOS;
+  String _getRelativeDate(DateTime date) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final yesterday = DateTime(now.year, now.month, now.day - 1);
+    final dateOnly = DateTime(date.year, date.month, date.day);
 
-    return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => ProductDetailsPage(productId: item.itemId),
+    if (dateOnly == today) {
+      return 'Today';
+    } else if (dateOnly == yesterday) {
+      return 'Yesterday';
+    } else {
+      final difference = today.difference(dateOnly).inDays;
+      if (difference <= 7) {
+        return '$difference ${difference == 1 ? 'day' : 'days'} ago';
+      } else {
+        return DateFormat('MMM dd').format(date);
+      }
+    }
+  }
+
+  Widget _buildWishlistCard(WishlistItemModel item, List<WishlistItemModel> items) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+    
+    final relativeDate = _getRelativeDate(item.createdAt);
+
+    final cardColor = theme.cardColor;
+    final titleColor = theme.colorScheme.onBackground;
+    final subtitleColor = theme.colorScheme.onBackground.withOpacity(0.85);
+    final mutedColor = theme.colorScheme.onBackground.withOpacity(0.6);
+    final shadowColor = isDark ? Colors.black.withOpacity(0.5) : Colors.grey.withOpacity(0.3);
+    final surfaceVariant = isDark ? Colors.grey[800] : Colors.grey[200];
+
+    return Container(
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: shadowColor,
+            blurRadius: 6,
+            offset: const Offset(0, 1),
           ),
-        );
-      },
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        padding: const EdgeInsets.all(12.0),
-        decoration: BoxDecoration(
-          color: theme.cardColor,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: isCupertino
-              ? null
-              : [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.08),
-                    blurRadius: 10,
-                  )
-                ],
-          border: isCupertino
-              ? Border(bottom: BorderSide(color: Colors.grey.shade300))
-              : null,
-        ),
-        child: Row(
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: CachedNetworkImage(
-                imageUrl: "${AppConfig.imageBaseUrl}${item.image}",
-                width: 80,
-                height: 80,
-                fit: BoxFit.cover,
-                errorWidget: (context, url, error) =>
-                    Icon(Icons.broken_image, size: 80, color: theme.disabledColor),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(12),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => ProductDetailsPage(productId: item.itemId),
               ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+            );
+          },
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // IMAGE WITH HEART
+              Stack(
                 children: [
-                  Text(
-                    item.itemName,
-                    style: theme.textTheme.titleMedium
-                        ?.copyWith(fontWeight: FontWeight.bold),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '₹${item.price.toStringAsFixed(2)}/day',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: Colors.green,
-                      fontWeight: FontWeight.w600,
+                  Hero(
+                    tag: 'product_image_${item.itemId}',
+                    child: ClipRRect(
+                      borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                      child: CachedNetworkImage(
+                        imageUrl: "${AppConfig.imageBaseUrl}${item.image}",
+                        width: double.infinity,
+                        height: 110,
+                        fit: BoxFit.cover,
+                        placeholder: (context, url) => Container(
+                          height: 110,
+                          color: surfaceVariant,
+                          child: Center(
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: colorScheme.primary,
+                            ),
+                          ),
+                        ),
+                        errorWidget: (context, url, error) => Container(
+                          height: 110,
+                          color: surfaceVariant,
+                          child: Icon(
+                            Icons.broken_image,
+                            size: 28,
+                            color: mutedColor,
+                          ),
+                        ),
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    item.availability ? 'Available' : 'Not Available',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: item.availability
-                          ? theme.colorScheme.primary
-                          : theme.colorScheme.error,
+
+                  // Heart button - always filled since it's in wishlist
+                  Positioned(
+                    top: 6,
+                    right: 6,
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: () => _removeItem(item.itemId, items),
+                        borderRadius: BorderRadius.circular(30),
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.45),
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.4),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: const Icon(
+                            Icons.favorite,
+                            color: Colors.redAccent,
+                            size: 16,
+                          ),
+                        ),
+                      ),
                     ),
                   ),
-                  Text(item.locationName ?? 'Unknown Location'),
                 ],
               ),
-            ),
-            // Only show the delete button on Android
-            if (!isCupertino && items != null && index != null)
-              IconButton(
-                icon: Icon(Icons.delete_outline, color: theme.colorScheme.error),
-                tooltip: "Remove from wishlist",
-                onPressed: () => _removeItem(item.itemId, index, items),
+
+              // DETAILS
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.all(8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // TITLE
+                      Text(
+                        item.name,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: titleColor,
+                          height: 1.2,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+
+                      // PRICE
+                      Text(
+                        '₹${item.price.toStringAsFixed(0)}/day',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.green,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+
+                      // OWNER INFO
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          CircleAvatar(
+                            radius: 12,
+                            backgroundColor: surfaceVariant,
+                            backgroundImage: (item.ownerProfileImage != null &&
+                                    item.ownerProfileImage!.isNotEmpty)
+                                ? CachedNetworkImageProvider("${AppConfig.imageBaseUrl}${item.ownerProfileImage}")
+                                : null,
+                            child: (item.ownerProfileImage == null || item.ownerProfileImage!.isEmpty)
+                                ? Icon(
+                                    Icons.person,
+                                    size: 12,
+                                    color: mutedColor,
+                                  )
+                                : null,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                // Owner name
+                                Text(
+                                  item.ownerName ?? 'Unknown Owner',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: subtitleColor,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 2),
+                                // Location
+                                Row(
+                                  children: [
+                                    Icon(
+                                      Icons.location_on,
+                                      size: 12,
+                                      color: mutedColor,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Expanded(
+                                      child: Text(
+                                        item.locationName,
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: mutedColor,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 4),
+
+                      // DATE
+                      Text(
+                        relativeDate,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: mutedColor,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 
+  Widget _buildShimmerGrid() {
+    return GridView.builder(
+      padding: const EdgeInsets.all(12),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        childAspectRatio: 0.68,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+      ),
+      itemCount: 6,
+      itemBuilder: (_, __) => _buildShimmerCard(),
+    );
+  }
+
   Widget _buildShimmerCard() {
     final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Shimmer.fromColors(
-        baseColor: theme.colorScheme.surfaceVariant,
-        highlightColor: theme.colorScheme.surface,
-        child: Row(
+    return Shimmer.fromColors(
+      baseColor: theme.colorScheme.surfaceVariant,
+      highlightColor: theme.colorScheme.surface,
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                // ✅ FIX: Moved color inside decoration
+              height: 140,
+              decoration: const BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
               ),
             ),
-            const SizedBox(width: 16),
-            Expanded(
+            Padding(
+              padding: const EdgeInsets.all(10),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Container(
-                    height: 16,
+                    height: 14,
                     decoration: BoxDecoration(
-                      // ✅ FIX: Moved color inside decoration
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(4),
                     ),
                   ),
                   const SizedBox(height: 8),
                   Container(
-                    height: 14,
-                    width: 100,
+                    height: 12,
+                    width: 80,
                     decoration: BoxDecoration(
-                      // ✅ FIX: Moved color inside decoration
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Container(
+                    height: 10,
+                    decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(4),
                     ),
@@ -296,56 +480,116 @@ class _WishlistPageState extends State<WishlistPage> {
 
   Widget _buildErrorState(Object? error, {required bool isCupertino}) {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text("Error: ${error}", textAlign: TextAlign.center),
-          const SizedBox(height: 16),
-          isCupertino
-              ? CupertinoButton.filled(onPressed: _refreshWishlist, child: const Text("Retry"))
-              : ElevatedButton(onPressed: _refreshWishlist, child: const Text("Retry")),
-        ],
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.error_outline,
+              size: 64,
+              color: Colors.grey.shade400,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              "Something went wrong",
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey.shade700,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              error.toString().replaceAll("Exception: ", ""),
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey.shade600,
+              ),
+            ),
+            const SizedBox(height: 24),
+            isCupertino
+                ? CupertinoButton.filled(
+                    onPressed: _refreshWishlist,
+                    child: const Text("Try Again"),
+                  )
+                : ElevatedButton.icon(
+                    onPressed: _refreshWishlist,
+                    icon: const Icon(Icons.refresh),
+                    label: const Text("Try Again"),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    ),
+                  ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildEmptyState({required bool isCupertino}) {
     final emptyView = Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-           Icon(
-            isCupertino ? CupertinoIcons.heart : Icons.favorite_border,
-            size: 72,
-            color: Colors.grey.shade400,
-          ),
-          const SizedBox(height: 16),
-          const Text(
-            "Your wishlist is empty.",
-            style: TextStyle(fontSize: 18, color: Colors.grey),
-          ),
-           const SizedBox(height: 8),
-           Text(
-            "Tap the heart on an item to save it.",
-            style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
-          ),
-        ],
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              isCupertino ? CupertinoIcons.heart : Icons.favorite_border,
+              size: 80,
+              color: Colors.grey.shade300,
+            ),
+            const SizedBox(height: 24),
+            Text(
+              "Your wishlist is empty",
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey.shade700,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              "Start adding items you love to your wishlist",
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey.shade600,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              "Tap the ❤️ icon on any product to save it here",
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 13,
+                color: Colors.grey.shade500,
+              ),
+            ),
+          ],
+        ),
       ),
     );
-    
+
     // Make the empty state refreshable
     if (isCupertino) {
-        return CustomScrollView(
-          slivers: [
-            CupertinoSliverRefreshControl(onRefresh: () async => _refreshWishlist()),
-            SliverFillRemaining(child: emptyView),
-          ],
-        );
+      return CustomScrollView(
+        slivers: [
+          CupertinoSliverRefreshControl(onRefresh: () async => _refreshWishlist()),
+          SliverFillRemaining(child: emptyView),
+        ],
+      );
     } else {
-       return RefreshIndicator(
-         onRefresh: () async => _refreshWishlist(),
-         child: Stack(children: [ListView(), emptyView]), // ListView enables refresh
-       );
+      return RefreshIndicator(
+        onRefresh: () async => _refreshWishlist(),
+        child: Stack(
+          children: [
+            ListView(),
+            emptyView,
+          ],
+        ),
+      );
     }
   }
 }

@@ -51,13 +51,12 @@ class Product {
 
   @HiveField(15) // ✅ FIX: Corrected duplicate Hive index
   bool isWishlisted;
-  
+
   @HiveField(16)
   final double? latitude;
 
   @HiveField(17)
   final double? longitude;
-
 
   Product({
     required this.id,
@@ -89,7 +88,8 @@ class Product {
       image: json['image'] ?? '',
       price: (json['price'] as num?)?.toDouble() ?? 0.0,
       categoryId: json['categoryId'] ?? 0,
-      ownerProfileImage: json['ownerProfileImage'], // Already nullable, so it's safe
+      ownerProfileImage:
+          json['ownerProfileImage'], // Already nullable, so it's safe
       categoryName: json['categoryName'] ?? 'Uncategorized',
       ownerId: json['ownerId'] ?? '',
       ownerName: json['ownerName'] ?? 'Unknown Owner',

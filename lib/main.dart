@@ -1,4 +1,3 @@
-// lib/main.dart (unified approach)
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -12,18 +11,16 @@ import 'package:overlay_support/overlay_support.dart';
 import 'package:provider/provider.dart';
 import 'dart:io' show Platform;
 
-// --- Assumed Imports ---
 import 'models/product_model.dart';
 import 'models/category_model.dart';
 import 'pages/Auth/auth_check_screen.dart';
 import 'services/theme_provider.dart';
-import 'Theme/theme.dart';
+import 'Theme/theme.dart'; // ✅ Contains darkTheme, lightTheme, darkCupertinoTheme, lightCupertinoTheme
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   if (kDebugMode) {
-
     print("🚀 Flutter main() reached");
   }
 
@@ -51,12 +48,14 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<ThemeProvider>(
       builder: (context, themeProvider, child) {
+        final isDark = themeProvider.isDarkMode;
+
         return OverlaySupport.global(
           child: Platform.isIOS
               ? CupertinoApp(
                   title: 'MapleCOT',
                   debugShowCheckedModeBanner: false,
-                  theme: themeProvider.isDarkMode ? darkCupertinoTheme : lightCupertinoTheme,
+                  theme: isDark ? darkCupertinoTheme : lightCupertinoTheme,
                   localizationsDelegates: const [
                     DefaultMaterialLocalizations.delegate,
                     DefaultWidgetsLocalizations.delegate,
@@ -65,17 +64,15 @@ class MyApp extends StatelessWidget {
                   initialRoute: AppRoutes.authCheck,
                   onGenerateRoute: AppRoutes.generateRoute,
                   navigatorKey: NavigationService.navigatorKey,
-                  builder: (context, child) {
-                    return Material(
-                      type: MaterialType.transparency,
-                      child: child,
-                    );
-                  },
+                  builder: (context, child) => Material(
+                    type: MaterialType.transparency,
+                    child: child,
+                  ),
                 )
               : MaterialApp(
-                  title: 'MapleCot',
+                  title: 'MapleCOT',
                   debugShowCheckedModeBanner: false,
-                  themeMode: themeProvider.isDarkMode ? ThemeMode.dark : ThemeMode.light,
+                  themeMode: isDark ? ThemeMode.dark : ThemeMode.light,
                   theme: lightTheme,
                   darkTheme: darkTheme,
                   initialRoute: AppRoutes.authCheck,

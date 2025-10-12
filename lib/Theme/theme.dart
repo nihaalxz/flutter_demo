@@ -1,57 +1,59 @@
+// lib/theme/theme.dart
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
-// --- 🌞 Light Themes ---
-
-/// Material theme for Android (Light Mode)
+// --- Light Material theme ---
 final ThemeData lightTheme = ThemeData(
   brightness: Brightness.light,
   primarySwatch: Colors.blue,
-  scaffoldBackgroundColor: const Color(0xFFF7F8FA), // A slightly off-white
+  scaffoldBackgroundColor: const Color(0xFFF7F8FA),
   cardColor: Colors.white,
   appBarTheme: const AppBarTheme(
     backgroundColor: Colors.white,
-    foregroundColor: Colors.black87, // Icon and text color
+    foregroundColor: Colors.black87,
     elevation: 0.5,
   ),
   colorScheme: const ColorScheme.light(
-    primary: Color(0xFF007AFF), // A standard blue
+    primary: Color(0xFF007AFF),
     secondary: Color(0xFF5AC8FA),
   ),
 );
 
-/// Cupertino theme for iOS (Light Mode)
+// --- Light Cupertino theme ---
 const CupertinoThemeData lightCupertinoTheme = CupertinoThemeData(
   brightness: Brightness.light,
-  primaryColor: Color(0xFF007AFF), // Standard iOS blue
-  scaffoldBackgroundColor: Color(0xFFF2F2F7), // Standard iOS system gray
-  barBackgroundColor: Color(0xF0F9F9F9), // Translucent app bar
+  primaryColor: Color(0xFF007AFF),
+  scaffoldBackgroundColor: Color(0xFFF2F2F7),
+  barBackgroundColor: Color(0xFFF9F9F9),
 );
 
-
-// --- 🌚 Dark Themes ---
-
-/// Material theme for Android (Dark Mode)
+// --- Dark Material theme (RentHouse-style) ---
 final ThemeData darkTheme = ThemeData(
   brightness: Brightness.dark,
   primarySwatch: Colors.blue,
-  scaffoldBackgroundColor: const Color(0xFF121212), // A deep gray
-  cardColor: const Color(0xFF1E1E1E),
+  scaffoldBackgroundColor: const Color.fromARGB(255, 21, 26, 36),
+  cardColor: const Color.fromARGB(255, 42, 46, 55),
   appBarTheme: const AppBarTheme(
-    backgroundColor: Color(0xFF1E1E1E),
+    backgroundColor: Color.fromARGB( 32, 40, 57,1),
     foregroundColor: Colors.white,
     elevation: 0.5,
   ),
   colorScheme: const ColorScheme.dark(
-    primary: Color(0xFF0A84FF), // A brighter blue for dark mode
-    secondary: Color(0xFF64D2FF),
+    primary: Color(0xFF3B82F6),
+    secondary: Color(0xFF60A5FA),
+  ),
+  iconTheme: const IconThemeData(color: Color(0xFF9CA3AF)),
+  bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+    backgroundColor: Color.fromARGB(255, 120, 139, 182),
+    selectedItemColor: Color(0xFF3B82F6),
+    unselectedItemColor: Color(0xFF9CA3AF),
   ),
 );
 
-/// Cupertino theme for iOS (Dark Mode)
+// --- Dark Cupertino theme ---
 const CupertinoThemeData darkCupertinoTheme = CupertinoThemeData(
   brightness: Brightness.dark,
-  primaryColor: Color(0xFF0A84FF), // Brighter iOS blue for dark mode
-  scaffoldBackgroundColor: Color(0xFF000000), // Pure black
-  barBackgroundColor: Color(0xF01D1D1D), // Translucent dark app bar
+  primaryColor: Color(0xFF3B82F6),
+  scaffoldBackgroundColor:  Color.fromARGB(255, 21, 26, 36),
+  barBackgroundColor: Color(0xFF1A2234),
 );
