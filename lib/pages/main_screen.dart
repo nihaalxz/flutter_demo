@@ -22,6 +22,9 @@ import './Auth/profile_page.dart';
 import '../services/notification_service.dart';
 import '../state/AppStateManager.dart';
 
+// Theme
+import '../theme/theme.dart';
+
 class MainScreen extends StatefulWidget {
   final int initialIndex;
 
@@ -42,16 +45,13 @@ class _MainScreenState extends State<MainScreen> {
   StreamSubscription<UnreadUpdate>? _updateSubscription;
   
   // Navigation keys for each tab
-  final List<GlobalKey<NavigatorState>> _navigatorKeys = [
-    GlobalKey<NavigatorState>(),
-    GlobalKey<NavigatorState>(),
-    GlobalKey<NavigatorState>(),
-    GlobalKey<NavigatorState>(),
-    GlobalKey<NavigatorState>(),
-  ];
+  final List<GlobalKey<NavigatorState>> _navigatorKeys = List.generate(
+    5,
+    (_) => GlobalKey<NavigatorState>(),
+  );
 
   // Pages - using IndexedStack for state preservation
-  final List<Widget> _pages = [
+  final List<Widget> _pages = const [
     HomePage(),
     WishlistPage(),
     CreateListingPage(),
@@ -63,7 +63,6 @@ class _MainScreenState extends State<MainScreen> {
   void initState() {
     super.initState();
     
-    // Initialize navigation state with initial index
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<NavigationCubit>().switchToTab(widget.initialIndex);
     });
@@ -79,39 +78,37 @@ class _MainScreenState extends State<MainScreen> {
 
       _updateSubscription = NotificationService.instance.unreadUpdateStream.listen(
         (update) {
-          if (mounted) {
-          // Update unread bookings badge through BLoC
-          // FIX: Access bookingsCount from the map properly
+          if (!mounted) return;
+
           final unreadCounts = update.unreadCounts;
           final bookingsCount = unreadCounts['bookingsCount'] ?? 0;
           context.read<NavigationCubit>().updateUnreadBookings(
             bookingsCount > 0,
           );
-            // Show notification
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(update.notification.title),
-                    if (update.notification.message != null)
-                      Text(
-                        update.notification.message!,
-                        style: const TextStyle(fontSize: 12),
-                      ),
-                  ],
-                ),
-                backgroundColor: Theme.of(context).primaryColor,
+
+          // Show notification
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(update.notification.title),
+                  if (update.notification.message != null)
+                    Text(
+                      update.notification.message!,
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                ],
               ),
-            );
-            
-            appState.updateCountsFromPush(update.unreadCounts);
-          }
+              backgroundColor: Theme.of(context).snackBarTheme.backgroundColor ??
+                  Theme.of(context).primaryColor,
+            ),
+          );
+
+          appState.updateCountsFromPush(update.unreadCounts);
         },
-        onError: (error) {
-          debugPrint('Notification stream error: $error');
-        },
+        onError: (error) => debugPrint('Notification stream error: $error'),
         cancelOnError: false,
       );
     });
@@ -120,7 +117,6 @@ class _MainScreenState extends State<MainScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Handle route arguments if passed
     final routeArgs = ModalRoute.of(context)?.settings.arguments;
     if (routeArgs is int) {
       context.read<NavigationCubit>().switchToTab(routeArgs);
@@ -144,21 +140,17 @@ class _MainScreenState extends State<MainScreen> {
 
   void _onItemTapped(int index) {
     final appState = Provider.of<AppStateManager>(context, listen: false);
-    
-    // Clear unread bookings badge when entering bookings tab
-    if (index == 3) { 
+
+    if (index == 3) {
       appState.clearUnreadBookings();
       context.read<NavigationCubit>().updateUnreadBookings(false);
     }
-    
-    // Pop to root when switching to same tab
+
     final currentIndex = context.read<NavigationCubit>().state.currentIndex;
     if (index == currentIndex) {
-      final navigatorKey = _navigatorKeys[index];
-      navigatorKey.currentState?.popUntil((route) => route.isFirst);
+      _navigatorKeys[index].currentState?.popUntil((route) => route.isFirst);
     }
-    
-    // Update tab through BLoC
+
     context.read<NavigationCubit>().switchToTab(index);
   }
 
@@ -166,11 +158,8 @@ class _MainScreenState extends State<MainScreen> {
   Widget build(BuildContext context) {
     return MultiBlocListener(
       listeners: [
-        // Listen to AppStateManager for unread bookings updates
         BlocListener<NavigationCubit, NavigationState>(
-          listener: (context, state) {
-            // Handle any side effects when navigation state changes
-          },
+          listener: (context, state) {},
         ),
       ],
       child: Consumer<AppStateManager>(
@@ -180,12 +169,10 @@ class _MainScreenState extends State<MainScreen> {
               AppRoutes.navigateToLogin(context);
             });
             return const Scaffold(
-              body: Center(
-                child: CircularProgressIndicator(),
-              ),
+              body: Center(child: CircularProgressIndicator()),
             );
           }
-          
+
           return _buildScaffold(appState);
         },
       ),
@@ -207,6 +194,7 @@ class _MainScreenState extends State<MainScreen> {
   }
 
   Widget _buildBottomNavigationBar(BuildContext context, AppStateManager appState, NavigationState navState) {
+    final theme = Theme.of(context);
     return BottomNavigationBar(
       items: <BottomNavigationBarItem>[
         const BottomNavigationBarItem(
@@ -241,10 +229,10 @@ class _MainScreenState extends State<MainScreen> {
       currentIndex: navState.currentIndex,
       onTap: _onItemTapped,
       type: BottomNavigationBarType.fixed,
-      selectedItemColor: Theme.of(context).primaryColor,
-      unselectedItemColor: Colors.grey[600],
+      selectedItemColor: theme.bottomNavigationBarTheme.selectedItemColor ?? theme.primaryColor,
+      unselectedItemColor: theme.bottomNavigationBarTheme.unselectedItemColor ?? Colors.grey[600],
       showUnselectedLabels: true,
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: theme.bottomNavigationBarTheme.backgroundColor ?? theme.scaffoldBackgroundColor,
       elevation: 8.0,
     );
   }

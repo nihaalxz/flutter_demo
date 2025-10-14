@@ -170,7 +170,7 @@ class _LocationDropdownState extends State<LocationDropdown> {
   }
 
   Future<void> _getCurrentLocation() async {
-    if (_isGettingCurrentLocation) return; // Prevent double-tap
+    if (_isGettingCurrentLocation) return;
 
     setState(() => _isGettingCurrentLocation = true);
 
@@ -191,12 +191,19 @@ class _LocationDropdownState extends State<LocationDropdown> {
           SnackBar(
             content: Row(
               children: [
-                const Icon(Icons.check_circle, color: Colors.white, size: 20),
-                const SizedBox(width: 8),
-                Expanded(child: Text('Location set to $city')),
+                const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Location set to $city',
+                    style: const TextStyle(fontWeight: FontWeight.w500),
+                  ),
+                ),
               ],
             ),
+            backgroundColor: Colors.green.shade600,
             behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             duration: const Duration(seconds: 2),
           ),
         );
@@ -207,13 +214,19 @@ class _LocationDropdownState extends State<LocationDropdown> {
           SnackBar(
             content: Row(
               children: [
-                const Icon(Icons.error_outline, color: Colors.white, size: 20),
-                const SizedBox(width: 8),
-                Expanded(child: Text(e.message)),
+                const Icon(Icons.error_outline_rounded, color: Colors.white, size: 20),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    e.message,
+                    style: const TextStyle(fontWeight: FontWeight.w500),
+                  ),
+                ),
               ],
             ),
             backgroundColor: Colors.red.shade600,
             behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             duration: const Duration(seconds: 3),
           ),
         );
@@ -224,13 +237,19 @@ class _LocationDropdownState extends State<LocationDropdown> {
           SnackBar(
             content: Row(
               children: [
-                const Icon(Icons.error_outline, color: Colors.white, size: 20),
-                const SizedBox(width: 8),
-                const Expanded(child: Text('Failed to get location')),
+                const Icon(Icons.error_outline_rounded, color: Colors.white, size: 20),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Text(
+                    'Failed to get location',
+                    style: TextStyle(fontWeight: FontWeight.w500),
+                  ),
+                ),
               ],
             ),
             backgroundColor: Colors.red.shade600,
             behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
         );
       }
@@ -244,40 +263,66 @@ class _LocationDropdownState extends State<LocationDropdown> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(14),
+        color: isDark 
+            ? theme.colorScheme.surface.withOpacity(0.5)
+            : Colors.white,
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: theme.dividerColor.withOpacity(0.3),
+          color: theme.colorScheme.primary.withOpacity(0.2),
+          width: 1.5,
         ),
+        boxShadow: [
+          BoxShadow(
+            color: theme.colorScheme.primary.withOpacity(0.08),
+            blurRadius: 12,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
           value: widget.selectedLocation,
           icon: _isGettingCurrentLocation
               ? SizedBox(
-                  width: 16,
-                  height: 16,
+                  width: 18,
+                  height: 18,
                   child: CircularProgressIndicator(
-                    strokeWidth: 2,
+                    strokeWidth: 2.5,
                     color: theme.colorScheme.primary,
                   ),
                 )
               : Icon(
-                  Icons.arrow_drop_down,
-                  size: 20,
-                  color: theme.iconTheme.color,
+                  Icons.keyboard_arrow_down_rounded,
+                  size: 24,
+                  color: theme.colorScheme.primary,
                 ),
           isExpanded: true,
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(16),
           dropdownColor: theme.colorScheme.surface,
-          style: theme.textTheme.bodyMedium,
-          hint: Text(
-            'All Kerala',
-            style: theme.textTheme.bodyMedium,
+          style: theme.textTheme.bodyMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+          ),
+          hint: Row(
+            children: [
+              Icon(
+                Icons.public_rounded,
+                size: 20,
+                color: theme.colorScheme.primary,
+              ),
+              const SizedBox(width: 10),
+              Text(
+                'All Kerala',
+                style: TextStyle(
+                  color: theme.colorScheme.primary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
           ),
           items: _buildDropdownItems(theme),
           onChanged: _handleLocationChange,
@@ -292,9 +337,10 @@ class _LocationDropdownState extends State<LocationDropdown> {
       DropdownMenuItem(
         value: null,
         child: _buildMenuItem(
-          icon: Icons.public,
+          icon: Icons.public_rounded,
           label: 'All Kerala',
           theme: theme,
+          isDefault: true,
         ),
       ),
       
@@ -302,18 +348,32 @@ class _LocationDropdownState extends State<LocationDropdown> {
       DropdownMenuItem(
         value: 'current_location',
         child: _buildMenuItem(
-          icon: Icons.my_location,
+          icon: Icons.my_location_rounded,
           label: _currentCity ?? 'Use Current Location',
           theme: theme,
           isSpecial: _currentCity != null,
         ),
       ),
       
-      // Divider
-      const DropdownMenuItem(
+      // Modern divider
+      DropdownMenuItem(
         value: 'divider',
         enabled: false,
-        child: Divider(height: 1),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Container(
+            height: 1,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  Colors.transparent,
+                  theme.dividerColor.withOpacity(0.5),
+                  Colors.transparent,
+                ],
+              ),
+            ),
+          ),
+        ),
       ),
       
       // Loading state
@@ -322,12 +382,28 @@ class _LocationDropdownState extends State<LocationDropdown> {
           value: 'loading',
           enabled: false,
           child: Center(
-            child: SizedBox(
-              width: 16,
-              height: 16,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: theme.colorScheme.primary,
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.5,
+                      color: theme.colorScheme.primary,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    'Loading locations...',
+                    style: TextStyle(
+                      color: theme.textTheme.bodySmall?.color,
+                      fontSize: 13,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -337,57 +413,62 @@ class _LocationDropdownState extends State<LocationDropdown> {
         DropdownMenuItem(
           value: 'error',
           enabled: false,
-          child: Text(
-            _errorMessage!,
-            style: TextStyle(color: Colors.red.shade600, fontSize: 12),
-          ),
-        )
-      // Popular locations
-      else
-        ..._popularLocations.map((location) {
-          final name = location['locationName'] as String;
-          final count = location['itemCount'] as int;
-          
-          return DropdownMenuItem(
-            value: name,
+          child: Padding(
+            padding: const EdgeInsets.all(12),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Expanded(
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.location_city,
-                        size: 16,
-                        color: theme.iconTheme.color?.withOpacity(0.6),
-                      ),
-                      const SizedBox(width: 8),
-                      Flexible(
-                        child: Text(
-                          name,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.bodyMedium,
-                        ),
-                      ),
-                    ],
-                  ),
+                Icon(
+                  Icons.error_outline_rounded,
+                  size: 18,
+                  color: Colors.red.shade400,
                 ),
                 const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.primary.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    count.toString(),
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.primary,
-                      fontWeight: FontWeight.w600,
-                    ),
+                Text(
+                  _errorMessage!,
+                  style: TextStyle(
+                    color: Colors.red.shade600,
+                    fontSize: 13,
                   ),
                 ),
               ],
+            ),
+          ),
+        )
+      // Popular locations - clean list without counters
+      else
+        ..._popularLocations.map((location) {
+          final name = location['locationName'] as String;
+          
+          return DropdownMenuItem(
+            value: name,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.primary.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      Icons.location_city_rounded,
+                      size: 16,
+                      color: theme.colorScheme.primary,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Flexible(
+                    child: Text(
+                      name,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           );
         }),
@@ -399,28 +480,67 @@ class _LocationDropdownState extends State<LocationDropdown> {
     required String label,
     required ThemeData theme,
     bool isSpecial = false,
+    bool isDefault = false,
   }) {
-    return Row(
-      children: [
-        Icon(
-          icon,
-          size: 18,
-          color: isSpecial 
-              ? theme.colorScheme.primary 
-              : theme.iconTheme.color,
-        ),
-        const SizedBox(width: 8),
-        Flexible(
-          child: Text(
-            label,
-            overflow: TextOverflow.ellipsis,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: isSpecial ? theme.colorScheme.primary : null,
-              fontWeight: isSpecial ? FontWeight.w600 : null,
+    final color = isSpecial || isDefault 
+        ? theme.colorScheme.primary 
+        : theme.textTheme.bodyMedium?.color;
+        
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: (isSpecial || isDefault)
+                  ? theme.colorScheme.primary.withOpacity(0.15)
+                  : theme.colorScheme.surfaceVariant.withOpacity(0.5),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(
+              icon,
+              size: 18,
+              color: color,
             ),
           ),
-        ),
-      ],
+          const SizedBox(width: 12),
+          Flexible(
+            child: Text(
+              label,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: color,
+                fontWeight: (isSpecial || isDefault) 
+                    ? FontWeight.w600 
+                    : FontWeight.w500,
+              ),
+            ),
+          ),
+          if (isSpecial)
+            Container(
+              margin: const EdgeInsets.only(left: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    theme.colorScheme.primary,
+                    theme.colorScheme.primary.withOpacity(0.7),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: const Text(
+                'Current',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 

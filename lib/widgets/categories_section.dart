@@ -13,7 +13,6 @@ class CategoriesSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
     
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -89,7 +88,7 @@ class _CategoryItemState extends State<CategoryItem> {
               height: 60,
               width: 60,
               decoration: BoxDecoration(
-                color: isDark ? const Color.fromARGB(255, 29, 30, 33) : Colors.grey[200],
+                color: theme.cardColor,
                 borderRadius: BorderRadius.circular(14),
                 boxShadow: [
                   BoxShadow(
@@ -135,24 +134,34 @@ class _CategoryItemState extends State<CategoryItem> {
 
     try {
       if (_isSvg(iconUrl)) {
-        return SvgPicture.network(
-          fullUrl,
-          fit: BoxFit.contain,
-          width: 30,
-          height: 30,
-          colorFilter: ColorFilter.mode(
-            isDark ? Colors.white : Colors.black87, // SVG color adapts to theme
-            BlendMode.srcIn,
+        return Center(
+          child: SvgPicture.network(
+            fullUrl,
+            // SOLUTION 1: Increase size to 40x40 or 45x45 to compensate for internal padding
+            width: 45,
+            height: 45,
+            // SOLUTION 2: Use BoxFit.cover instead of contain to fill more space
+            fit: BoxFit.cover,
+            // SOLUTION 3: Allow the SVG to clip outside bounds if needed
+            allowDrawingOutsideViewBox: true,
+            colorFilter: ColorFilter.mode(
+              isDark ? Colors.white : Colors.black87,
+              BlendMode.srcIn,
+            ),
+            placeholderBuilder: (context) => _buildLoadingState(context),
           ),
-          placeholderBuilder: (context) => _buildLoadingState(context),
         );
       } else {
-        // For regular images, we can't change color, so we rely on the background contrast
-        return CachedNetworkImage(
-          imageUrl: fullUrl,
-          fit: BoxFit.contain,
-          placeholder: (context, url) => _buildLoadingState(context),
-          errorWidget: (context, url, error) => _buildFallbackIcon(context),
+        // For raster images, use similar approach
+        return Center(
+          child: CachedNetworkImage(
+            imageUrl: fullUrl,
+            width: 45,
+            height: 45,
+            fit: BoxFit.cover,
+            placeholder: (context, url) => _buildLoadingState(context),
+            errorWidget: (context, url, error) => _buildFallbackIcon(context),
+          ),
         );
       }
     } catch (e) {

@@ -44,7 +44,7 @@ final ThemeData darkTheme = ThemeData(
   ),
   iconTheme: const IconThemeData(color: Color(0xFF9CA3AF)),
   bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-    backgroundColor: Color.fromARGB(255, 120, 139, 182),
+    backgroundColor: const Color.fromARGB(255, 42, 46, 55),
     selectedItemColor: Color(0xFF3B82F6),
     unselectedItemColor: Color(0xFF9CA3AF),
   ),
