@@ -9,7 +9,7 @@ import 'package:timeago/timeago.dart' as timeago;
 import '../models/notification_model.dart';
 import '../services/notification_service.dart';
 import 'bookings_page.dart';
-import 'payments/payment_history_page.dart';
+import 'payments/Transaction_history_page.dart';
 
 class NotificationPage extends StatefulWidget {
   const NotificationPage({super.key});
@@ -153,7 +153,7 @@ class _NotificationPageState extends State<NotificationPage> {
         }
         break;
       case NotificationType.Payments:
-        Navigator.of(context).push(MaterialPageRoute(builder: (_) => const PaymentHistoryPage()));
+        Navigator.of(context).push(MaterialPageRoute(builder: (_) => const TransactionHistoryPage()));
         break;
       default:
         break;

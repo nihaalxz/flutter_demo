@@ -182,7 +182,7 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
                 context: context,
                 value: MenuItem.item5,
                 icon: Icons.receipt_long_rounded,
-                text: 'Payment History',
+                text: 'Transaction History',
               ),
               _buildPopupMenuItem(
                 context: context,

@@ -6,14 +6,14 @@ import '../../models/payment_history_DTO.dart';
 import '../../services/payment_services/payment_service.dart';
 
 /// A page that displays a list of the user's past payment transactions.
-class PaymentHistoryPage extends StatefulWidget {
-  const PaymentHistoryPage({super.key});
+class TransactionHistoryPage extends StatefulWidget {
+  const TransactionHistoryPage({super.key});
 
-  @override
-  State<PaymentHistoryPage> createState() => _PaymentHistoryPageState();
+ @override
+ State<TransactionHistoryPage> createState() => _PaymentHistoryPageState();
 }
 
-class _PaymentHistoryPageState extends State<PaymentHistoryPage> {
+class _PaymentHistoryPageState extends State<TransactionHistoryPage> {
   final PaymentService _paymentService = PaymentService();
   late Future<List<PaymentHistoryDto>> _historyFuture; // Corrected type
 
@@ -33,7 +33,7 @@ class _PaymentHistoryPageState extends State<PaymentHistoryPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Payment History')),
+      appBar: AppBar(title: const Text('Transactions')),
       body: SafeArea( // ✅ Added SafeArea
         child: FutureBuilder<List<PaymentHistoryDto>>(
           future: _historyFuture,

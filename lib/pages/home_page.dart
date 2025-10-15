@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:myfirstflutterapp/pages/transactions_main_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:myfirstflutterapp/models/category_model.dart';
 import 'package:myfirstflutterapp/models/product_model.dart';
@@ -8,7 +9,7 @@ import 'package:myfirstflutterapp/pages/auth/profile_page.dart';
 import 'package:myfirstflutterapp/pages/gen/settings_page.dart';
 import 'package:myfirstflutterapp/pages/myOffers.dart';
 import 'package:myfirstflutterapp/pages/notification_page.dart';
-import 'package:myfirstflutterapp/pages/payments/payment_history_page.dart';
+import 'package:myfirstflutterapp/pages/payments/Transaction_history_page.dart';
 import 'package:myfirstflutterapp/pages/payments/wallet_page.dart';
 import 'package:myfirstflutterapp/pages/product/my_items_page.dart';
 import 'package:myfirstflutterapp/pages/rental_history_page.dart';
@@ -428,7 +429,7 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin 
         break;
       case MenuItem.item5:
         appState.clearUnreadPayments();
-        Navigator.of(context).push(MaterialPageRoute(builder: (context) => const PaymentHistoryPage()));
+        Navigator.of(context).push(MaterialPageRoute(builder: (context) => const TransactionsMainPage()));
         break;
       case MenuItem.item6:
         Navigator.of(context).push(MaterialPageRoute(builder: (context) => const RentalHistoryPage()));
